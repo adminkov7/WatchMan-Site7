@@ -1,9 +1,13 @@
 **WatchMan-Site7**
 
 Contributors: adminkov
+
 Plugin Name: WatchMan-Site7
+
 Plugin URI: http://www.adminkov.bcr.by/watchman-site7/
+
 Tags: login, black list, cron, IP, security
+
 Author: Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 Donate link: https://www.adminkov.bcr.by/category/wordpress/
