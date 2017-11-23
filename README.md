@@ -83,11 +83,11 @@ Automatic screen refresh mode using SSE technology (Server-Sent Events).
 
 **Frequently Asked Questions:**
 
-Question: When you change the WHO-is service provider, the info panel shows not all the statistics of visits to your website. Why?
+**Question: When you change the WHO-is service provider, the info panel shows not all the statistics of visits to your website. Why?**
 
 The answer: Replace WHO-is provider need to spend as little as possible. First, you loop through each to determine the correctness of the information provided by the provider. The accuracy of the information about visitors, unfortunately, is different and depends on the region of residence of visitors. Therefore, select the best provider from four submitted for your area and use it. In the event of an accidental denial of service provider WHO-is service, proceed to another provider.
 
-Question: After the visitor's IP is on the Black List, what happens next?
+**Question: After the visitor's IP is on the Black List, what happens next?**
 
 The answer: The plugin remembers your blocking decision and automatically enters a blocking entry in htaccess when it's time to start blocking. Then, when it's time to end the lock, the plug-in removes the blocking entry from the htaccess. However, a record of this IP is stored in the database. And when, after some time, this visitor will go to your site, his IP will be marked in red. Although the visitor will walk quietly through your pages. the expiration date has expired. By the way, you can not delete this entry until you clear the Black list field. Then you can safely delete this entry or it will be automatically deleted when the visitor log is truncated automatically.
 = Question: After clicking the "wp-cron" button (at the bottom of the plug-in table), a modal window appears. What's next? =
