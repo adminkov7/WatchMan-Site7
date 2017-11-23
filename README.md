@@ -74,10 +74,10 @@ Missing.
 7. Example of filling in the fields Black list for selected visitor's IP
 
 **Changelog:**
-= 2.1.1 =
+**2.1.1**
 Expanded the functionality of the widget.
 
-= 2.2.1 =
+**2.2.1**
 Automatic screen refresh mode using SSE technology (Server-Sent Events).
 
 **Frequently Asked Questions:**
