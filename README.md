@@ -25,8 +25,6 @@ The plugin keeps a log of site visits, monitors system files and site events. Th
 7. Export records of visits to the site in an external file for later analysis.
 8. Automatic screen refresh mode using SSE technology (Server-Sent Events).
 
-[Demo Video](...is preparing for publication)
-
 **Features include:**
 
 1. filters I level: by date, by country, by visitor's roles
@@ -55,17 +53,17 @@ The plugin keeps a log of site visits, monitors system files and site events. Th
 - Italian [it_IT]
 - Russian [ru_RU]
 
-== Installation ==
+**Installation:**
 
 1. Install and activate like any other basic plugin.
 2. Define basic plugin settings menu: Visitors/settings. 
 3. Click on the Screen Options tab to expand the options section. You'll be able to change the number of results per page as well as hide/display table columns.
 
-== Upgrade Notice ==
+**Upgrade Notice:**
 
 Missing.
 
-== Screenshots ==
+**Screenshots:**
 
 1. Screen basic settings of the plugin
 2. Screen basic settings of the plugin (continue). Insert only your key for the Google Maps API KEY field, which you will receive by clicking on the link: https://console.developers.google.com/apis/credentials
@@ -75,14 +73,14 @@ Missing.
 6. An example of working with a black list. The visitor's IP is automatically entered in .htaccess
 7. Example of filling in the fields Black list for selected visitor's IP
 
-== Changelog ==
+**Changelog:**
 = 2.1.1 =
 Expanded the functionality of the widget.
 
 = 2.2.1 =
 Automatic screen refresh mode using SSE technology (Server-Sent Events).
 
-== Frequently Asked Questions ==
+**Frequently Asked Questions:**
 
 = Question: When you change the WHO-is service provider, the info panel shows not all the statistics of visits to your website. Why? =
 The answer: Replace WHO-is provider need to spend as little as possible. First, you loop through each to determine the correctness of the information provided by the provider. The accuracy of the information about visitors, unfortunately, is different and depends on the region of residence of visitors. Therefore, select the best provider from four submitted for your area and use it. In the event of an accidental denial of service provider WHO-is service, proceed to another provider.
