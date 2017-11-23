@@ -9,12 +9,19 @@ Plugin URI: http://www.adminkov.bcr.by/watchman-site7/
 Tags: login, black list, cron, IP, security
 
 Author: Oleg Klenitskiy
+
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
+
 Donate link: https://www.adminkov.bcr.by/category/wordpress/
+
 Requires at least: WP 4.5
+
 Tested up to: WP 4.9
+
 Stable tag: 2.0
+
 Version: 2.2.1
+
 License: GPL3
 
 **Description:**
