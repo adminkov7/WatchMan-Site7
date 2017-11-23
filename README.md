@@ -1,4 +1,4 @@
-=== WatchMan-Site7 ===
+**WatchMan-Site7**
 
 Contributors: adminkov
 Plugin Name: WatchMan-Site7
@@ -13,7 +13,7 @@ Stable tag: 2.0
 Version: 2.2.1
 License: GPL3
 
-== Description ==
+**Description:**
 
 The plugin keeps a log of site visits, monitors system files and site events. The main functions of the plugin are: 
 1. Record the date and time of visit to the site by people, robots. 
