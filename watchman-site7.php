@@ -6,7 +6,7 @@ Description:  This plugin is designed for site administrators and is used to con
 Author:       Oleg Klenitskiy
 Author URI:   https://www.adminkov.bcr.by/category/wordpress/
 Contributors: adminkov
-Version:      2.2.1
+Version:      2.2.2
 License:      GPL2
 License URI:  https://www.gnu.org/licenses/gpl-2.0.html
 Domain Path:  /languages
@@ -18,51 +18,46 @@ if( !class_exists( 'WP_List_Table' ) ) {
     require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
 }
 //
-require_once(__DIR__ . '/includes/statistics.php');
+require_once(__DIR__ . '/includes/statistic.php');
 require_once(__DIR__ . '/includes/wp-cron.php');
 require_once(__DIR__ . '/includes/ip-info.php');
 require_once(__DIR__ . '/includes/io-interface.php');
 require_once(__DIR__ . '/includes/widget.php');
 require_once(__DIR__ . '/settings/watchman_site_countries.php');
 
-//Register script.js
+//Register wms7-navigator.js
 function wms7_navigator_load_script() {
   if (strpos($_SERVER['REQUEST_URI'], 'wms7') == false){
-    wp_enqueue_script( 'wms7-navigator', plugins_url('/js/wms7-navigator.js', __FILE__ ), array('jquery'));
+    wp_enqueue_script( 'wms7-navigator', plugins_url('/js/wms7-navigator.js', __FILE__ ), array(), NULL, false);
     //for use module wms7-navigator.js
-    $wms7_includes__url = plugin_dir_url( __FILE__ ).'watchman-site7';
+    $wms7_plugin_url = plugin_dir_url( __FILE__ ).'watchman-site7';
     ?>
     <script>
-    var wms7_url = '<?php echo($wms7_includes__url); ?>';
+    var wms7_url = '<?php echo($wms7_plugin_url); ?>';
     </script>
     <?php
     //
   }
 }
 add_action('wp_enqueue_scripts', 'wms7_navigator_load_script');
-
-function wms7_load_script() {
+//Register wms7-script.js, vis.js, wms7-style.css
+function wms7_load_css_js() {
   if (strpos($_SERVER['REQUEST_URI'], 'wms7') == true){
-    wp_enqueue_script( 'wms7-script', plugins_url('/js/wms7-script.js', __FILE__ ), array('jquery'));
+    wp_enqueue_script( 'vis', plugins_url('/js/vis.js', __FILE__ ), array('jquery'), NULL, false);
+    wp_enqueue_script( 'wms7-script', plugins_url('/js/wms7-script.js', __FILE__ ), array('vis'), NULL, false);
+    wp_enqueue_style( 'wms7', plugins_url('/css/wms7-style.css', __FILE__ ), false, NULL, 'all');
+
     //for use module wms7-script.js
-    $wms7_includes__url = plugin_dir_url( __FILE__ ).'includes/sse.php';
+    $wms7_sse_url = plugin_dir_url( __FILE__ ).'includes/sse.php';
     ?>
     <script>
-    var wms7_url = '<?php echo($wms7_includes__url); ?>';
+    var wms7_url = '<?php echo($wms7_sse_url); ?>';
     </script>
     <?php
     //
   }
 }
-add_action('admin_enqueue_scripts', 'wms7_load_script');
-
-//Register style.css
-function wms7_load_style() {
-  if (strpos($_SERVER['REQUEST_URI'], 'wms7') == true){
-    wp_enqueue_style( 'mytheme-options-style', plugins_url('/css/wms7-style.css', __FILE__ ) );
-  }   
-}
-add_action( 'admin_enqueue_scripts', 'wms7_load_style' );
+add_action('admin_enqueue_scripts', 'wms7_load_css_js');
 
 /**
  * wms7_List_Table class that will display custom table
@@ -114,19 +109,17 @@ class wms7_List_Table extends WP_List_Table {
 
     $menu_page_url = menu_page_url('wms7_visitors', false);
     ( is_array($param) && !empty($param) ) ? $url = add_query_arg( $param, $menu_page_url) : $url = $menu_page_url;      
-    
     //save the current url of the plugin in wp_options
     update_option( 'wms7_current_url', $url ); 
 
     return $url;
   }
-  //Standart function: WP_Posts_List_Table
+  //Standart function: WP_List_Table
   function extra_tablenav( $which ) {
+    $url = $this->wms7_get_current_url();
+    $val = get_option('wms7_screen_settings');
 
     if ( $which == 'top' ){
-
-      $url = $this->wms7_get_current_url();
-      $val = get_option('wms7_screen_settings');
 
       $all_link = isset($val['all_link']) ? $val['all_link'] : 0;
       $unlogged_link = isset($val['unlogged_link']) ? $val['unlogged_link'] : 0;
@@ -135,346 +128,86 @@ class wms7_List_Table extends WP_List_Table {
       $robots_link = isset($val['robots_link']) ? $val['robots_link'] : 0;
       $blacklist_link = isset($val['blacklist_link']) ? $val['blacklist_link'] : 0;      
 
-      $hidden_all_link = ($all_link == '1') ? "" : 'hidden';
-      $hidden_unlogged_link = ($unlogged_link =='1') ? "" : 'hidden';
-      $hidden_successful_link = ($successful_link =='1') ? "" : 'hidden';
-      $hidden_failed_link = ($failed_link =='1') ? "" : 'hidden';
-      $hidden_robots_link = ($robots_link =='1') ? "" : 'hidden';
-      $hidden_blacklist_link = ($blacklist_link =='1') ? "" : 'hidden';
+      $hidden_all_link = ($all_link == '1') ? "" : 'hidden="true"';
+      $hidden_unlogged_link = ($unlogged_link =='1') ? "" : 'hidden="true"';
+      $hidden_successful_link = ($successful_link =='1') ? "" : 'hidden="true"';
+      $hidden_failed_link = ($failed_link =='1') ? "" : 'hidden="true"';
+      $hidden_robots_link = ($robots_link =='1') ? "" : 'hidden="true"';
+      $hidden_blacklist_link = ($blacklist_link =='1') ? "" : 'hidden="true"';
 
       echo '<a class="visit_result" title="' . __('Filter 2 level', 'wms7').'">'.__('Visits','wms7').' : </a>';
 
-      echo '<input onclick=visit(id) class="radio" id="radio-1" name="radio_visits" type="radio" value="1"'.$hidden_all_link.' >
-      <label for="radio-1"'.$hidden_all_link.'>'.__('All','wms7').'('. $this->wms7_get('allTotal').')</label>';
+      echo '<input onclick=visit(id) class="radio" id="radio-1" name="radio_visits" type="radio" value="1" '.$hidden_all_link.' >
+      <label for="radio-1" '.$hidden_all_link.'>'.__('All','wms7').'('. $this->wms7_get('allTotal').')</label>';
 
-      echo '<input onclick=visit(id) class="radio" id="radio-2" name="radio_visits" type="radio" value="1"'.$hidden_unlogged_link.'>
-      <label for="radio-2"'.$hidden_unlogged_link.'>'.__('Unlogged','wms7').'('. $this->wms7_get('visitsTotal').')</label>';
+      echo '<input onclick=visit(id) class="radio" id="radio-2" name="radio_visits" type="radio" value="1" '.$hidden_unlogged_link.'>
+      <label for="radio-2" '.$hidden_unlogged_link.'>'.__('Unlogged','wms7').'('. $this->wms7_get('visitsTotal').')</label>';
 
-      echo '<input onclick=visit(id) class="radio" id="radio-3" name="radio_visits" type="radio" value="1"'.$hidden_successful_link.'>
-      <label for="radio-3"'.$hidden_successful_link.'>'.__('Success log','wms7').'('. $this->wms7_get('successTotal').')</label>';
+      echo '<input onclick=visit(id) class="radio" id="radio-3" name="radio_visits" type="radio" value="1" '.$hidden_successful_link.'>
+      <label for="radio-3" '.$hidden_successful_link.'>'.__('Success log','wms7').'('. $this->wms7_get('successTotal').')</label>';
   
-      echo '<input onclick=visit(id) class="radio" id="radio-4" name="radio_visits" type="radio" value="1"'.$hidden_failed_link.'>
-      <label for="radio-4"'.$hidden_failed_link.'>'.__('Failed log','wms7').'('. $this->wms7_get('failedTotal').')</label>';
+      echo '<input onclick=visit(id) class="radio" id="radio-4" name="radio_visits" type="radio" value="1" '.$hidden_failed_link.'>
+      <label for="radio-4" '.$hidden_failed_link.'>'.__('Failed log','wms7').'('. $this->wms7_get('failedTotal').')</label>';
  
-      echo '<input onclick=visit(id) class="radio" id="radio-5" name="radio_visits" type="radio" value="1"'.$hidden_robots_link.'>
-      <label for="radio-5"'.$hidden_robots_link.'>'.__('Robots','wms7').'('. $this->wms7_get('robotsTotal').')</label>';
+      echo '<input onclick=visit(id) class="radio" id="radio-5" name="radio_visits" type="radio" value="1" '.$hidden_robots_link.'>
+      <label for="radio-5" '.$hidden_robots_link.'>'.__('Robots','wms7').'('. $this->wms7_get('robotsTotal').')</label>';
 
-      echo '<input onclick=visit(id) class="radio" id="radio-6" name="radio_visits" type="radio" value="1"'.$hidden_blacklist_link.'>
-      <label for="radio-6"'.$hidden_blacklist_link.'>'.__('Black list','wms7').'('. $this->wms7_get('blacklistTotal').')</label>';
+      echo '<input onclick=visit(id) class="radio" id="radio-6" name="radio_visits" type="radio" value="1" '.$hidden_blacklist_link.'>
+      <label for="radio-6" '.$hidden_blacklist_link.'>'.__('Black list','wms7').'('. $this->wms7_get('blacklistTotal').')</label>';
     }
       //switcher top & bottom
       $mode = ( isset($_GET['mode']) ) ? sanitize_text_field($_GET['mode']) : "list";
       $table = new wms7_List_Table();
       $table->view_switcher($mode);
-      //
 
     if ( $which == 'bottom' ) {
 
-    //Код добавляет разметку после таблицы
-      $output0 = '<form method="GET">';
-      $output0 .='<a href="#win0" class="button" id="doaction" style="float:left;margin-right:10px;">'.' index.php</a>';
-      $output0 .='</form>';
+      $index_php = isset($val['index_php']) ? $val['index_php'] : 0;
+      $robots_txt = isset($val['robots_txt']) ? $val['robots_txt'] : 0;
+      $htaccess = isset($val['htaccess']) ? $val['htaccess'] : 0;
+      $wp_config_php = isset($val['wp_config_php']) ? $val['wp_config_php'] : 0;
+      $wp_cron = isset($val['wp_cron']) ? $val['wp_cron'] : 0;
+      $statistic = isset($val['statistic']) ? $val['statistic'] : 0;      
 
-      $output1 = '<form method="GET">';
-      $output1 .='<a href="#win1" class="button" id="doaction" style="float:left;margin-right:10px;">'.' robots.txt</a>';
-      $output1 .='</form>';
+      $hidden_index_php = ($index_php == '1') ? "" : 'style="display:none"';
+      $hidden_robots_txt = ($robots_txt =='1') ? "" : 'style="display:none"';
+      $hidden_htaccess = ($htaccess =='1') ? "" : 'style="display:none"';
+      $hidden_wp_config_php = ($wp_config_php =='1') ? "" : 'style="display:none"';
+      $hidden_wp_cron = ($wp_cron =='1') ? "" : 'style="display:none"';
+      $hidden_statistic = ($statistic =='1') ? "" : 'style="display:none"';      
 
-      $output2 = '<form method="GET">';
-      $output2 .='<a href="#win2" class="button" id="doaction" style="float:left;margin-right:10px;">'.' .htaccess</a>';
-      $output2 .='</form>';
-
-      $output3 = '<form method="GET">';
-      $output3 .='<a href="#win3" class="button" id="doaction" style="float:left;margin-right:10px;">'.' wp-config.php</a>';
-      $output3 .='</form>';
-
-      $output4 = '<form method="GET">';
-      $output4 .='<a href="#win4" class="button" id="doaction" style="float:left;margin-right:10px;">'.' wp-cron</a>';
-      $output4 .='</form>';
-
-      $output5 = '<form method="GET">';
-      $output5 .='<a href="#win5" class="button" id="doaction" style="float:left;margin-right:10px;">'.' statistics</a>';
-      $output5 .='</form>';     
-
-      echo $output0.$output1.$output2.$output3.$output4.$output5;
-
-      if (!file_exists($_SERVER['DOCUMENT_ROOT'].'/index.php')){
-        $index="File not found: index.php";
-      }else{
-        $val = file($_SERVER['DOCUMENT_ROOT'].'/index.php');
-        $index="";
-        foreach ($val as $line) {
-          $index = $index.$line;
-        }
-        unset($line);
-      }
-
-      if (!file_exists($_SERVER['DOCUMENT_ROOT'].'/robots.txt')){
-        $robots="File not found: robots.txt";
-      }else{
-        $val = file($_SERVER['DOCUMENT_ROOT'].'/robots.txt');
-        $robots="";
-        foreach ($val as $line) {
-          $robots = $robots.$line;
-        }
-        unset($line);
-      }
-
-      if (!file_exists($_SERVER['DOCUMENT_ROOT'].'/.htaccess')){
-        $htaccess="File not found: .htaccess";
-      }else{
-        $val = file($_SERVER['DOCUMENT_ROOT'].'/.htaccess');
-        $htaccess="";
-        foreach ($val as $line) {
-          $htaccess = $htaccess.$line;
-        }
-        unset($line);
-      }
-
-      if (!file_exists($_SERVER['DOCUMENT_ROOT'].'/wp-config.php')){
-        $wp_config="File not found: wp-config.php";
-      }else{
-        $val = file($_SERVER['DOCUMENT_ROOT'].'/wp-config.php');
-        $wp_config="";
-        foreach ($val as $line) {
-          $wp_config = $wp_config.$line;
-        }
-        unset($line);
-      }
-
-      $win_modal=$this->wms7_modal_windows($index,$robots,$htaccess,$wp_config);
-      
-      echo $win_modal;
+      //The code adds the buttons after the table
+      $btn0 = '<form id="заглушка" method="POST">
+              </form>';
+      echo ($btn0);
+      $btn1 = '<form id="win1" method="POST">
+              <input type="submit" value="index" id="btn_bottom" class="button"  name="footer" '.$hidden_index_php.'>
+              </form>';
+      echo ($btn1);
+      $btn2 = '<form id="win2" method="POST">
+              <input type="submit" value="robots" id="btn_bottom" class="button"  name="footer" '.$hidden_robots_txt.'>
+              </form>';
+      echo ($btn2);
+      $btn3 = '<form id="win3" method="POST">
+              <input type="submit" value="htaccess" id="btn_bottom" class="button"  name="footer" '.$hidden_htaccess.'>
+              </form>';
+      echo ($btn3);
+      $btn4 = '<form id="win4" method="POST">
+              <input type="submit" value="wp_config" id="btn_bottom" class="button"  name="footer" '.$hidden_wp_config_php.'>
+              </form>';
+      echo ($btn4);
+      $btn5 = '<form id="win5" method="POST">
+              <input type="submit" value="wp_cron" id="btn_bottom" class="button"  name="footer" '.$hidden_wp_cron.'>
+              </form>';
+      echo ($btn5);
+      $btn6 = '<form id="win6" method="POST">
+              <input type="submit" value="statistic" id="btn_bottom" class="button"  name="footer" '.$hidden_statistic.'>
+              </form>';
+      echo ($btn6);
     }
   }
-
-  function wms7_modal_windows($index, $robots, $htaccess, $wp_config) {
-  
-    if (isset($_REQUEST["wms0"])) {
-      // save index.php
-      wms7_save_index_php(sanitize_post( $_POST['wms0'], 'edit' ));
-      unset ($_POST['wms0']);
-      // to update the main plugin page
-      $URL = $this->wms7_get_current_url().'&paged='.get_option('wms7_current_page');
-      echo '<script>location.replace("'.$URL.'");</script>';
-    }
-
-    if (isset($_REQUEST["wms1"])) {
-      // save robots.txt
-      wms7_save_robots_txt(sanitize_post( $_POST['wms1'], 'edit' ));
-      unset ($_POST['wms1']);
-      // to update the main plugin page
-      $URL = $this->wms7_get_current_url().'&paged='.get_option('wms7_current_page');
-      echo '<script>location.replace("'.$URL.'");</script>';
-    }
-
-    if (isset($_REQUEST["wms2"])) {
-      // save .htaccess
-      wms7_save_htaccess(sanitize_post( $_POST['wms2'], 'edit' ));
-      unset ($_POST['wms2']);
-      // to update the main plugin page
-      $URL = $this->wms7_get_current_url().'&paged='.get_option('wms7_current_page');
-      echo '<script>location.replace("'.$URL.'");</script>';
-    }
-
-    if (isset($_REQUEST["wms3"])) {
-      // save wp-config.php
-      wms7_save_wp_config(sanitize_post( $_POST['wms3'], 'edit' ));
-      unset ($_POST['wms3']);
-      // to update the main plugin page
-      $URL = $this->wms7_get_current_url().'&paged='.get_option('wms7_current_page');
-      echo '<script>location.replace("'.$URL.'");</script>';
-    }
-
-    // create table wp-cron
-    $wms7_cron = new wms7_cron();
-    $cron_table = $wms7_cron->wms7_create_cron_table();
-    if (isset($_REQUEST["cron_delete"])) {
-      // delete items from table crons
-      $wms7_cron->wms7_delete_item_crons($_POST['cron_delete']);
-      unset ($_POST['cron_delete']);
-      // to update the main plugin page
-      $URL = $this->wms7_get_current_url().'&paged='.get_option('wms7_current_page');
-      echo '<script>location.replace("'.$URL.'");</script>';
-    }
-
-    // create table statistics
-    $statistics = wms7_create_table_statistics();
-    if (isset($_REQUEST["statistics"])) {
-      // to update the main plugin page
-      $URL = $this->wms7_get_current_url().'&paged='.get_option('wms7_current_page');
-      echo '<script>location.replace("'.$URL.'");</script>';
-    }
-
-    $title = __('Close', 'wms7');
-    $win_content = '
-    <!-- Modal window №0 -->
-    <a href="" class="overlay" id="win0"></a>
-    <div class="popup">
-      <h2>index.php</h2>
-      <a class="close" title="'.$title.'" href=""></a>     
-      <form id="win0" method="POST">
-        <textarea class="win_modal1" name="wms0" >'.$index.'</textarea>
-        <input type="submit" value="'.__('Save', 'wms7').'" id="submit" class="button-primary"  name="index.php">
-        <label style="margin: 0;padding: 0;">'.$_SERVER['DOCUMENT_ROOT'].'/</label>
-      </form>
-    </div>
-    <!-- Modal window №1 -->
-    <a href="" class="overlay" id="win1"></a>
-    <div class="popup">
-      <h2>robots.txt</h2>
-      <a class="close" title="'.$title.'" href=""></a>
-      <form id="win1" method="POST">
-        <textarea class="win_modal1" name="wms1" >'.$robots.'</textarea>
-        <input type="submit" value="'.__('Save', 'wms7').'" id="submit" class="button-primary"  name="robots.txt">
-        <label style="margin: 0;padding: 0;">'.$_SERVER['DOCUMENT_ROOT'].'/</label>
-      </form>
-    </div>
-    <!-- Modal window №2 -->
-    <a href="" class="overlay" id="win2"></a>
-    <div class="popup">
-      <h2>.htaccess</h2>        
-      <a class="close" title="'.$title.'" href=""></a>
-      <form id="win2" method="POST">
-        <textarea class="win_modal1" name="wms2" >'.$htaccess.'</textarea>
-        <input type="submit" value="'.__('Save', 'wms7').'" id="submit" class="button-primary"  name=".htaccess">
-        <label style="margin: 0;padding: 0;">'.$_SERVER['DOCUMENT_ROOT'].'/</label>
-      </form>     
-    </div> 
-    <!-- Modal window №3 -->
-    <a href="" class="overlay" id="win3"></a>
-    <div class="popup">
-      <h2>wp-config.php</h2>        
-      <a class="close" title="'.$title.'" href=""></a>
-      <form id="win3" method="POST">
-        <textarea class="win_modal1" name="wms3" >'.$wp_config.'</textarea>
-        <input type="submit" value="'.__('Save', 'wms7').'" id="submit" class="button-primary"  name="wp-config.php">
-        <label style="margin: 0;padding: 0;">'.$_SERVER['DOCUMENT_ROOT'].'/</label>
-      </form>     
-    </div>     
-      <!-- Modal window №4 -->
-      <a href="" class="overlay" id="win4"></a>
-      <div class="popup">
-        <h2>wp-cron tasks</h2>
-        <a class="close" title="'.$title.'" href=""></a>
-        <form id="win4" method="POST">
-          <ul class="tasks">
-           <li class = "tasks" style="color: red;">'.__('Not found', 'wms7').' : '.$wms7_cron->orphan_count.'</li>
-           <li class = "tasks" style="color: blue;">'.__('Plugin task', 'wms7').' : '.$wms7_cron->plugin_count.'</li>
-           <li class = "tasks" style="color: green;">'.__('Themes task', 'wms7').' : '.$wms7_cron->themes_count.'</li>
-           <li class = "tasks" style="color: brown;">'.__('WP task', 'wms7').' : '.$wms7_cron->wp_count.'</li>
-          </ul>
-          <table class="win_modal2" name="wms4">
-            <tr><th>id</th><th>'.__('Task name', 'wms7').'</th><th>'.__('Recurrence', 'wms7').'</th><th>'.__('Next run', 'wms7').'</th><th>'.__('Source task', 'wms7').'</th></tr>'
-            .$cron_table.'
-          </table>   
-          <input type="submit" value="'.__('Delete', 'wms7').'" id="submit" class="button-primary"  name="cron_delete">
-          <input type="submit" value="'.__('Refresh', 'wms7').'" id="submit" class="button-primary"  name="cron_refresh">
-        </form>
-      </div>
-    <!-- Modal window №5 -->
-    <a href="" class="overlay" id="win5"></a>
-    <div class="popup">
-      <h2>'.__('visit statistics', 'wms7').'</h2>        
-      <a class="close" title="'.$title.'" href=""></a>
-      <form id="win5" method="POST">'
-        .$statistics.'
-        <input type="submit" value="'.__('Refresh', 'wms7').'" id="submit" class="button-primary "  name="statistics">
-      </form>
-    </div>';
-    if (!isset($_REQUEST['id'])) {
-        return $win_content;
-      }else{
-    $geo_ip = $this->wms7_geo_ip();
-    $geo_wifi = $this->wms7_geo_wifi();
-    $win_content = $win_content.'
-    <!-- Modal window №6 -->
-    <a href="" class="overlay" id="win6"></a>
-    <div class="popup">
-      <h2>'.__('Geolocation visitor of site','wms7').' ip='.$geo_ip["IP"].'  (id='.$geo_ip["ID"].')</h2>
-      <a class="close" title="'.$title.'" href=""></a>
-      <form name="Geolocation" id="win6" method="POST">'
-        .$this->wms7_geolocation_visitor().'
-        <input type="button" ' .$this->wms7_ip_enabled().' value="'.__('Locate IP', 'wms7').'" id="get_location" class="button-primary "  name="geo_ip" onClick="wms7_initMap('
-                            .$geo_ip["ID"].',\''
-                            .$geo_ip["Provider"].'\','
-                            .$geo_ip["Lat"].','
-                            .$geo_ip["Lon"].',\''
-                            .$geo_ip["Acc"].'\','
-                            .$geo_ip["Err_code"].',\''
-                            .$geo_ip["Err_msg"].'\')">
-        <input type="button" ' .$this->wms7_wifi_enabled().' value="'.__('Locate WiFi', 'wms7').'" id="get_location" class="button-primary "  name="geo_wifi" onClick="wms7_initMap('
-                            .$geo_wifi["ID"].',\''
-                            .$geo_wifi["Login"].'\','
-                            .$geo_wifi["Lat_wifi"].','
-                            .$geo_wifi["Lon_wifi"].','
-                            .$geo_wifi["Acc_wifi"].','
-                            .$geo_wifi["Err_code"].',\''
-                            .$geo_wifi["Err_msg"].'\')">
-        <div id="lat" style="margin:-32px 0 2px 200px; width:220px;"><label>Latitude: Not defined</label></div>
-        <div id="lon" style="margin:-5px 0 2px 200px; width:220px;"><label>Longitude: Not defined</label></div>
-        <div id="acc" style="margin:-39px 0 2px 420px;"><label>Accuracy: Not defined</label></div>
-        <div id="err" style="margin:20px 0 20px 5px;"><label></label></div>
-      </form>
-    </div>
-      ';
-    return $win_content;
-    }
-  }
-
-function wms7_ip_enabled() {
-
-  global $wpdb;
-  $table_name = $wpdb->prefix . 'watchman_site';
-  if (isset($_REQUEST['id'])) {
-    $id = sanitize_text_field($_REQUEST['id']);
-
-    $disabled = $wpdb->get_results( $wpdb->prepare( 
-      "
-      SELECT `geo_ip` 
-      FROM $table_name  
-      WHERE `id` = %s AND `geo_ip` <> %s
-      ",
-      $id,''
-      ),
-      'ARRAY_A'
-    );
-
-    if (count($disabled) == 0) {
-      return 'disabled';
-      }else{
-      return '';
-    }  
-  }
-}
-
-function wms7_wifi_enabled() {
-
-  global $wpdb;
-  $table_name = $wpdb->prefix . 'watchman_site';
-  if (isset($_REQUEST['id'])) {
-    $id = sanitize_text_field($_REQUEST['id']);
-
-    $disabled = $wpdb->get_results( $wpdb->prepare( 
-      "
-      SELECT `geo_wifi` 
-      FROM $table_name  
-      WHERE `id` = %s AND `geo_wifi` <> %s
-      ",
-      $id,''
-      ),
-      'ARRAY_A'
-    );
-
-    if (count($disabled) == 0) {
-      return 'disabled';
-      }else{
-      return '';
-    }
-  }  
-}
 
   function wms7_IP_compromising( $user_IP ) {
-
     global $wpdb;
     $table_name = $wpdb->prefix . 'watchman_site';
  
@@ -494,7 +227,7 @@ function wms7_wifi_enabled() {
         return TRUE;
       }
   }
-  //Standart function: WP_Posts_List_Table
+  //Standart function: WP_List_Table
   function column_default($item, $column_name) {
     switch($column_name){
       case 'id':
@@ -542,7 +275,7 @@ function wms7_wifi_enabled() {
       return $item[$column_name];
     }
   }
-  //Standart function: WP_Posts_List_Table
+  //Standart function: WP_List_Table
   function column_user_role($item) {
     if( !$item['uid'] ) return;
 
@@ -550,7 +283,7 @@ function wms7_wifi_enabled() {
     $user_role = isset($user->roles[0]) ? $user->roles[0] : 'undefined';
     return $user_role;
   }
-  //Standart function: WP_Posts_List_Table
+  //Standart function: WP_List_Table
   function column_user_ip($item) {
     //Checking the compromising IP
     if ($this->wms7_IP_compromising($item['user_ip']) == TRUE) {
@@ -559,7 +292,7 @@ function wms7_wifi_enabled() {
 
     $URL = $this->wms7_get_current_url();
     $actions = array(
-      'map' => sprintf('<a href="'.$URL.'&action=map&id=%s&paged=%s#win6">%s</a>', $item['id'], get_option('wms7_current_page'), __('Map', 'wms7'))
+      'map' => sprintf('<a href="'.$URL.'&action=map&id=%s&paged=%s">%s</a>', $item['id'], get_option('wms7_current_page'), __('Map', 'wms7'))
     );
 
     return sprintf('%s %s',
@@ -567,7 +300,7 @@ function wms7_wifi_enabled() {
       $this->row_actions($actions)
     );
   }
-  //Standart function: WP_Posts_List_Table
+  //Standart function: WP_List_Table
   function column_black_list($item) {
 
     $URL = $this->wms7_get_current_url();
@@ -592,14 +325,14 @@ function wms7_wifi_enabled() {
       $this->row_actions($actions)
     );
   }
-  //Standart function: WP_Posts_List_Table
+  //Standart function: WP_List_Table
   function column_cb($item) {
     return sprintf(
       '<input type="checkbox" name="id[]" value="%s" />',
       $item['id']
     );
   }
-  //Standart function: WP_Posts_List_Table
+  //Standart function: WP_List_Table
   function get_columns() {
     $columns = array(
       'cb'            =>'<input type="checkbox" />',
@@ -616,7 +349,7 @@ function wms7_wifi_enabled() {
     );
     return $columns;
   }
-  //Standart function: WP_Posts_List_Table
+  //Standart function: WP_List_Table
   function get_sortable_columns() {
     $sortable_columns = array(
       'id'            => array('id',true), 
@@ -630,7 +363,7 @@ function wms7_wifi_enabled() {
       );
     return $sortable_columns;
   }
-  //Standart function: WP_Posts_List_Table
+  //Standart function: WP_List_Table
   function get_bulk_actions() {
     $actions = array(
       'delete' => __('Delete', 'wms7'),
@@ -638,7 +371,7 @@ function wms7_wifi_enabled() {
       );
     return $actions;
   }
-  //Standart function: WP_Posts_List_Table
+  //Standart function: WP_List_Table
   function process_bulk_action() {
 
     global $wpdb;
@@ -683,133 +416,7 @@ function wms7_wifi_enabled() {
     }
   }
 
-  function wms7_geolocation_visitor() {
-
-    if (!isset($_REQUEST['id'])) return;
-
-    $val = get_option('wms7_main_settings');
-    $val = $val['key_api'];
-
-    $win_content = '
-    <div id="map" style="width: 580px; height: 200px; padding: 0; margin:-10px 0 10px 0;"> </div>
-    <script src="https://maps.googleapis.com/maps/api/js?key='.$val.'" async defer></script>
-    ';
-    return $win_content;
-  }
-
-  function wms7_geo_wifi() {
-    global $wpdb;
-    $table_name = $wpdb->prefix . 'watchman_site';
-    $table = new wms7_List_Table();
-    $id = sanitize_text_field($_REQUEST['id']);
-
-    if ('map' == $table->current_action()) {
-      //get login
-      $user_login = $wpdb->get_results("SELECT `user_login` FROM $table_name WHERE `id` = $id", 'ARRAY_A');
-      $login = implode("^", $user_login[0]);
-      $login = isset($login) ? $login : "unlogged";
-      //get ip
-      $user_ip = $wpdb->get_results("SELECT `user_ip` FROM $table_name WHERE `id` = $id", 'ARRAY_A');
-      $ip = implode("^", $user_ip[0]);
-      //get coords
-      $coords = $wpdb->get_results("SELECT `geo_wifi` FROM $table_name WHERE `id` = $id", 'ARRAY_A');
-      $coords = implode("^", $coords[0]);  
-      $coords = explode("<br>", $coords);
-
-      $lat = $lon = $acc = $code = $msg = 0;
-
-      foreach ($coords as $coord) {
-        if (strpos($coord, 'Lat_wifi') === 0){
-            $lat = mb_strcut($coord, 9);
-            if ($lat == '') $lat = 0;
-        }
-        if (strpos($coord, 'Lon_wifi') === 0){
-            $lon = mb_strcut($coord, 9);
-            if ($lon == '') $lon = 0;
-        }
-        if (strpos($coord, 'Acc_wifi=') === 0){
-            $acc = mb_strcut($coord, 9);
-            $acc = round($acc, 2);
-        }
-        if (strpos($coord, 'Err_code') === 0){
-            $code = mb_strcut($coord, 9);
-        }
-        if (strpos($coord, 'Err_msg') === 0){
-            $msg = mb_strcut($coord, 8);
-        }
-      }
-      unset($coord);
-    }
-    $login = 'login: '.$login;
-    $arr = array ("ID"=>$id, "Login"=>$login, "IP"=>$ip, "Lat_wifi"=>$lat, "Lon_wifi"=>$lon, "Acc_wifi"=>$acc, "Err_code"=>$code, "Err_msg"=>$msg);
-    return $arr;
-  }
-
-  function wms7_geo_ip() {
-    global $wpdb;
-    $table_name = $wpdb->prefix . 'watchman_site';
-    $table = new wms7_List_Table();
-    $id = sanitize_text_field($_REQUEST['id']);
-
-    if ('map' == $table->current_action()) {
-
-      //provider
-      $provider = $wpdb->get_results( $wpdb->prepare( 
-        "
-        SELECT `provider` 
-        FROM $table_name 
-        WHERE `id` = %s
-        ",
-        $id
-        ),
-        'ARRAY_A'
-      );
-      $provider = implode("^", $provider[0]);
-
-      //get ip
-      $user_ip = $wpdb->get_results( $wpdb->prepare( 
-        "
-        SELECT `user_ip` 
-        FROM $table_name 
-        WHERE `id` = %s
-        ",
-        $id
-        ),
-        'ARRAY_A'
-      );
-      $ip = implode("^", $user_ip[0]);
-
-      //get coords
-      $lat = '';
-      $lon = '';
-      $coords = $wpdb->get_results( $wpdb->prepare( 
-        "
-        SELECT `geo_ip` 
-        FROM $table_name 
-        WHERE `id` = %s
-        ",
-        $id
-        ),
-        'ARRAY_A'
-      );
-      $coords = implode("^", $coords[0]);
-      $coords = explode("<br>", $coords);
-      foreach ($coords as $coord) {
-        if (strpos($coord, 'Lat_ip') === 0){
-          $lat = mb_strcut($coord, 7);
-        }
-        if (strpos($coord, 'Lon_ip') === 0){
-          $lon = mb_strcut($coord, 7);
-        }
-      }       
-      unset($coord);
-    }
-    $provider = 'provider: '.$provider;
-    $arr = array ("ID"=>$id,  "Provider"=>$provider, "IP"=>$ip, "Lat"=>$lat, "Lon"=>$lon, "Acc"=>"Not defined", "Err_code"=>"0", "Err_msg"=>"ok");      
-    return $arr;    
-  }
-
-  //Standart function: WP_Posts_List_Table
+  //Standart function: WP_List_Table
   function prepare_items() {
     global $wpdb, $wms7;
     $table_name = $wpdb->prefix . 'watchman_site'; // do not forget about tables prefix
@@ -884,10 +491,11 @@ function wms7_wifi_enabled() {
       }else{
         update_option('wms7_action',sanitize_text_field($_REQUEST['action']));        
       }
-      if ($_REQUEST['action'] !== 'map') {
-        $URL = menu_page_url('wms7_visitors', false).'&paged='.get_option('wms7_current_page');
-        echo '<script>location.replace("'.$URL.'");</script>';
-      }
+
+      // if ($_REQUEST['action'] == 'map') {
+      //   $URL = menu_page_url('wms7_visitors', false).'&paged='.get_option('wms7_current_page');
+      //   echo '<script>location.replace("'.$URL.'");</script>';
+      // }
     }
     $screen = get_current_screen();
     $per_page_option = 'wms7_visitors_per_page';
@@ -1367,7 +975,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       get_current_screen() -> add_help_tab(array(
         'id'        => 'wms7-tab-7',
         'title'     => __('7.Other functions', 'wms7'),
-        'content'   => __('Additional features of the plugin are in the form of buttons located at the bottom of the main table, visit the website:<br />- « index » feature edit and save in a modal window file index.php<br />- « robots » feature edit and save in a modal window file rorots.txt<br />- « htaccess » edit function and save in a modal window file.htaccess<br />- « wp-config » function to edit and save it in a modal window file wp-config.php<br />- « wp-cron » output function and removal of task wp-cron in a modal window<br />- « statistics » statistics of visits to the site<br /><br />Additional features','wms7').'<br /><img src='.$img6.' style="float: left;">',
+        'content'   => __('Additional features of the plugin are in the form of buttons located at the bottom of the main table, visit the website:<br />- « index » feature edit and save in a modal window file index.php<br />- « robots » feature edit and save in a modal window file rorots.txt<br />- « htaccess » edit function and save in a modal window file.htaccess<br />- « wp-config » function to edit and save it in a modal window file wp-config.php<br />- « wp-cron » output function and removal of task wp-cron in a modal window<br />- « statistic » statistic of visits to the site<br /><br />Additional features','wms7').'<br /><img src='.$img6.' style="float: left;">',
         ));
       get_current_screen() -> add_help_tab(array(
         'id'        => 'wms7-tab-8',
@@ -1378,6 +986,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       get_current_screen()->set_help_sidebar(
         '<p><strong>' . __( 'Additional information:', 'wms7' ) . '</strong></p>' .
         '<p><a href="https://wordpress.org/plugins/watchman-site7/" target="_blank">' .  __( 'page the Wordpress repository','wms7') . '</a></p>'.
+        '<p><a href="https://github.com/adminkov7/WatchMan-Site7" target="_blank">' .  __( 'page the GitHub repository','wms7') . '</a></p>'.        
         '<p><a href="https://www.adminkov.bcr.by/category/wordpress/" target="_blank">' .  __( 'home page support plugin','wms7') . '</a></p>'.
         '<p><a href="https://www.adminkov.bcr.by/chat/" target="_blank">' .  __( 'video communication with the developer of the plugin','wms7') . '</a></p>'
         );
@@ -1389,6 +998,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       $img5 = plugins_url('/images/robots.png', __FILE__);
       $img7 = plugins_url('/images/robots_banned.png', __FILE__);
       $img8 = plugins_url('/images/google_map_api.png', __FILE__);
+      $img9 = plugins_url('/images/export_fields_csv.png', __FILE__);      
 
       get_current_screen() -> add_help_tab(array(
         'id'        => 'wms7-tab-1',
@@ -1434,6 +1044,11 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
         'content'   => __('API key required to display in a modal window, Google maps - location of a website visitor. The map window appears when you click the Map link in the column to Visit the IP in the table main page of the plugin. Detailed information about obtaining the key is on the support page of the plugin.','wms7').'<br /><img src='.$img8.' style="float: left;"><br /><br /><br /><br /><br /><br />'.
           __('Log console Google API Console, create your project and enable Google Maps JavaScript API, Google Maps Geocoding API in this project.<br />To view the list of enabled APIs:<br />1.Go to Google API Console. <a href="https://console.developers.google.com/apis/credentials" target="_blank">Page registration Google Maps API key</a><br />2.Click Select a project, then select the same project you created and click Open.<br />3.In the API list on the Dashboard page, find Google Maps JavaScript API and Google Maps Geocoding API.<br />4.If these APIs are listed all installed. If these APIs are not in the list, add them:<br />-At the top of the page, select ENABLE API to open the Library tab. Alternatively, you can select Library in the left menu.<br />-Find the Google Maps JavaScript API and Google Maps Geocoding API and select them from the list of results.<br />-Click ENABLE. When the process is complete, Google Maps JavaScript API and Google Maps Geocoding API will appear in the API list on the Dashboard','wms7'),
         ));
+      get_current_screen() -> add_help_tab(array(
+        'id'        => 'wms7-tab-9',
+        'title'     => __('9.field: Exporting Table Fields', 'wms7'),
+        'content'   => __('Select the fields you want in the export file -csv. The Export - command is located on the main page of the plug-in in the drop-down list - Bulk action.', 'wms7').'<br /><br /><img src='.$img9.' style="float: left;">',
+        ));      
       // Help sidebars are optional
       get_current_screen()->set_help_sidebar(
         '<p><strong>' . __( 'Additional information:', 'wms7' ) . '</strong></p>' .
@@ -1504,10 +1119,17 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       $robots_link = checked(1,isset($val['robots_link']) ? $val['robots_link'] : 0,false);
       $blacklist_link = checked(1,isset($val['blacklist_link']) ? $val['blacklist_link'] : 0,false);
 
+      $index_php = checked(1,isset($val['index_php']) ? $val['index_php'] : 0,false);
+      $robots_txt = checked(1,isset($val['robots_txt']) ? $val['robots_txt'] : 0,false);
+      $htaccess = checked(1,isset($val['htaccess']) ? $val['htaccess'] : 0,false);
+      $wp_config_php = checked(1,isset($val['wp_config_php']) ? $val['wp_config_php'] : 0,false);
+      $wp_cron = checked(1,isset($val['wp_cron']) ? $val['wp_cron'] : 0,false);
+      $statistic = checked(1,isset($val['statistic']) ? $val['statistic'] : 0,false);
+
       $return .= "
       <fieldset class='panel-info-screen-setting'>
         <legend>".__('Display panel info','wms7')."</legend>
-
+`
           <label for='setting_list'><input type='checkbox' id='setting_list' name='wms7_screen_settings[setting_list]' value='1' $setting_list /> ".__('Setting list','wms7')."</label>
 
           <label for='history_list'><input type='checkbox' id='history_list' name='wms7_screen_settings[history_list]' value='1' $history_list /> ".__('History list','wms7')."</label>
@@ -1517,7 +1139,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
           <label for='black_list'><input type='checkbox' id='black_list' name='wms7_screen_settings[black_list]' value='1' $black_list /> ".__('Black list','wms7')."</label>              
       </fieldset>
 
-      <fieldset class='filter-level-II-screen-setting'>
+      <fieldset style='border: 1px solid black; padding: 0 10px;'>
       <legend>".__('Display filters II level','wms7')."</legend>
       
         <label for='all_link'><input type='checkbox' id='all_link' name='wms7_screen_settings[all_link]' value='1' $all_link /> ".__('All visits','wms7')."</label>
@@ -1532,7 +1154,24 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
 
         <label for='blacklist_link'><input type='checkbox' id='blacklist_link' name='wms7_screen_settings[blacklist_link]' value='1' $blacklist_link /> ".__('Black list','wms7')."</label>
 
-      </fieldset>"
+      </fieldset>
+
+      <fieldset style='border: 1px solid black; padding: 0 10px;'>
+      <legend>".__('Display buttons add functions of bottom screen','wms7')."</legend>
+      
+        <label for='index_php'><input type='checkbox' id='index_php' name='wms7_screen_settings[index_php]' value='1' $index_php /> ".__('index.php','wms7')."</label>
+
+        <label for='robots_txt'><input type='checkbox' id='robots_txt' name='wms7_screen_settings[robots_txt]' value='1' $robots_txt /> ".__('robots.txt','wms7')."</label>
+
+        <label for='htaccess'><input type='checkbox' id='htaccess' name='wms7_screen_settings[htaccess]' value='1' $htaccess /> ".__('.htaccess','wms7')."</label>
+
+        <label for='wp_config_php'><input type='checkbox' id='wp_config_php' name='wms7_screen_settings[wp_config_php]' value='1' $wp_config_php /> ".__('wp-config.php','wms7')."</label>
+
+        <label for='wp_cron'><input type='checkbox' id='wp_cron' name='wms7_screen_settings[wp_cron]' value='1' $wp_cron /> ".__('wp-cron','wms7')."</label>
+
+        <label for='statistic'><input type='checkbox' id='statistic' name='wms7_screen_settings[statistic]' value='1' $statistic /> ".__('statistic','wms7')."</label>
+
+      </fieldset>"      
       ;
     } 
     return $return;
@@ -1623,7 +1262,371 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     $output .='<input class="button" id="doaction" type="submit" title="' . __('Filter 1 level, II group', 'wms7') . '" value="'.__('Filter','wms7').'" />';
     $output .='</form>';
     return $output;
-  }  
+  }
+  function wms7_geolocation_visitor() {
+
+    if (!isset($_REQUEST['id'])) return;
+
+    $val = get_option('wms7_main_settings');
+    $val = $val['key_api'];
+
+    $win_content = "
+    <div id='map' style='width: 660px; height: 260px; padding: 0; margin:10px; background-color: #7D7970;'> </div>
+    <script src='https://maps.googleapis.com/maps/api/js?key=$val' async defer></script>
+    ";
+    return $win_content;
+  }
+
+  function wms7_geo_wifi() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'watchman_site';
+    $table = new wms7_List_Table();
+    $id = sanitize_text_field($_REQUEST['id']);
+
+    if ('map' == $table->current_action()) {
+      //get login
+      $user_login = $wpdb->get_results("SELECT `user_login` FROM $table_name WHERE `id` = $id", 'ARRAY_A');
+      $login = implode("^", $user_login[0]);
+      $login = isset($login) ? $login : "unlogged";
+      //get ip
+      $user_ip = $wpdb->get_results("SELECT `user_ip` FROM $table_name WHERE `id` = $id", 'ARRAY_A');
+      $ip = implode("^", $user_ip[0]);
+      //get coords
+      $coords = $wpdb->get_results("SELECT `geo_wifi` FROM $table_name WHERE `id` = $id", 'ARRAY_A');
+      $coords = implode("^", $coords[0]);  
+      $coords = explode("<br>", $coords);
+
+      $lat = $lon = $acc = $code = $msg = 0;
+
+      foreach ($coords as $coord) {
+        if (strpos($coord, 'Lat_wifi') === 0){
+            $lat = mb_strcut($coord, 9);
+            if ($lat == '') $lat = 0;
+        }
+        if (strpos($coord, 'Lon_wifi') === 0){
+            $lon = mb_strcut($coord, 9);
+            if ($lon == '') $lon = 0;
+        }
+        if (strpos($coord, 'Acc_wifi=') === 0){
+            $acc = mb_strcut($coord, 9);
+            $acc = round($acc, 2);
+        }
+        if (strpos($coord, 'Err_code') === 0){
+            $code = mb_strcut($coord, 9);
+        }
+        if (strpos($coord, 'Err_msg') === 0){
+            $msg = mb_strcut($coord, 8);
+        }
+      }
+      unset($coord);
+    }
+    $login = 'login: '.$login;
+    $arr = array ("ID"=>$id, "Login"=>$login, "IP"=>$ip, "Lat_wifi"=>$lat, "Lon_wifi"=>$lon, "Acc_wifi"=>$acc, "Err_code"=>$code, "Err_msg"=>$msg);
+    return $arr;
+  }
+
+  function wms7_geo_ip() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'watchman_site';
+    $table = new wms7_List_Table();
+    $id = sanitize_text_field($_REQUEST['id']);
+
+    if ('map' == $table->current_action()) {
+
+      //provider
+      $provider = $wpdb->get_results( $wpdb->prepare( 
+        "
+        SELECT `provider` 
+        FROM $table_name 
+        WHERE `id` = %s
+        ",
+        $id
+        ),
+        'ARRAY_A'
+      );
+      $provider = implode("^", $provider[0]);
+
+      //get ip
+      $user_ip = $wpdb->get_results( $wpdb->prepare( 
+        "
+        SELECT `user_ip` 
+        FROM $table_name 
+        WHERE `id` = %s
+        ",
+        $id
+        ),
+        'ARRAY_A'
+      );
+      $ip = implode("^", $user_ip[0]);
+
+      //get coords
+      $lat = '';
+      $lon = '';
+      $coords = $wpdb->get_results( $wpdb->prepare( 
+        "
+        SELECT `geo_ip` 
+        FROM $table_name 
+        WHERE `id` = %s
+        ",
+        $id
+        ),
+        'ARRAY_A'
+      );
+      $coords = implode("^", $coords[0]);
+      $coords = explode("<br>", $coords);
+      foreach ($coords as $coord) {
+        if (strpos($coord, 'Lat_ip') === 0){
+          $lat = mb_strcut($coord, 7);
+        }
+        if (strpos($coord, 'Lon_ip') === 0){
+          $lon = mb_strcut($coord, 7);
+        }
+      }       
+      unset($coord);
+    }
+    $provider = 'provider: '.$provider;
+    $arr = array ("ID"=>$id,  "Provider"=>$provider, "IP"=>$ip, "Lat"=>$lat, "Lon"=>$lon, "Acc"=>"Not defined", "Err_code"=>"0", "Err_msg"=>"ok");      
+    return $arr;    
+  }
+  function wms7_win_popup(){
+
+    switch ($_POST['footer']) {
+    case 'index':
+        $str_head = 'index.php';
+        break;
+    case 'robots':
+        $str_head = 'robots.txt';
+        break;
+    case 'htaccess':
+        $str_head = '.htaccess';
+        break;
+    case 'wp_config':
+        $str_head = 'wp-config.php';
+        break;
+    case 'wp_cron':
+        $str_head = 'wp-cron tasks';
+        break;
+    case 'statistic':
+        $str_head = 'statistics of visits';
+        break;                 
+    }
+
+    if ( ($_POST['footer'] =='index') || ($_POST['footer'] =='robots') || 
+       ($_POST['footer'] =='htaccess') || ($_POST['footer'] =='wp_config') ){
+      $this->wms7_file_editor($str_head);
+    }
+    if ( $_POST['footer'] =='wp_cron' ) {
+      $this->wms7_wp_cron($str_head); 
+    }
+    if ( isset($_POST['cron_refresh']) ) {
+      $this->wms7_wp_cron($str_head);
+    }
+    if ( isset($_POST['cron_delete']) ) {
+      $wms7_cron = new wms7_cron();
+      $wms7_cron->wms7_delete_item_crons();
+    }
+    if ( $_POST['footer'] == 'statistic' ) {
+      $this->wms7_stat($str_head); 
+    }
+  }
+  function wms7_ip_enabled() {
+
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'watchman_site';
+    if (isset($_REQUEST['id'])) {
+      $id = sanitize_text_field($_REQUEST['id']);
+
+      $disabled = $wpdb->get_results( $wpdb->prepare( 
+        "
+        SELECT `geo_ip` 
+        FROM $table_name  
+        WHERE `id` = %s AND `geo_ip` <> %s
+        ",
+        $id,''
+        ),
+        'ARRAY_A'
+      );
+
+      if (count($disabled) == 0) {
+        return 'disabled';
+        }else{
+        return '';
+      }  
+    }
+  }
+
+  function wms7_wifi_enabled() {
+
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'watchman_site';
+    if (isset($_REQUEST['id'])) {
+      $id = sanitize_text_field($_REQUEST['id']);
+
+      $disabled = $wpdb->get_results( $wpdb->prepare( 
+        "
+        SELECT `geo_wifi` 
+        FROM $table_name  
+        WHERE `id` = %s AND `geo_wifi` <> %s
+        ",
+        $id,''
+        ),
+        'ARRAY_A'
+      );
+
+      if (count($disabled) == 0) {
+        return 'disabled';
+        }else{
+        return '';
+      }
+    }  
+  }
+  function wms7_map(){
+    $map = $this->wms7_geolocation_visitor();
+
+    $geo_ip = $this->wms7_geo_ip();
+    $btn_ip_enabled = $this->wms7_ip_enabled();
+
+    $provider = '"'.$geo_ip['Provider'].'"';    
+    $lat = $geo_ip['Lat'];
+    $lon = $geo_ip['Lon'];
+    $acc = '"'.$geo_ip['Acc'].'"';    
+    $err_code = $geo_ip['Err_code'];
+    $err_msg = '"'.$geo_ip['Err_msg'].'"';
+    //---------------------------------------------
+    $geo_wifi = $this->wms7_geo_wifi();
+    $btn_wifi_enabled = $this->wms7_wifi_enabled();
+
+    $login = '"'.$geo_wifi['Login'].'"';    
+    $lat_wifi = $geo_wifi['Lat_wifi'];
+    $lon_wifi = $geo_wifi['Lon_wifi'];
+    $acc_wifi = '"'.$geo_wifi['Acc_wifi'].'"';    
+    $err_code_wifi = $geo_wifi['Err_code'];
+    $err_msg_wifi = '"'.$geo_wifi['Err_msg'].'"';
+    //---------------------------------------------
+    $win_content = "
+    <div class='win-popup'>
+      <div class='popup-content'>
+        <div class='popup-header'>
+            <h2>".__('Geolocation visitor of site','wms7').' ip='.$geo_ip['IP']."  (id=".$geo_ip["ID"].")</h2>
+            <label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
+        </div>
+            $map
+        <div class='popup-footer'>
+          <input type='submit' value='locate IP' id='get_location' class='button-primary' name='map_ip' $btn_ip_enabled 
+            onClick='wms7_initMap($provider,$lat,$lon,$acc,$err_code,$err_msg)'>
+          <input type='submit' value='locate WiFi' id='get_location' class='button-primary' name='map_wifi' $btn_wifi_enabled 
+            onClick='wms7_initMap($login,$lat_wifi,$lon_wifi,$acc_wifi,$err_code_wifi,$err_msg_wifi)'>
+            <div id='lat' style='margin:-32px 0 2px 200px; width:220px;'><label>Latitude: Not defined</label></div>
+            <div id='lon' style='margin:-5px 0 2px 200px; width:220px;''><label>Longitude: Not defined</label></div>
+            <div id='acc' style='margin:-37px 0 2px 420px;'><label>Accuracy: Not defined</label></div>
+            <div id='err' style='margin-top:20px;'>Message:<label></label></div>
+        </div>
+      </div>            
+    </div>
+    ";
+    echo $win_content;
+  } 
+    
+  function wms7_stat($str_head){
+    $arr = wms7_create_table_stat();
+    $stat_graph =json_encode($arr);
+    $stat_table = wms7_table_stat($arr);
+    $win_popup = "
+    <div class='win-popup'>
+      <label class='btn' for='win-popup'></label>
+      <input type='checkbox' style='display: none;' checked>    
+      <div class='popup-content'>
+        <div class='popup-header'>
+          <h2>$str_head</h2>
+          <label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
+        </div>
+        <form id='popup_win' method='POST'>
+          <div class='popup-body'>
+            $stat_table
+          </div>
+          <div class='popup-footer'>
+  <input type='submit' value='Table' id='submit' class='button-primary' name='stat_table'>
+  <input type='submit' value='Graph' id='submit' class='button-primary' name='stat_graph' onClick='wms7_stat_graph($stat_graph)'>
+          </div>
+        </form> 
+      </div>
+    </div>
+    ";
+    echo $win_popup;
+  }
+
+  function wms7_wp_cron($str_head){
+    // create table wp-cron
+    $wms7_cron = new wms7_cron();
+    $cron_table = $wms7_cron->wms7_create_cron_table();
+    $win_popup = "
+    <div class='win-popup'>
+      <label class='btn' for='win-popup'></label>
+      <input type='checkbox' style='display: none;' checked>
+      <div class='popup-content'>
+        <div class='popup-header'>
+          <h2>$str_head</h2>
+          <label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
+        </div>
+        <form id='popup_win' method='POST'>
+          <div class='popup-body'>
+            <ul class='tasks'>
+             <li class = 'tasks' style='color: red;font-weight:bold;'>".__('Not found', 'wms7')." : $wms7_cron->orphan_count</li>
+             <li class = 'tasks' style='color: blue;font-weight:bold;'>".__('Plugin task', 'wms7')." : $wms7_cron->plugin_count</li>
+             <li class = 'tasks' style='color: green;font-weight:bold;'>".__('Themes task', 'wms7')." : $wms7_cron->themes_count</li>
+             <li class = 'tasks' style='color: brown;font-weight:bold;'>".__('WP task', 'wms7')." : $wms7_cron->wp_count</li>
+            </ul>
+            <table class='table'>
+            <thead class='thead'><tr class='tr'><th class='th' width='9%'>id</th><th class='th' width='35%'>".__('Task name', 'wms7')."</th><th class='th' width='15%'>".__('Recurrence', 'wms7')."</th><th class='th' width='20%'>".__('Next run', 'wms7')."</th><th class='th'>".__('Source task', 'wms7')."</th></tr></thead>
+              $cron_table
+            <tfoot class='tfoot'><tr class='tr'><th class='th' width='9%'>id</th><th class='th' width='35%'>".__('Task name', 'wms7')."</th><th class='th' width='15%'>".__('Recurrence', 'wms7')."</th><th class='th' width='20%'>".__('Next run', 'wms7')."</th><th class='th'>".__('Source task', 'wms7')."</th></tr></tfoot>
+            </table>
+          </div>
+          <div class='popup-footer'>
+            <input type='submit' value='Delete' id='submit' class='button-primary'  name='cron_delete'>
+            <input type='submit' value='Refresh' id='submit' class='button-primary'  name='cron_refresh'>
+          </div>
+        </form> 
+      </div>
+    </div>
+    ";
+    echo $win_popup;    
+  }
+
+  function wms7_file_editor($str_head){
+    $str_body="";  
+    if (!file_exists($_SERVER['DOCUMENT_ROOT'].'/'.$str_head)){
+      $str_body="File not found: " . $str_head;
+    }else{
+      $val = file($_SERVER['DOCUMENT_ROOT'].'/'.$str_head);
+      foreach ($val as $line) {
+        $str_body = $str_body.$line;
+      }
+      unset($line);
+    }
+    $win_popup = "
+    <div class='win-popup'>
+      <label class='btn' for='win-popup'></label>
+      <input type='checkbox' style='display: none;' checked>
+      <div class='popup-content'>
+        <div class='popup-header'>
+          <h2>$str_head</h2>
+          <label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
+        </div>
+          <form id='popup_save' method='POST'>
+            <div class='popup-body'>
+              <textarea name='content'>$str_body</textarea>
+            </div>  
+            <div class='popup-footer'>
+              <input type='submit' value='Save' id='submit' class='button-primary'  name='".$_POST['footer']."'>
+              <label style='margin: 0;padding: 0;'>".$_SERVER['DOCUMENT_ROOT']."</label> 
+            </div>
+          </form>  
+      </div>
+    </div>
+    ";
+    echo $win_popup;
+  }
 
   function wms7_visit_manager(){
     global $wpdb;
@@ -1678,6 +1681,39 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       </form>
     </div>
     <?php
+
+    if ( isset($_REQUEST['action']) && ($_REQUEST['action'] == 'map') ) {
+      $this->wms7_map();
+    }
+
+    if (isset($_POST['footer'])) {$this->wms7_win_popup();}
+
+    // save index.php
+    if ( isset($_POST['index']) && ($_POST['index'] == 'Save') ) {
+      wms7_save_index_php(sanitize_post( $_POST['content'], 'edit' ));
+    }
+    // save robots.txt
+    if ( isset($_POST['robots']) && ($_POST['robots'] == 'Save') ) {
+      wms7_save_robots_txt(sanitize_post( $_POST['content'], 'edit' ));
+    }
+    // save htaccess
+    if ( isset($_POST['htaccess']) && ($_POST['htaccess'] == 'Save') ) {
+      wms7_save_htaccess(sanitize_post( $_POST['content'], 'edit' ));
+    }
+    // save wp-config
+    if ( isset($_POST['wp_config']) && ($_POST['wp_config'] == 'Save') ) {
+      wms7_save_wp_config(sanitize_post( $_POST['content'], 'edit' ));
+    }
+    // refresh cron table
+    if ( isset($_POST['cron_refresh']) || isset($_POST['cron_delete']) ) {
+      $str_head = 'wp-cron tasks';
+      $this->wms7_wp_cron($str_head);
+    }
+    // refresh stat table
+    if ( isset($_POST['stat_table']) || isset($_POST['stat_graph']) ) {
+      $str_head = 'statistics of visits';
+      $this->wms7_stat($str_head);
+    }
   }
 
   function wms7_settings(){
@@ -1699,7 +1735,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       <?php $message = (isset($message)) ? $message : ''; echo $message; ?>
       <table bgcolor="white" width="100%" cellspacing="2" cellpadding="5" RULES="rows" style="border:1px solid #DDDDDD";>
         <tr>
-          <td height="25"><font size="4"><b><?php __("General settings","wms7") ?></b></font></td>
+          <td height="25"><font size="4"><b><?php _e("General settings of plugin","wms7") ?></b></font></td>
         </tr>
         <tr>
           <td>
@@ -1720,13 +1756,13 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
   }
 
   function wms7_main_settings(){
-      // параметры: $option_group, $wms7_main_settings
+      // parameters: $option_group, $wms7_main_settings
     register_setting( 'option_group', 'wms7_main_settings');
 
-      // параметры: $id, $title, $callback, $page
+      // parameters: $id, $title, $callback, $page
     add_settings_section( 'wms7_section', '', '', 'wms7_settings' );
 
-      // параметры: $id, $title, $callback, $page, $section, $args
+      // parameters: $id, $title, $callback, $page, $section, $args
     add_settings_field('field1', '<label for="wms7_main_settings[log_duration]">'.__('Duration log entries','wms7').':</label>', 
       array($this,'wms7_main_setting_field1'), 'wms7_settings', 'wms7_section' );
 
@@ -1751,7 +1787,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       array($this,'wms7_main_setting_field8'), 'wms7_settings', 'wms7_section' );    
   }
 
-  //Заполняем опцию 1
+  //Filling out an option 1
   function wms7_main_setting_field1(){
     $val = get_option('wms7_main_settings');
     $val = isset($val['log_duration']) ? $val['log_duration'] : '3';
@@ -1765,7 +1801,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     }  
   }
 
-  //Заполняем опцию 2
+  //Filling out an option 2
   function wms7_main_setting_field2(){
     $val = get_option('wms7_main_settings');
     $val = isset($val['ip_excluded']) ? $val['ip_excluded'] : '';
@@ -1774,7 +1810,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     <?php
   }
 
-  //Заполняем опцию 3
+  //Filling out an option 3
   function wms7_main_setting_field3(){
     $val = get_option('wms7_main_settings');
     $val = isset($val['whois_service']) ? $val['whois_service'] : 'none';
@@ -1802,7 +1838,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     echo $output;                  
   }    
 
-  //Заполняем опцию 4
+  //Filling out an option 4
   function wms7_main_setting_field4(){
     $val = get_option('wms7_main_settings');
     $val = isset($val['robots']) ? $val['robots'] : 'Mail.RU_Bot;YandexBot;Googlebot;bingbot;Virusdie;AhrefsBot;YandexMetrika;MJ12bot;BegunAdvertising;Slurp;DotBot;YandexMobileBot;MegaIndex;Google;YandexAccessibilityBot;SemrushBot;Baiduspider;SEOkicks-Robot;BingPreview;rogerbot;Applebot;Qwantify;DuckDuckBot;Cliqzbot;';
@@ -1811,7 +1847,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     <?php
   }
 
-  //Заполняем опцию 5
+  //Filling out an option 5
   function wms7_main_setting_field5(){
     $val = get_option('wms7_main_settings');
     $val = isset($val['robots_reg']) ? $val['robots_reg'] : '';
@@ -1820,7 +1856,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     <?php
   }
 
-  //Заполняем опцию 6
+  //Filling out an option 6
   function wms7_main_setting_field6(){
     $val = get_option('wms7_main_settings');
     $val = isset($val['robots_banned']) ? $val['robots_banned'] : '';
@@ -1829,7 +1865,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     <?php
   }  
 
-  //Заполняем опцию 7
+  //Filling out an option 7
   function wms7_main_setting_field7(){
     $val = get_option('wms7_main_settings');
     $val = isset($val['key_api']) ? $val['key_api'] : '';
@@ -1838,7 +1874,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     <?php
   }
 
-  //Заполняем опцию 8
+  //Filling out an option 8
   function wms7_main_setting_field8(){
     $val = get_option('wms7_main_settings');
 
@@ -1872,7 +1908,8 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     <input id="page_from" name="wms7_main_settings[page_from]" type="checkbox" value="1" 
     <?php checked( $page_from ) ?> /><label for='page_from'><?php _e('Page From','wms7') ?></label>
     <input id="info" name="wms7_main_settings[info]" type="checkbox" value="1" 
-    <?php checked( $info ) ?> /><label for='info'><?php _e('Info','wms7') ?></label>
+    <?php checked( $info ) ?> /><label for='info'><?php _e('Info','wms7') ?></label><br/>
+    <label><?php _e('Select the fields to export to the report file','wms7') ?></label>
     <?php
   }
 
@@ -1916,23 +1953,23 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     $str=__('Duration log entries', 'wms7').': '.$log_duration.' '.__('day','wms7').';&#010;'.
     __('Do not include visits for','wms7').': '.$ip_excluded.';&#010;'.
     __('Visits of robots','wms7').': '.$robots_reg;                   
-    echo '<textarea class ="textarea_panel_info" name="wms1" >'.$str.'</textarea>';              
+    echo '<textarea class ="textarea_panel_info">'.$str.'</textarea>';              
     echo '</fieldset>';
 
     echo '<fieldset class=info_whois title="'.__('History visits', 'wms7').'" ' .$hidden_history_list. ' style="width:'.$width. '" >';
     echo '<legend class=panel_title>'.$whois_service.'</legend>';
-    echo '<textarea class ="textarea_panel_info" name="wms2" >'.$this->wms7_whois_service_info($whois_service).'</textarea>';
+    echo '<textarea class ="textarea_panel_info">'.$this->wms7_whois_service_info($whois_service).'</textarea>';
     echo '</fieldset>';
 
     echo '<fieldset class=info_robots title="'.__('Robots-last day visit', 'wms7').'" ' .$hidden_robots_list. ' style="width:'.$width. '" >';
     echo '<legend class=panel_title>'.__('Robots list', 'wms7').'</legend>';     
-    echo '<textarea class ="textarea_panel_info" name="wms3" >'.$this->wms7_robot_visit_info().'</textarea>';
+    echo '<textarea class ="textarea_panel_info">'.$this->wms7_robot_visit_info().'</textarea>';
     echo '</fieldset>';
 
     echo '<fieldset class=info_blacklist title="'.__('Black list', 'wms7').'" ' .$hidden_black_list. ' style="width:'.$width. '" >';
     echo '<legend class=panel_title>'.__('Black list', 'wms7').'</legend>';
-    echo '<textarea class ="textarea_panel_info" name="wms4" >'.$this->wms7_black_list_info().'</textarea>';
-    echo '</fieldset>';                                  
+    echo '<textarea class ="textarea_panel_info">'.$this->wms7_black_list_info().'</textarea>';
+    echo '</fieldset>';
     echo '</fieldset>';
   }
 

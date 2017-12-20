@@ -1,17 +1,17 @@
 === WatchMan-Site7 ===
 
 Contributors: adminkov
-Plugin Name: WatchMan-Site7
-Plugin URI: https://wordpress.org/plugins/watchman-site7/
-Tags: login, black list, cron, IP, security
-Author: Oleg Klenitskiy
+Plugin Name:  WatchMan-Site7
+Plugin URI:   https://wordpress.org/plugins/watchman-site7/
+Tags:         login, black list, cron, IP, security
+Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
-Donate link: https://www.adminkov.bcr.by/category/wordpress/
+Donate link:  https://www.adminkov.bcr.by/category/wordpress/
 Requires at least: WP 4.5
 Tested up to: WP 4.9
-Stable tag: 2.0
-Version: 2.2.1
-License: GPL3
+Stable tag:   2.0
+Version:      2.2.2
+License:      GPL3
 
 == Description ==
 
@@ -81,6 +81,9 @@ Expanded the functionality of the widget.
 
 = 2.2.1 =
 Automatic screen refresh mode using SSE technology (Server-Sent Events).
+
+= 2.2.2 =
+The code is optimized. The work of modal windows has been improved.
 
 == Frequently Asked Questions ==
 
