@@ -2,14 +2,14 @@
 /*
 Slave module:   sse.php
 Description:    to send a count of records of visitor
-Version:        2.2.1
+Version:        2.2.2
 Author:         Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 */
 
-// указываем, что нам нужен минимум от WP
+// we specify that we need at least WP
 define('SHORTINIT', true);
-// подгружаем среду WordPress
+// loadable environment WordPress
 require_once( $_SERVER['DOCUMENT_ROOT'] . '/wp-load.php' );
 
 function wms7_count_rows () {

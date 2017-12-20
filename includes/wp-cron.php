@@ -2,7 +2,7 @@
 /*
 Slave module: wp-cron.php
 Description:  Lists all events in CRON
-Version:      2.2.1
+Version:      2.2.2
 Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 */
@@ -37,7 +37,7 @@ if( !class_exists( 'wms7_cron' )){
 
 			$arr_cron = $this->wms7_cron_view();
 			$table_row = explode(";", $arr_cron);
-			$str='';
+			$str='<tbody class="tbody">';
 			$i=0;
 			foreach ($table_row as $val) {
 				$i++;
@@ -49,9 +49,10 @@ if( !class_exists( 'wms7_cron' )){
 							$source_task[0] = '';
 							$source_task[1] =  __('press Refresh', 'wms7');
 					}
-					$str=$str.'<tr ><td><input type="checkbox" name="'.$val[0].'" value="cron">'.$i.'</td><td>'.$val[0].'</td><td>'.$val[1].'</td><td>'.$val[2].'</td><td title="'.$source_task[0].'">'.$source_task[1].'</td></tr>';
+					$str=$str.'<tr class="tr"><td class="td" width="9%" style="padding-left:5px;"><input type="checkbox" name="'.$val[0].'" value="cron">'.$i.'</td><td class="td" width="35%">'.$val[0].'</td><td class="td" width="15%">'.$val[1].'</td><td class="td" width="20%">'.$val[2].'</td><td class="td" title="'.$source_task[0].'">'.$source_task[1].'</td></tr>';
 				}
 			}
+			$str = $str.'</tbody>';
 			unset($val);
 			return $str;
 		}
@@ -74,12 +75,12 @@ if( !class_exists( 'wms7_cron' )){
 		}
 
 		function wms7_scan_dir($dirname, $context) {
-     	// Читаем в цикле директорию  
+     	// Read in the cycle directory  
 			foreach (glob($dirname.'/*') as $file) {
 				if(is_file($file)) {
 					$path_parts = pathinfo($file);
 			 		if (isset($path_parts['extension']) && $path_parts['extension'] == 'php') {
-       			// Если файл *.php обрабатываем его содержимое				
+       			// If the file *.php processed content				
 		 				$pos = strpos(file_get_contents($file), $context);
 		  			if ($pos !== false) {	
 		  				$this->file_name[0] = $path_parts['dirname'];
@@ -89,7 +90,7 @@ if( !class_exists( 'wms7_cron' )){
 			 		}
 			 	}else{
 						if (is_dir($file)) {									
-						  // Если директория, вызываем рекурсивно функцию wms7_scan_dir			      		
+						  // If it is a directory, recursively called function wms7_scan_dir			      		
 							$ret = $this->wms7_scan_dir($file, $context);
 							if ($ret!==false) {
 								return $ret;

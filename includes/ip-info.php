@@ -2,7 +2,7 @@
 /*
 Slave module: ip-info7.php
 Description:  Takes the IP of the visitor. Returns an array of information about IP.
-Version:      2.2.1
+Version:      2.2.2
 Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 */
@@ -25,7 +25,7 @@ function wms7_who_is($user_IP,$provider_who_is){
 
 function wms7_IP_API($user_IP){
 	$str_info = array();
-	// Получаем данные от API в JSON - формате
+	//Receiving data from API  JSON - format
   $country_info = json_decode(file_get_contents('http://ip-api.com/json/'. $user_IP), true);
 	//get user country code
 	$country_code = isset($country_info['countryCode']) ? $country_info['countryCode'] : 'AA';
@@ -61,7 +61,7 @@ function wms7_IP_API($user_IP){
 
 function wms7_Geobytes($user_IP){
 	$str_info = array();	
-	// Получаем данные от API в JSON - формате
+	//Receiving data from API  JSON - format
   $country_info = json_decode(file_get_contents('http://gd.geobytes.com/GetCityDetails?fqcn='. $user_IP), true);
 	//get user country code
 	$country_code = isset($country_info['geobytesinternet']) ? $country_info['geobytesinternet'] : 'AA';
@@ -98,7 +98,7 @@ function wms7_Geobytes($user_IP){
 
 function wms7_IP_info($user_IP){
 	$str_info = array();	
-	// Получаем данные от API в JSON - формате
+	//Receiving data from API  JSON - format
 	$country_info = json_decode(file_get_contents("http://ipinfo.io/".$user_IP."/json")); 
 	//get user country code
 	$country_code = isset($country_info->country) ? $country_info->country : 'AA';
@@ -135,10 +135,10 @@ function wms7_IP_info($user_IP){
 
 function wms7_SxGeo($user_IP){
 	$str_info = array();	
-	// Получаем данные от API в JSON - формате
+	//Receiving data from API  JSON - format
 	$geo_api_request = "http://api.sypexgeo.net/json/".$user_IP;
 	$geo_info_json = file_get_contents ($geo_api_request);
-	// Получаем ассоциативный php-массив с результатом запроса к API
+	//Receive associative array with result of request to API
 	$country_info = json_decode($geo_info_json, true);
 
 	//get user country code

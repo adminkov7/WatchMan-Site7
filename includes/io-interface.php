@@ -2,57 +2,57 @@
 /*
 Slave module: io-interface.php
 Description:  Various interface functions processing of external data
-Version:      2.2.1
+Version:      2.2.2
 Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 */
 
 function wms7_save_index_php($file_content){
-//имя файла
+//file name
 	$filename = $_SERVER['DOCUMENT_ROOT'].'/index_new.php';
-// удаляем экранирование
+//remove the shielding
 	$file_content = stripslashes($file_content);
-// Пишем содержимое в файл
+//Write content to a file
 	file_put_contents($filename, $file_content);
-//переименовываем файл
+//rename the file
 	rename($filename, $_SERVER['DOCUMENT_ROOT'].'/index.php');
 }
 
 function wms7_save_robots_txt($file_content){
-//имя файла
+//file name
 	$filename = $_SERVER['DOCUMENT_ROOT'].'/robots_new.txt';
-// удаляем экранирование
+//remove the shielding
 	$file_content = stripslashes($file_content);
-// Пишем содержимое в файл
+//Write content to a file
 	file_put_contents($filename, $file_content);
-//переименовываем файл
+//rename the file
 	rename($filename, $_SERVER['DOCUMENT_ROOT'].'/robots.txt');	
 }
 
 function wms7_save_htaccess($file_content){
-//имя файла
+//file name
 	$filename = $_SERVER['DOCUMENT_ROOT'].'/new.htaccess';
-// удаляем экранирование
+//remove the shielding
 	$file_content = stripslashes($file_content);	
-// Пишем содержимое в файл
+//Write content to a file
 	file_put_contents($filename, $file_content);
-//переименовываем файл
+//rename the file
 	rename($filename, $_SERVER['DOCUMENT_ROOT'].'/.htaccess');	
 }
 
 function wms7_save_wp_config($file_content){
-// имя файла
+//file name
 	$filename = $_SERVER['DOCUMENT_ROOT'].'/wp-configs_new.php';
-// удаляем экранирование
+//remove the shielding
 	$file_content = stripslashes($file_content);	
-// пишем содержимое в файл
+//Write content to a file
 	file_put_contents($filename, $file_content);
-//переименовываем файл
+//rename the file
 	rename($filename, $_SERVER['DOCUMENT_ROOT'].'/wp-config.php');
 }
 
 function wms7_ip_delete_from_file($user_ip){
-//имя файла
+//file name
 // Do not sanitize $filename
 	$filename = $_SERVER['DOCUMENT_ROOT'].'/.htaccess';
 	$file=file($filename);
@@ -73,52 +73,52 @@ function wms7_ip_delete_from_file($user_ip){
 }
 
 function wms7_ip_insert_to_file($user_ip){
-	//имя файла
+	//file name
 	// Do not sanitize $filename
 	$filename = $_SERVER['DOCUMENT_ROOT'].'/.htaccess';	
 
-	// поиск строки в файле
+	//search string in file
 	if (strpos(file_get_contents($filename), $user_ip)) return;
-	// Открываем файл для получения существующего содержимого
+	//Open the file to get existing content
 	$current = file_get_contents($filename);
-	// Добавляем новую строку в файл
+	//Add a new line to the file
 	$current .= "\n"."Deny from ".$user_ip;
-	// Пишем содержимое обратно в файл
+	//Write contents back to file
 	file_put_contents($filename, $current);
 }
 
 function wms7_rewritecond_insert($robot_banned){
-	//имя файла
+	//file name
 	// Do not sanitize $filename
 	$filename = $_SERVER['DOCUMENT_ROOT'].'/.htaccess';
-	// вставка Deny from env = wms7_bad_bot
+	// insert Deny from env = wms7_bad_bot
 	if (strpos(file_get_contents($filename), 'wms7_bad_bot') == false) {
-		// Открываем файл для получения существующего содержимого
+		//Open the file to get existing content
 		$current = file_get_contents($filename);
 		$current = 'Deny from env=wms7_bad_bot'."\n".$current;
-		// Пишем содержимое обратно в файл
+		//Write contents back to file
 		file_put_contents($filename, $current);		
 	}
-	// поиск строки в файле
+	//search string in file
 	if (strpos(file_get_contents($filename), $robot_banned)) return;
-	// Открываем файл для получения существующего содержимого
+	//Open the file to get existing content
 	$current = file_get_contents($filename);
-	// Добавляем новую строку в файл
+	//Add a new line to the file
 	$current = 'SetEnvIfNoCase User-Agent "'
 		.$robot_banned
 		.'" wms7_bad_bot'
 		."\n"
 		.$current;
-	// Пишем содержимое обратно в файл
+	//Write contents back to file
 	file_put_contents($filename, $current);
 }
 
 function wms7_rewritecond_delete(){
-	//имя файла
+	//file name
 	// Do not sanitize $filename
 	$filename = $_SERVER['DOCUMENT_ROOT'].'/.htaccess';
 
-	// Открываем файл для получения существующего содержимого
+	//Open the file to get existing content
 	$current = file($filename);
 
 	foreach($current as $key => $value){
@@ -127,7 +127,7 @@ function wms7_rewritecond_delete(){
 		}
 	}
 	unset($key);
-	// Пишем содержимое обратно в файл
+	//Write contents back to file
 	file_put_contents($filename, $current);
 }
 function wms7_flds_csv() {
