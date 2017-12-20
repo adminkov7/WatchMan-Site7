@@ -1,19 +1,18 @@
 /* for modal window - statistic. Begin*/
 ul.tasks {
-margin: -10px 0 10px 0;
+margin: 0;
 }
 ul.tasks li.tasks {
 display: inline;
 margin-right: 15px;
+margin-left: 15px;
 padding: 3px;
 list-style-type: none;
 }
 li.tasks:before {
 content: "■";
 }
-.tasks {
-margin: -10px 0 0 0;
-}
+
 /* for modal window - statistic. End*/
 /* for filters II level. Begin*/
 .radio + label {
@@ -36,7 +35,6 @@ margin: -10px 0 0 0;
   left: 0;
   width: 12px;
   height: 12px;
-  border: 1px solid #CDD1DA;
   border-radius: 50%;
   background: #FFF;
 }
@@ -61,33 +59,6 @@ margin: -10px 0 0 0;
         0 1px 1px rgba(0,0,0,0.25);
 }
 /* for filters II level. End*/
-.win_modal1 {
-width: 100%;
-background: #fff;
-background: -moz-linear-gradient(#fff, #999);
-background: -webkit-linear-gradient(#fff, #999);
-background: -o-linear-gradient(#fff, #999);
-color: black;
-height:200px;
-left:5px;
-}
-.win_modal2 {
-width: 100%;
-background: #fff;
-background: -moz-linear-gradient(#fff, #999);
-background: -webkit-linear-gradient(#fff, #999);
-background: -o-linear-gradient(#fff, #999);
-color: black;
-height:185px;
-display: block;
-overflow: auto;
-margin: -5px 0 5px 0;
-font-size: 13px;
-}
-.win_modal2 td, .win_modal2 th {
-border: 1px solid black;
-}
-
 /* sse */
 .sse {
   position: relative;
@@ -153,7 +124,6 @@ border: 1px solid black;
   height: 100%;
   width: 60%;
   border-radius: inherit;
-  background: silver;
   position: absolute;
   z-index: 2;
   right: 40%;
@@ -215,16 +185,23 @@ border: 1px solid black;
 }
 
 #doaction, #doaction2{
-border-radius: 10px;	
-background: #a5a39d;
+float:right;
+margin-right:10px;  
 border-radius: 10px;
 background: linear-gradient(#f2f2f2, #ababab);
 }
-
+#btn_bottom{
+float:left;
+margin-right:10px;  
+border-radius: 10px;  
+background: linear-gradient(#f2f2f2, #ababab);
+}
 .panel-info-screen-setting{
 position: absolute;
 top:72px;
 left: 350px;
+border: 1px solid black;
+width: auto;
 }
 .info_panel{
 position: relative;	
@@ -233,9 +210,9 @@ float:left;
 width: 100%;
 height:120px;
 top: 10px;
+border-radius: 10px;
 
 background: #a5a39d;
-border-radius: 10px;
 box-shadow:
 inset 0 3px 8px 1px rgba(0,0,0,0.2),
 0 1px 0 rgba(255,255,255,0.5);
@@ -252,18 +229,13 @@ box-shadow: 0 0 10px rgba(0,0,0,0.3), 0 1px 1px rgba(0,0,0,0.25);
 }
 
 .panel_title {
-
-color: #666;
-color: rgba(0,0,0,0.4);
 font-style: normal;
 font-weight: bold;
 font-family: Helvetica, Arial, sans-serif;
 text-transform: uppercase;
 text-shadow: 0 1px 0 #bcb8ae, 0 -1px 0 #97958e;
-
 background: #82a06a;
 background: linear-gradient(#f2f2f2, #ababab);
-
 color: #82a06a;
 }
 .textarea_panel_info{
@@ -411,114 +383,47 @@ color:blue;
 .wp-list-table .column-page_from { width: 12%; }
 .wp-list-table .column-info { width: 12%; }
 
-/* Styles related to the modal window and content */
-.popup h2 { /* заголовок 2 */
-color: #008000;
-background-color: #D4D0C8;
-text-align: left;
-text-shadow: 0 1px 3px rgba(0,0,0,.3);
-font:22px 'Trebuchet MS', Helvetica, sans-serif;
+/* Styles related to the popup window and content */
+.table {
+  max-width:665px;
+  table-layout:fixed;
+  margin-left:8px;
 }
-/* Basic styles of the blackout layer and modal window  */
-.overlay {
-top: 0;
-right: 0;
-bottom: 0;
-left: 0;
-z-index: 1;
-visibility: hidden;
-/* blur background */
-background-color: rgba(0, 0, 0, 0.7);
-opacity: 0;
-position: fixed;
-cursor: default;
--webkit-transition: opacity .5s;
--moz-transition: opacity .5s;
--ms-transition: opacity .5s;
--o-transition: opacity .5s;
-transition: opacity .5s;
+.th, .td {
+    padding:5px 10px;
+    border:1px solid #000;
 }
-.overlay:target {
-visibility: visible;
-opacity: 1;
+.thead, .tfoot {
+background: #fff;
+background: -moz-linear-gradient(#fff, #999);
+background: -webkit-linear-gradient(#fff, #999);
+background: -o-linear-gradient(#fff, #999);
+    display:table;
+    width:100%;
+    width:calc(100% - 18px);
 }
-.is-image {
-top: 0;
-right: 0;
-bottom: 0;
-left: 0;
-display:block;
-margin: auto;
-width: 100%;
-height: auto;
-/* rounding corners of embedded images */
--webkit-border-radius: 4px;
--moz-border-radius: 4px;
--ms-border-radius: 4px;
-border-radius: 4px;
+.tbody {
+    height:200px;
+    overflow:auto;
+    overflow-x:hidden;
+    display:block;
+    width:100%;
+background: #fff;
+background: -moz-linear-gradient(#fff, #999);
+background: -webkit-linear-gradient(#fff, #999);
+background: -o-linear-gradient(#fff, #999);
+color: black;
 }
-/* built-in m-media elements, frames */
-embed, iframe {
-top: 0;
-right: 0;
-bottom: 0; 
-left: 0; 
-display:block;
-margin: auto;
-min-width: 320px;
-max-width: 600px;
-width: 100%;
+.tbody .tr {
+  display:table;
+  width:100%;
+  table-layout:fixed;
 }
-
-/* modal window styles */
-.popup {
-top: 0;
-right: 0;
-left: 0;
-font-size: 14px;
-z-index: 10;
-display: block;
-visibility: hidden;
-margin: 0 auto;
-width: 90%;
-min-width: 320px;
-max-width: 600px;
-max-height:50%;
-overflow-y: scroll;
-/* fixed positioning, the window is stable when scrolling */
-position: fixed;
-padding: 15px;
-border: 1px solid #383838;
-/* скругление углов */
--webkit-border-radius: 4px;
--moz-border-radius: 4px;
--ms-border-radius: 4px;
-border-radius: 4px;
-background-color: #FFFFFF;
-/* внешняя тень */
--webkit-box-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
--moz-box-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
--ms-box-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
--o-box-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
-box-shadow: 0px 0px 6px rgba(0, 0, 0, 0.8);
-/* full transparency of the window, appearance when clicking */
-opacity: 0;
-/* transition effect (appearance) */
--webkit-transition: all ease .5s;
--moz-transition: all ease .5s;
--ms-transition: all ease .5s;
--o-transition: all ease .5s;
-transition: all ease .5s;
-}
-.overlay:target+.popup {
-top: 20%;
-visibility: visible;
-opacity: 1;
-}
-/* form a close button */
-.close {
+/*------------*/
+/* кнопка закрытия окна */
+.win-popup .btn-close {
 position: absolute;
-top: 38px;
+top: 20px;
 right: 10px;padding: 0;
 width: 20px;
 height: 20px;
@@ -542,20 +447,107 @@ line-height: 20px;
 -o-transition: all ease .8s;
 transition: all ease .8s;
 }
-.close:before {
+.win-popup .btn-close:before {
 color: rgba(255, 255, 255, 0.9);
 content: "X";
 text-shadow: 0 -1px rgba(0, 0, 0, 0.9);
-font-size: 12px;
+font-size: 14px;
 }
-.close:hover {
+.win-popup .btn-close:hover {
 background-color: rgba(252, 20, 0, 0.8);
 -webkit-transform: rotate(360deg);
 -moz-transform: rotate(360deg);
 -ms-transform: rotate(360deg);
 -o-transform: rotate(360deg);
-transform: rotate(360deg);    
+transform: rotate(360deg);  
 }
-.popup p, .popup div {
-margin-bottom: 10px;
+.popup-header {
+padding: 20px 20px 10px 10px;
+}
+.popup-header h2 {
+color: #008000;
+background-color: #D4D0C8;
+text-align: left;
+text-shadow: 0 1px 3px rgba(0,0,0,.3);
+font:22px Arial, Helvetica, sans-serif;
+position: relative;
+margin: 0 0 0 0;
+padding: 0 10px;
+-webkit-border-radius: 10px;
+-moz-border-radius: 10px;
+-ms-border-radius: 10px;
+-o-border-radius: 10px;
+-webkit-box-shadow: 0px 0px 10px #000;
+-moz-box-shadow: 0px 0px 10px #000;
+box-shadow: 0px 0px 10px #000;
+}
+
+.win-popup{
+    width:100%;
+    height:100%;
+    background-color: rgba(0,0,0,0.5);
+    overflow:hidden;
+    position:fixed;
+    top:0;
+    left:0;
+}
+.win-popup .popup-content{
+    width: 680px;
+    height: 400px;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    margin: auto;
+}
+.popup-content{
+position: relative; 
+margin: 0 0 20px 0;
+float:left;
+width: 100%;
+height:120px;
+top: 10px;
+border-radius: 10px;
+
+background: #a5a39d;
+box-shadow:
+inset 0 3px 8px 1px rgba(0,0,0,0.2),
+0 1px 0 rgba(255,255,255,0.5);
+}
+.popup-content:after{
+content: "";
+position: absolute;
+z-index: -1;
+top: -8px; right: -8px; bottom: -8px; left: -8px;
+border-radius: inherit;
+background: #ccc;
+background: linear-gradient(#f2f2f2, #ababab);
+box-shadow: 0 0 10px rgba(0,0,0,0.3), 0 1px 1px rgba(0,0,0,0.25);
+}
+.popup-body{
+  width: 670px;
+  overflow-x: auto;
+  padding:0;
+  margin:0;
+}
+.popup-body textarea{
+position: relative;   
+text-align: left;
+padding: 10px 10px; 
+width: 97%;
+background: #fff;
+background: -moz-linear-gradient(#fff, #999);
+background: -webkit-linear-gradient(#fff, #999);
+background: -o-linear-gradient(#fff, #999);
+color: black;
+margin: 0 10px;
+height:275px;
+border: 1px solid #5A5750;
+}
+.popup-footer{
+position: relative;   
+text-align: left;
+padding: 0;
+margin:10px;
 }
