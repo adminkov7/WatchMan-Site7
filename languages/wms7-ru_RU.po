@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: WatchMan-Site7 v2.2.1\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2017-11-20 11:07:50+0000\n"
+"PO-Revision-Date: 2018-03-06 03:29:33+0000\n"
 "Last-Translator: adminkov <klenitskiy.oleg@mail.ru>\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -620,7 +620,7 @@ msgstr "Повторение"
 #: watchman-site7.php:367
 #@ wms7
 msgid "Next run"
-msgstr "Следующий старт"
+msgstr "Когда"
 
 #: watchman-site7.php:367
 #@ wms7
