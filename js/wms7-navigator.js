@@ -12,9 +12,11 @@ var lon = position.coords.longitude;
 var acc = position.coords.accuracy;
 var xmlhttp = getXmlHttp();
 
+pos = wms7_url.indexOf('//');
+url = wms7_url.substr(pos+2);
 // variable wms7_url from module watchman-site7.php
 // Open an asynchronous connection
-xmlhttp.open('POST', wms7_url, true); 
+xmlhttp.open('POST', url+'watchman-site7.php', true); 
 // Sent encoding
 xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 // Send a POST request
@@ -26,16 +28,18 @@ xmlhttp.send('Lat_wifi_js=' + encodeURIComponent(lat) + '&Lon_wifi_js=' + encode
         	//alert('successCallback'+'\n'+xmlhttp.responseText+'\n'+'readyState='+xmlhttp.readyState+'\n'+'status='+xmlhttp.status);
         }
       }
-      //alert(xmlhttp.responseText+'\n'+'readyState='+xmlhttp.readyState+'\n'+'status='+xmlhttp.status);
+      //alert('successCallback'+'\n'+xmlhttp.responseText+'\n'+'readyState='+xmlhttp.readyState+'\n'+'status='+xmlhttp.status);
     };
 }
 
 function errorCallback(error) {
 var xmlhttp = getXmlHttp();
 
+pos = wms7_url.indexOf('//');
+url = wms7_url.substr(pos+2);
 // variable wms7_url from module watchman-site7.php
 // Open an asynchronous connection
-xmlhttp.open('POST', wms7_url, true);
+xmlhttp.open('POST',  url+'watchman-site7.php', true);
 // Sent encoding
 xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 // Send a POST request
@@ -47,7 +51,7 @@ xmlhttp.send('Err_code_js=' + encodeURIComponent(error.code) + '&Err_msg_js=' + 
         	//alert('errorCallback'+'\n'+xmlhttp.responseText+'\n'+'readyState='+xmlhttp.readyState+'\n'+'status='+xmlhttp.status);
         }
       }
-    //alert(xmlhttp.responseText+'\n'+'readyState='+xmlhttp.readyState+'\n'+'status='+xmlhttp.status);
+    //alert('successCallback'+'\n'+xmlhttp.responseText+'\n'+'readyState='+xmlhttp.readyState+'\n'+'status='+xmlhttp.status);
     };
 }
 

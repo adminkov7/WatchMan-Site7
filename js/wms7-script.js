@@ -1,18 +1,14 @@
-var alert;
-var console;
-var EventSource;
-var wms7_url;
 function wms7_sse() {
   var myElement = document.getElementById('sse');
 
   if (myElement.checked) {
       document.cookie = 'wms7_sse=on';
       if (!! window.EventSource ) {
-          var source = new EventSource ( wms7_url ); 
+          var source = new EventSource ( wms7_url+'includes/sse.php' ); 
 
           source.addEventListener('message', function(e) {
               console.log(e.data);
-              if (get_cookie( 'wms7_count' ) !== e.data) {
+              if (get_cookie('wms7_count') !== e.data) {
                   document.cookie = 'wms7_count=' + e.data;
                   location.replace(window.location.href);
               }
@@ -38,45 +34,83 @@ function wms7_sse() {
 }
 
 function wms7_getUrlVars() {
-    var vars = {};
-    var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
-        vars[key] = value;
-    });
-    return vars;
+  var vars = {};
+  var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
+      vars[key] = value;
+  });
+  return vars;
 }
 
-function get_cookie ( cookie_name ){
-  var results = document.cookie.match ( '(^|;) ?' + cookie_name + '=([^;]*)(;|$)' );
+function get_cookie(cookie_name){
+  var results = document.cookie.match ('(^|;) ?' + cookie_name + '=([^;]*)(;|$)');
  
-  if ( results )
-    return ( decodeURI ( results[2] ) );
-  else
-    return null;
+  if ( results ) {
+      return ( decodeURI ( results[2] ) );
+    }else{
+      return null;
+  }
 }
 
-window.onload = function () {
+window.onload = function() {
   var page = wms7_getUrlVars()['page'];
   var result = wms7_getUrlVars()['result'];
-
+  var checkbox = wms7_getUrlVars()['checkbox'];
   wms7_link_focus(page, result);
-  if (!get_cookie( 'wms7_sse' )){
+  wms7_stat_focus();
+  wms7_mail_focus();
+  if (!get_cookie('wms7_sse')){
     document.cookie = 'wms7_sse=off';
     }else{
-    if (get_cookie( 'wms7_sse' ) == 'on'){
+    if (get_cookie('wms7_sse') == 'on'){
       if (page =='wms7_visitors') {
         var myElement = document.getElementById('sse');
         myElement.checked = true;
         //start SSE
         wms7_sse();
       }
+      if (page =='wms7_settings') {
+        wms7_check_pwd('pwd_box0');
+        wms7_check_pwd('pwd_box1');
+        wms7_check_pwd('pwd_box2');
+        wms7_check_pwd('pwd_box3');
+        wms7_check_pwd('pwd_box4');
+        if (checkbox == 'box0') {
+          myElement = document.getElementById('text_folders_box0');
+          myElement.style.display = 'none';
+        }
+        if (checkbox == 'box1') {
+          myElement = document.getElementById('text_folders_box1');
+          myElement.style.display = 'none';
+        }
+        if (checkbox == 'box2') {
+          myElement = document.getElementById('text_folders_box2');
+          myElement.style.display = 'none';
+        }
+        if (checkbox == 'box3') {
+          myElement = document.getElementById('text_folders_box3');
+          myElement.style.display = 'none';
+        }
+        if (checkbox == 'box4') {
+          myElement = document.getElementById('text_folders_box4');
+          myElement.style.display = 'none';
+        }
+      }
     }
   }
+}
+
+function wms7_popup_loader() {
+  var loader = document.getElementById('win-loader');
+  loader.style.visibility='visible';
 }
 
 function wms7_popup_close() {
   var page = 'page='+wms7_getUrlVars()['page'];
   var paged = 'paged='+wms7_getUrlVars()['paged'];
   var result = wms7_getUrlVars()['result'];
+  //переводим в исходное состояние
+  document.cookie = 'wms7_mail_btn=folder1';
+  //
   if (result) {
     result = 'result='+wms7_getUrlVars()['result']
   }else{
@@ -87,6 +121,40 @@ function wms7_popup_close() {
   url = url + '?'+ page + '&' + result + '&' + paged;
   location.replace(url);
  }
+
+function wms7_stat_focus() {
+  var btn;
+  var myElement;
+  btn = get_cookie('wms7_stat_btn');
+  if (document.getElementsByName('radio_stat')){
+    switch (btn) {
+      case 'visits' : {myElement = document.getElementById('visits'); break;}
+      case 'unlogged' : {myElement = document.getElementById('unlogged'); break;}
+      case 'success' : {myElement = document.getElementById('success'); break;}
+      case 'failed' : {myElement = document.getElementById('failed'); break;}
+      case 'robots' : {myElement = document.getElementById('robots'); break;}
+      case 'blacklist' : {myElement = document.getElementById('blacklist'); break;}
+    }
+      if (myElement) {myElement.checked = true;}
+  }    
+}
+
+function wms7_mail_focus() {
+  var myElement;
+  var btn = get_cookie('wms7_mail_btn');
+  if (document.getElementsByName('radio_mail')){ 
+    switch (btn) {
+      case 'folder1' : {myElement = document.getElementById('folder1'); break;}
+      case 'folder2' : {myElement = document.getElementById('folder2'); break;}
+      case 'folder3' : {myElement = document.getElementById('folder3'); break;}
+      case 'folder4' : {myElement = document.getElementById('folder4'); break;}
+    }
+    if (myElement) {
+      myElement.checked = true;
+      myElement.selected = true;
+    }
+  }
+}
 
 function wms7_link_focus(page, result) {
   var myElement;
@@ -112,8 +180,33 @@ function visit(visit) {
     case 'radio-3': {location.replace(url+'&result=1'); break;}
     case 'radio-4': {location.replace(url+'&result=0'); break;}
     case 'radio-5': {location.replace(url+'&result=3'); break;}    
-    case 'radio-6': {location.replace(url+'&result=4');}
+    case 'radio-6': {location.replace(url+'&result=4'); break;}
+    case undefined : {location.replace(url+'&result=5');}
   }
+}
+
+function mailbox_selector(folder) {
+  switch (folder) {
+    case 'folder1': {document.cookie = 'wms7_mail_btn=folder1';break;}
+    case 'folder2': {document.cookie = 'wms7_mail_btn=folder2';break;}
+    case 'folder3': {document.cookie = 'wms7_mail_btn=folder3';break;}
+    case 'folder4': {document.cookie = 'wms7_mail_btn=folder4';break;}
+  }
+  var page = 'page='+wms7_getUrlVars()['page'];
+  var paged = 'paged='+wms7_getUrlVars()['paged'];
+  var mailbox = 'mailbox='+get_cookie( 'wms7_mail_btn' );
+  var result = wms7_getUrlVars()['result'];
+  if (result) {
+    result = 'result='+wms7_getUrlVars()['result'];
+  }else{
+    result='result=5';
+  }
+  var stateParameters = { page: page, result: result, paged: paged };
+  var url = window.location.href.slice(0,window.location.href.indexOf('\?'));
+  url = url + '?'+ page + '&' + result + '&' + paged + '&' + mailbox;
+
+  history.pushState(stateParameters, "WatchMan-Site7", url);
+  window.location.replace(url);
 }
 
 function wms7_initMap(Login, Lat, Lon, Acc, Err, Msg) {
@@ -143,12 +236,12 @@ function wms7_initMap(Login, Lat, Lon, Acc, Err, Msg) {
 	function() {
 		infowindow.open(map,marker);
 	});
-	document.getElementById('lat').textContent = 'Latitude: '+ Lat+'°';
-	document.getElementById('lon').textContent = 'Longitude: ' + Lon+'°';
-	document.getElementById('acc').textContent = 'Accuracy: ' + Acc+'m';
-	document.getElementById('err').textContent = 'Error: (' + Err + ') ' + Msg;
+  	document.getElementById('lat').textContent = 'Latitude: '+ Lat+'°';
+  	document.getElementById('lon').textContent = 'Longitude: ' + Lon+'°';
+  	document.getElementById('acc').textContent = 'Accuracy: ' + Acc+'m';
+  	document.getElementById('err').textContent = 'Error: (' + Err + ') ' + Msg;
 
-  document.getElementById('get_location').addEventListener('click',
+    document.getElementById('get_location').addEventListener('click',
   	geocodeLatLng(geocoder, map, infowindow, Lat, Lon ,marker)
   );	
 }
@@ -172,7 +265,92 @@ function geocodeLatLng(geocoder, map, infowindow, myLat, myLon, marker) {
   });
 }
 
-function wms7_stat_graph(result) {
+function wms7_stat_btn(){
+  myElement = document.getElementsByName('radio_stat');
 
-alert(result);
+  for (i = 0; i<myElement.length; i++) {
+    if (myElement[i].checked) break;
+  }
+  btn=myElement[i].value;
+  document.cookie = 'wms7_stat_btn='+btn;
+}
+
+function wms7_quit_btn(){
+  var page = 'page='+wms7_getUrlVars()['page'];
+  var paged = 'paged='+wms7_getUrlVars()['paged'];
+  var mailbox = 'mailbox='+get_cookie( 'wms7_mail_btn' );
+  var result = wms7_getUrlVars()['result'];
+  if (result) {
+    result = 'result='+wms7_getUrlVars()['result'];
+  }else{
+    result='result=5';
+  }
+  var stateParameters = { page: page, result: result, paged: paged };
+  var url = window.location.href.slice(0,window.location.href.indexOf('\?'));
+  url = url + '?'+ page + '&' + result + '&' + paged + '&' + mailbox;
+
+  history.pushState(stateParameters, "WatchMan-Site7", url);
+}
+
+function wms7_check_boxes(id){
+  var page = 'page='+wms7_getUrlVars()['page'];
+  var paged = 'paged='+wms7_getUrlVars()['paged'];
+  var checkbox = 'checkbox='+id;
+  var result = wms7_getUrlVars()['result'];
+  if (result) {
+    result = 'result='+wms7_getUrlVars()['result'];
+  }else{
+    result='result=5';
+  }
+  var stateParameters = { page: page, result: result, paged: paged };
+  var url = window.location.href.slice(0,window.location.href.indexOf('\?'));
+  url = url + '?'+ page + '&' + result + '&' + paged + '&' + checkbox;
+
+  history.pushState(stateParameters, "WatchMan-Site7", url);
+  window.location.replace(url);
+}
+
+function wms7_check_pwd(id){
+  myElementChk = document.getElementById(id);
+  switch (id) {
+    case 'pwd_box0': {myElementPwd = document.getElementById('mail_box_pwd_box0'); break;}
+    case 'pwd_box1': {myElementPwd = document.getElementById('mail_box_pwd_box1'); break;}
+    case 'pwd_box2': {myElementPwd = document.getElementById('mail_box_pwd_box2'); break;}
+    case 'pwd_box3': {myElementPwd = document.getElementById('mail_box_pwd_box3'); break;}
+    case 'pwd_box4': {myElementPwd = document.getElementById('mail_box_pwd_box4'); break;}    
+  }
+  if (myElementChk.checked) {
+      myElementPwd.setAttribute('type', 'password');
+    }else{    
+      myElementPwd.setAttribute('type', 'text');
+  }
+}
+
+function wms7_mail_folders(box,id_tbl,id_textarea,id_textarea_alt){
+  myElement1 = document.getElementById(id_tbl);
+  myElement1.style.display = 'none';
+  myElement2 = document.getElementById(id_textarea);
+  myElement2.style.display = 'block';
+  myElement3 = document.getElementById(id_textarea_alt);
+  myElement3.style.display = 'none';
+
+  mylist = '';
+  mylist_alt = '';
+  mytr = myElement1.getElementsByTagName('tr');
+  mychk = document.getElementsByName(box+'_chk');
+  for (var i = 0; i < mychk.length; i++) {
+    element=mychk[i];
+    if (element.checked) {
+      id = element.id;
+      for (var j = 0; j < mytr.length; j++) {
+        var row = mytr[j];
+        if (row.cells[0].innerHTML.indexOf(id) > '0') {
+          mylist = mylist + row.cells[1].innerHTML + ';' + '\n';
+          mylist_alt = mylist_alt + row.cells[1].getAttribute('data') + ';' + '\n';
+        }  
+      }
+    }
+  }  
+  myElement2.innerHTML = mylist;
+  myElement3.innerHTML = mylist_alt;
 }
