@@ -403,9 +403,10 @@ background: -o-linear-gradient(#fff, #999);
     width:calc(100% - 18px);
 }
 .tbody {
-    height:200px;
-    overflow:auto;
-    overflow-x:hidden;
+    height:180px;
+    max-height:180px;
+    overflow-y: scroll;
+    overflow-x: auto;
     display:block;
     width:100%;
 background: #fff;
@@ -420,6 +421,52 @@ color: black;
   table-layout:fixed;
 }
 /*------------*/
+.form-table .th_box {
+  padding:0;
+}
+.form-table .td_box {
+  padding:0 0 3px 3px;
+}
+.table_box {
+  max-width:350px;
+  table-layout:fixed;
+  margin-left:8px;
+  margin:0;
+  padding:0;
+}
+.th_box, .td_box {
+    padding:5px 10px;
+    border:1px solid #000;
+}
+.thead_box, .tfoot_box {
+background: #fff;
+background: -moz-linear-gradient(#fff, #999);
+background: -webkit-linear-gradient(#fff, #999);
+background: -o-linear-gradient(#fff, #999);
+    display:table;
+    width:100%;
+    width:calc(100% - 18px);
+}
+.tbody_box {
+  height:130px;
+  max-height:180px;
+  width:350px;
+
+    overflow-y: scroll;
+    overflow-x: auto;
+    display:block;
+
+background: #fff;
+background: -moz-linear-gradient(#fff, #999);
+background: -webkit-linear-gradient(#fff, #999);
+background: -o-linear-gradient(#fff, #999);
+color: black;
+}
+.tbody_box .tr_box {
+  display:table;
+  width:100%;
+  table-layout:fixed;
+}
 /* кнопка закрытия окна */
 .win-popup .btn-close {
 position: absolute;
@@ -542,12 +589,75 @@ background: -webkit-linear-gradient(#fff, #999);
 background: -o-linear-gradient(#fff, #999);
 color: black;
 margin: 0 10px;
-height:275px;
+height:285px;
 border: 1px solid #5A5750;
+-webkit-box-shadow: 0px 0px 10px #000;
+-moz-box-shadow: 0px 0px 10px #000;
+box-shadow: 0px 0px 10px #000;
+}
+.popup-body-mail textarea{
+position: relative;   
+text-align: left;
+padding: 10px 10px; 
+width: 97%;
+background: #fff;
+background: -moz-linear-gradient(#fff, #999);
+background: -webkit-linear-gradient(#fff, #999);
+background: -o-linear-gradient(#fff, #999);
+color: black;
+margin: 10px 10px 0 10px;
+height:220px;
+border: 1px solid #5A5750;
+-webkit-box-shadow: 0px 0px 10px #000;
+-moz-box-shadow: 0px 0px 10px #000;
+box-shadow: 0px 0px 10px #000;
+}
+#map{
+-webkit-box-shadow: 0px 0px 10px #000;
+-moz-box-shadow: 0px 0px 10px #000;
+box-shadow: 0px 0px 10px #000;
 }
 .popup-footer{
 position: relative;   
 text-align: left;
 padding: 0;
 margin:10px;
+}
+/*loader*/
+.loader{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:75px;
+  height:75px;
+  border: 10px solid white;
+  border-radius:50%;
+  border-top-color: blue;
+
+  -webkit-transform: translate(-50%, -50%);
+  -moz-transform: translate(-50%, -50%);
+  -ms-transform: translate(-50%, -50%);
+  -o-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  animation: 1s spin infinite linear;
+
+  transition: 1s all;
+  opacity: 1;
+  visibility: hidden;
+}
+@keyframes spin{
+  from{
+  -webkit-transform: translate(-50%, -50%) rotate(0deg);
+  -moz-transform: translate(-50%, -50%) rotate(0deg);
+  -ms-transform: translate(-50%, -50%) rotate(0deg);
+  -o-transform: translate(-50%, -50%) rotate(0deg);
+  transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to{
+  -webkit-transform: translate(-50%, -50%) rotate(360deg);
+  -moz-transform: translate(-50%, -50%) rotate(360deg);
+  -ms-transform: translate(-50%, -50%) rotate(360deg);
+  -o-transform: translate(-50%, -50%) rotate(360deg);
+  transform: translate(-50%, -50%) rotate(360deg);
+  }
 }
