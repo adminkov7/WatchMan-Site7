@@ -6,7 +6,7 @@ Description:  This plugin is designed for site administrators and is used to con
 Author:       Oleg Klenitskiy
 Author URI:   https://www.adminkov.bcr.by/category/wordpress/
 Contributors: adminkov
-Version:      2.2.2
+Version:      2.2.3
 License:      GPL2
 License URI:  https://www.gnu.org/licenses/gpl-2.0.html
 Domain Path:  /languages
@@ -17,7 +17,7 @@ Text Domain:  wms7
 if( !class_exists( 'WP_List_Table' ) ) {
     require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
 }
-//
+require_once(__DIR__ . '/includes/mail.php');
 require_once(__DIR__ . '/includes/statistic.php');
 require_once(__DIR__ . '/includes/wp-cron.php');
 require_once(__DIR__ . '/includes/ip-info.php');
@@ -30,28 +30,27 @@ function wms7_navigator_load_script() {
   if (strpos($_SERVER['REQUEST_URI'], 'wms7') == false){
     wp_enqueue_script( 'wms7-navigator', plugins_url('/js/wms7-navigator.js', __FILE__ ), array(), NULL, false);
     //for use module wms7-navigator.js
-    $wms7_plugin_url = plugin_dir_url( __FILE__ ).'watchman-site7';
+    $wms7_url = plugin_dir_url( __FILE__ );
     ?>
     <script>
-    var wms7_url = '<?php echo($wms7_plugin_url); ?>';
+    var wms7_url = '<?php echo($wms7_url); ?>';
     </script>
     <?php
     //
   }
 }
 add_action('wp_enqueue_scripts', 'wms7_navigator_load_script');
-//Register wms7-script.js, vis.js, wms7-style.css
+//Register wms7-script.js, wms7-style.css
 function wms7_load_css_js() {
   if (strpos($_SERVER['REQUEST_URI'], 'wms7') == true){
-    wp_enqueue_script( 'vis', plugins_url('/js/vis.js', __FILE__ ), array('jquery'), NULL, false);
-    wp_enqueue_script( 'wms7-script', plugins_url('/js/wms7-script.js', __FILE__ ), array('vis'), NULL, false);
-    wp_enqueue_style( 'wms7', plugins_url('/css/wms7-style.css', __FILE__ ), false, NULL, 'all');
+    wp_enqueue_script( 'wms7-script', plugins_url('/js/wms7-script.js', __FILE__ ), array(), NULL, false);
+    wp_enqueue_style( 'wms7', plugins_url('/css/wms7-style.css', __FILE__ ), false, NULL, 'all'); 
 
     //for use module wms7-script.js
-    $wms7_sse_url = plugin_dir_url( __FILE__ ).'includes/sse.php';
+    $wms7_url = plugin_dir_url( __FILE__ );
     ?>
     <script>
-    var wms7_url = '<?php echo($wms7_sse_url); ?>';
+    var wms7_url = '<?php echo($wms7_url); ?>';
     </script>
     <?php
     //
@@ -65,9 +64,7 @@ add_action('admin_enqueue_scripts', 'wms7_load_css_js');
 
 class wms7_List_Table extends WP_List_Table {
   private $wms7Data;
-  /**
-   * [REQUIRED] You must declare constructor and give some basic params
-   */
+
   function __construct() {
     global $wms7; 
       
@@ -144,10 +141,10 @@ class wms7_List_Table extends WP_List_Table {
       <label for="radio-2" '.$hidden_unlogged_link.'>'.__('Unlogged','wms7').'('. $this->wms7_get('visitsTotal').')</label>';
 
       echo '<input onclick=visit(id) class="radio" id="radio-3" name="radio_visits" type="radio" value="1" '.$hidden_successful_link.'>
-      <label for="radio-3" '.$hidden_successful_link.'>'.__('Success log','wms7').'('. $this->wms7_get('successTotal').')</label>';
+      <label for="radio-3" '.$hidden_successful_link.'>'.__('Success','wms7').'('. $this->wms7_get('successTotal').')</label>';
   
       echo '<input onclick=visit(id) class="radio" id="radio-4" name="radio_visits" type="radio" value="1" '.$hidden_failed_link.'>
-      <label for="radio-4" '.$hidden_failed_link.'>'.__('Failed log','wms7').'('. $this->wms7_get('failedTotal').')</label>';
+      <label for="radio-4" '.$hidden_failed_link.'>'.__('Failed','wms7').'('. $this->wms7_get('failedTotal').')</label>';
  
       echo '<input onclick=visit(id) class="radio" id="radio-5" name="radio_visits" type="radio" value="1" '.$hidden_robots_link.'>
       <label for="radio-5" '.$hidden_robots_link.'>'.__('Robots','wms7').'('. $this->wms7_get('robotsTotal').')</label>';
@@ -167,43 +164,49 @@ class wms7_List_Table extends WP_List_Table {
       $htaccess = isset($val['htaccess']) ? $val['htaccess'] : 0;
       $wp_config_php = isset($val['wp_config_php']) ? $val['wp_config_php'] : 0;
       $wp_cron = isset($val['wp_cron']) ? $val['wp_cron'] : 0;
-      $statistic = isset($val['statistic']) ? $val['statistic'] : 0;      
+      $statistic = isset($val['statistic']) ? $val['statistic'] : 0;
+      $mail = isset($val['mail']) ? $val['mail'] : 0;
 
       $hidden_index_php = ($index_php == '1') ? "" : 'style="display:none"';
       $hidden_robots_txt = ($robots_txt =='1') ? "" : 'style="display:none"';
       $hidden_htaccess = ($htaccess =='1') ? "" : 'style="display:none"';
       $hidden_wp_config_php = ($wp_config_php =='1') ? "" : 'style="display:none"';
       $hidden_wp_cron = ($wp_cron =='1') ? "" : 'style="display:none"';
-      $hidden_statistic = ($statistic =='1') ? "" : 'style="display:none"';      
+      $hidden_statistic = ($statistic =='1') ? "" : 'style="display:none"';
+      $hidden_mail = ($mail =='1') ? "" : 'style="display:none"';
 
       //The code adds the buttons after the table
       $btn0 = '<form id="заглушка" method="POST">
               </form>';
       echo ($btn0);
       $btn1 = '<form id="win1" method="POST">
-              <input type="submit" value="index" id="btn_bottom" class="button"  name="footer" '.$hidden_index_php.'>
+              <input type="submit" value="index" id="btn_bottom" class="button"  name="footer" '.$hidden_index_php.' title="'.__('index.php of site', 'wms7').'" style="width:80px;" >
               </form>';
       echo ($btn1);
       $btn2 = '<form id="win2" method="POST">
-              <input type="submit" value="robots" id="btn_bottom" class="button"  name="footer" '.$hidden_robots_txt.'>
+              <input type="submit" value="robots" id="btn_bottom" class="button"  name="footer" '.$hidden_robots_txt.' title="'.__('robots.txt of site', 'wms7').'" style="width:80px;" >
               </form>';
       echo ($btn2);
       $btn3 = '<form id="win3" method="POST">
-              <input type="submit" value="htaccess" id="btn_bottom" class="button"  name="footer" '.$hidden_htaccess.'>
+              <input type="submit" value="htaccess" id="btn_bottom" class="button"  name="footer" '.$hidden_htaccess.' title="'.__('.htaccess of site', 'wms7').'" style="width:80px;" >
               </form>';
       echo ($btn3);
       $btn4 = '<form id="win4" method="POST">
-              <input type="submit" value="wp_config" id="btn_bottom" class="button"  name="footer" '.$hidden_wp_config_php.'>
+              <input type="submit" value="wp_config" id="btn_bottom" class="button"  name="footer" '.$hidden_wp_config_php.' title="'.__('wp-config.php of site', 'wms7').'" style="width:80px;" >
               </form>';
       echo ($btn4);
       $btn5 = '<form id="win5" method="POST">
-              <input type="submit" value="wp_cron" id="btn_bottom" class="button"  name="footer" '.$hidden_wp_cron.'>
+              <input type="submit" value="wp_cron" id="btn_bottom" class="button"  name="footer" '.$hidden_wp_cron.'  title="'.__('wp-cron events of site', 'wms7').'" style="width:80px;" >
               </form>';
       echo ($btn5);
       $btn6 = '<form id="win6" method="POST">
-              <input type="submit" value="statistic" id="btn_bottom" class="button"  name="footer" '.$hidden_statistic.'>
+              <input type="submit" value="statistic" id="btn_bottom" class="button"  name="footer" '.$hidden_statistic.' title="'.__('statistic of visits to site', 'wms7').'" style="width:80px;" >
               </form>';
       echo ($btn6);
+      $btn7 = '<form id="win7" method="POST">
+              <input type="submit" value="sma" id="btn_bottom" class="button"  name="footer" '.$hidden_mail.' title="'.__('simple mail agent', 'wms7').'" style="width:80px;" >
+              </form>';
+      echo ($btn7);
     }
   }
 
@@ -373,9 +376,35 @@ class wms7_List_Table extends WP_List_Table {
   }
   //Standart function: WP_List_Table
   function process_bulk_action() {
-
     global $wpdb;
     $table_name = $wpdb->prefix . 'watchman_site';
+
+    if (get_option('wms7_current_page') == $this->get_pagenum()) {
+        //do not sanitize_text_field $_REQUEST['id']
+        if (isset($_REQUEST['id'])) {update_option('wms7_id',$_REQUEST['id']);}
+
+        if (isset($_REQUEST['action']) || isset($_REQUEST['action2'])) {
+          if ($_REQUEST['action'] == -1) {
+            update_option('wms7_action',sanitize_text_field($_REQUEST['action2']));
+          }else{
+            update_option('wms7_action',sanitize_text_field($_REQUEST['action']));        
+          }
+        }
+      }else{
+        delete_option('wms7_id');
+        delete_option('wms7_id_del'); //for action - delete
+        delete_option('wms7_action');
+
+        if (isset($_REQUEST["action"])) {
+          // to update the url of main plugin page
+          $URL = $this->wms7_get_current_url().'&paged='.$this->get_pagenum();
+          echo '<script>location.replace("'.$URL.'");</script>';
+        }
+    }
+
+    if ('export' === $this->current_action()) {
+      wms7_output_csv();
+    }
 
     if ('delete' === $this->current_action()) {
 
@@ -384,7 +413,7 @@ class wms7_List_Table extends WP_List_Table {
       
       $ids = sanitize_text_field($ids);
       if ($ids !== '') {
-        $wpdb->query( $wpdb->prepare(
+        $wms7_id_del = $wpdb->query( $wpdb->prepare(
           "
           DELETE 
           FROM $table_name 
@@ -392,6 +421,7 @@ class wms7_List_Table extends WP_List_Table {
           ",
           ''
         ));
+        update_option('wms7_id_del',$wms7_id_del);
       }
     }
 
@@ -419,28 +449,27 @@ class wms7_List_Table extends WP_List_Table {
   //Standart function: WP_List_Table
   function prepare_items() {
     global $wpdb, $wms7;
-    $table_name = $wpdb->prefix . 'watchman_site'; // do not forget about tables prefix
+
+    $this->process_bulk_action();
+
+    $table_name = $wpdb->prefix . 'watchman_site';
 
     $where = $wms7->wms7_make_where_query();
 
-    $where6 = $where5 = $where4 = $where3 = $where2 = $where1 = $where;
+    $where6 = $where5 = $where4 = $where3 = $where2 = $where;
 
-    unset($where1['result']);
     unset($where2['result']);
     unset($where3['result']);
     unset($where4['result']);
     unset($where5['result']);
     unset($where6['result']);
 
-    $where2['login_result'] = "login_result = '1'"; // success visit
-    $where3['login_result'] = "login_result = '0'"; // failed visit
-    $where4['login_result'] = "login_result = '2'"; // simple visit
-    $where5['login_result'] = "login_result = '3'"; // robots visit
+    $where2['login_result'] = "login_result = '1'"; // success visits
+    $where3['login_result'] = "login_result = '0'"; // failed visits
+    $where4['login_result'] = "login_result = '2'"; // simple visits
+    $where5['login_result'] = "login_result = '3'"; // robots visits
     $where6['login_result'] = "black_list <> ''";   // black list
 
-    if(is_array($where1) && !empty($where1)){
-      $where1 = 'WHERE ' . implode(' AND ', $where1);
-      }else{$where1 = '';}
     if(is_array($where2) && !empty($where2)){
       $where2 = 'WHERE ' . implode(' AND ', $where2);
       }else{$where2 = '';}
@@ -457,7 +486,7 @@ class wms7_List_Table extends WP_List_Table {
       $where6 = 'WHERE ' . implode(' AND ', $where6);
       }else{$where6 = '';}
 
-    $sql1 = "SELECT count(*) FROM $table_name ".$where1;
+    $sql1 = "SELECT count(*) FROM $table_name ";
     $allTotal = $wpdb->get_var($sql1);
     $sql2 = "SELECT count(*) FROM $table_name ".$where2;
     $successTotal = $wpdb->get_var($sql2);
@@ -475,28 +504,15 @@ class wms7_List_Table extends WP_List_Table {
     $this->wms7_set('failedTotal', $failedTotal);
     $this->wms7_set('visitsTotal', $visitsTotal);
     $this->wms7_set('robotsTotal', $robotsTotal);
-    $this->wms7_set('blacklistTotal', $blacklistTotal);
+    $this->wms7_set('blacklistTotal', $blacklistTotal);   
+   //save the current parameters for popup windows statistic
+    update_option( 'wms7_current_param', array(	'allTotal'=>$allTotal,
+    																						'visitsTotal'=> $visitsTotal,
+    																						'successTotal'=>$successTotal,
+    																						'failedTotal'=> $failedTotal,
+    																						'robotsTotal'=> $robotsTotal,
+    																						'blacklistTotal'=> $blacklistTotal) ); 
 
-    //to hide the $message in the function wms7_visit_manager()
-    if (get_option('wms7_current_page') != $this->get_pagenum()) {delete_option('wms7_action');}
-    //save the current page number of the table in wp_options
-    update_option( 'wms7_current_page', $this->get_pagenum() );
-
-    //to hide the $message in the function wms7_visit_manager()
-    if (isset($_REQUEST['action']) || isset($_REQUEST['action2'])) {
-      //do not sanitize_text_field $_REQUEST['id']
-      if (isset($_REQUEST['id'])) update_option('wms7_id',($_REQUEST['id']));
-      if ($_REQUEST['action'] == -1) {
-        update_option('wms7_action',sanitize_text_field($_REQUEST['action2']));
-      }else{
-        update_option('wms7_action',sanitize_text_field($_REQUEST['action']));        
-      }
-
-      // if ($_REQUEST['action'] == 'map') {
-      //   $URL = menu_page_url('wms7_visitors', false).'&paged='.get_option('wms7_current_page');
-      //   echo '<script>location.replace("'.$URL.'");</script>';
-      // }
-    }
     $screen = get_current_screen();
     $per_page_option = 'wms7_visitors_per_page';
     $per_page = get_option($per_page_option, 10);
@@ -508,8 +524,6 @@ class wms7_List_Table extends WP_List_Table {
     $sortable = $this->get_sortable_columns();
 
     $this->_column_headers = array($columns, $hidden, $sortable);
-
-    $this->process_bulk_action();
 
     $orderby = (isset($_REQUEST['orderby']) && in_array($_REQUEST['orderby'], array_keys($this->get_sortable_columns()))) ? $_REQUEST['orderby'] : 'id';
     $order = (isset($_REQUEST['order']) && in_array($_REQUEST['order'], array('asc', 'desc'))) ? $_REQUEST['order'] : 'desc';
@@ -536,6 +550,9 @@ class wms7_List_Table extends WP_List_Table {
       $total_items = $wpdb->get_var("SELECT COUNT(*) FROM $wms7->table {$where}");
     }
 
+   //save the current page number of the table in wp_options
+    update_option( 'wms7_current_page', $this->get_pagenum() );   
+
     $this->set_pagination_args(array(
         'total_items' => $total_items, // total items defined above
         'per_page' => $per_page, // per page constant defined at top of method
@@ -554,18 +571,18 @@ if( !class_exists( 'WatchManSite7' ) ) {
   function __construct() {
     global $wpdb;
 
-    $this->table = $wpdb->prefix . $this->table_name; 
+    $this->table = $wpdb->prefix . $this->table_name;
 
     add_action('init', array($this, 'wms7_languages'));
     add_action('init', array($this, 'wms7_init_visit_actions'));
-    add_action('init', array($this, 'wms7_lat_lon_save'));    
+    add_action('init', array($this, 'wms7_lat_lon_save'));
     add_action('admin_init', array($this, 'wms7_main_settings'));
-    add_action('admin_init','wms7_output_csv');
     add_action('admin_menu', array($this, 'wms7_admin_menu'));
     add_action('admin_head', array($this, 'wms7_screen_options'));
     add_action('plugins_loaded', array($this, 'wms7_load_locale'), 10 );
     add_filter('screen_settings', array($this, 'wms7_screen_settings_add'), 10, 2);
     add_filter('set-screen-option', array($this, 'wms7_screen_settings_save'), 11, 3);
+
     add_action( 'wms7_truncate', array($this, 'wms7_truncate_log'));
     if (!wp_next_scheduled('wms7_truncate')) {wp_schedule_event(time(), 'daily', 'wms7_truncate');}
     add_action( 'wms7_htaccess', array($this, 'wms7_ctrl_htaccess'));
@@ -629,9 +646,13 @@ if( !class_exists( 'WatchManSite7' ) ) {
     if ( stristr($_SERVER['REQUEST_URI'], 'wp-admin')) {return;}
     
     if (isset($_POST['Err_code_js'])) $Err_code = sanitize_text_field($_POST['Err_code_js']);
-    if (isset($_POST['Err_msg_js'])) $Err_msg =  sanitize_text_field($_POST['Err_msg_js']);
-    if (isset($_POST['Lat_wifi_js'])) $Lat_wifi =  sanitize_text_field($_POST['Lat_wifi_js']);
-    if (isset($_POST['Lon_wifi_js'])) $Lon_wifi =  sanitize_text_field($_POST['Lon_wifi_js']);
+    if (isset($_POST['Err_msg_js'])) {$Err_msg =  sanitize_text_field($_POST['Err_msg_js']);
+      }else{
+      $Err_msg ='(ok)';
+    }
+     $Err_msg = str_replace("\'", "", $Err_msg);
+    if (isset($_POST['Lat_wifi_js'])) $Lat_wifi = sanitize_text_field($_POST['Lat_wifi_js']);
+    if (isset($_POST['Lon_wifi_js'])) $Lon_wifi = sanitize_text_field($_POST['Lon_wifi_js']);
     if (isset($_POST['Acc_wifi_js'])) $Acc_wifi = sanitize_text_field($_POST['Acc_wifi_js']);
 
     if ( isset($Lat_wifi) && isset($Lon_wifi) && isset($Acc_wifi) ) {
@@ -905,7 +926,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       $where['filter_time'] = "YEAR(time_visit) = {$year} AND MONTH(time_visit) = {$month}";
     }
 
-    if( isset($_GET['result']) && '5' != $_GET['result'] ){
+    if( isset($_GET['result']) && ('5' !== $_GET['result']) ){
       $result = sanitize_text_field( $_GET['result'] );
       if ($result == 4) {
         $where['result'] = "black_list <> ''";
@@ -987,8 +1008,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
         '<p><strong>' . __( 'Additional information:', 'wms7' ) . '</strong></p>' .
         '<p><a href="https://wordpress.org/plugins/watchman-site7/" target="_blank">' .  __( 'page the Wordpress repository','wms7') . '</a></p>'.
         '<p><a href="https://github.com/adminkov7/WatchMan-Site7" target="_blank">' .  __( 'page the GitHub repository','wms7') . '</a></p>'.        
-        '<p><a href="https://www.adminkov.bcr.by/category/wordpress/" target="_blank">' .  __( 'home page support plugin','wms7') . '</a></p>'.
-        '<p><a href="https://www.adminkov.bcr.by/chat/" target="_blank">' .  __( 'video communication with the developer of the plugin','wms7') . '</a></p>'
+        '<p><a href="https://www.adminkov.bcr.by/category/wordpress/" target="_blank">' .  __( 'home page support plugin','wms7') . '</a></p>'
         );
     } 
     if( 'wms7_settings' == $page ){
@@ -1018,7 +1038,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       get_current_screen() -> add_help_tab(array(
         'id'        => 'wms7-tab-4',
         'title'     => __('4.field: WHO-IS service', 'wms7'),
-        'content'   => __('Presented to choose one of the 4 WHO-is providers. Information about the site visitor is provided in the form: country code of the visitor, country name of visitor, city visitor. The quality and reliability of the information provided varies from region to region.<br /><br />Information provided to who-is service provider in the column of User IP', 'wms7').'<br /><img src='.$img4.' style="float: left;">',
+        'content'   => __('Preoutboxed to choose one of the 4 WHO-is providers. Information about the site visitor is provided in the form: country code of the visitor, country name of visitor, city visitor. The quality and reliability of the information provided varies from region to region.<br /><br />Information provided to who-is service provider in the column of User IP', 'wms7').'<br /><img src='.$img4.' style="float: left;">',
         ));
       get_current_screen() -> add_help_tab(array(
         'id'        => 'wms7-tab-5',
@@ -1125,6 +1145,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       $wp_config_php = checked(1,isset($val['wp_config_php']) ? $val['wp_config_php'] : 0,false);
       $wp_cron = checked(1,isset($val['wp_cron']) ? $val['wp_cron'] : 0,false);
       $statistic = checked(1,isset($val['statistic']) ? $val['statistic'] : 0,false);
+      $mail = checked(1,isset($val['mail']) ? $val['mail'] : 0,false);
 
       $return .= "
       <fieldset class='panel-info-screen-setting'>
@@ -1170,6 +1191,8 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
         <label for='wp_cron'><input type='checkbox' id='wp_cron' name='wms7_screen_settings[wp_cron]' value='1' $wp_cron /> ".__('wp-cron','wms7')."</label>
 
         <label for='statistic'><input type='checkbox' id='statistic' name='wms7_screen_settings[statistic]' value='1' $statistic /> ".__('statistic','wms7')."</label>
+
+        <label for='mail'><input type='checkbox' id='mail' name='wms7_screen_settings[mail]' value='1' $mail /> ".__('e-mail box','wms7')."</label>
 
       </fieldset>"      
       ;
@@ -1407,8 +1430,14 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
         $str_head = 'wp-cron tasks';
         break;
     case 'statistic':
-        $str_head = 'statistics of visits';
-        break;                 
+        $str_head = 'statistic of visits';
+        break;
+    case 'sma':
+        $val = get_option('wms7_main_settings');    
+        $select_box = $val["mail_select"];
+        $box = $val[$select_box];
+        $str_head = 'e-mail box: '.$box["mail_box_name"];
+        break;
     }
 
     if ( ($_POST['footer'] =='index') || ($_POST['footer'] =='robots') || 
@@ -1418,17 +1447,14 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     if ( $_POST['footer'] =='wp_cron' ) {
       $this->wms7_wp_cron($str_head); 
     }
-    if ( isset($_POST['cron_refresh']) ) {
-      $this->wms7_wp_cron($str_head);
-    }
-    if ( isset($_POST['cron_delete']) ) {
-      $wms7_cron = new wms7_cron();
-      $wms7_cron->wms7_delete_item_crons();
-    }
     if ( $_POST['footer'] == 'statistic' ) {
       $this->wms7_stat($str_head); 
     }
+    if ( $_POST['footer'] == 'sma' ) {
+      $this->wms7_mail($str_head);
+    }
   }
+
   function wms7_ip_enabled() {
 
     global $wpdb;
@@ -1525,12 +1551,231 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     </div>
     ";
     echo $win_content;
-  } 
-    
+  }
+
+  function wms7_formatBytes($size, $precision = 2){
+    $base = log($size, 1024);
+    $suffixes = array('', 'K', 'M', 'G', 'T');   
+
+    return round(pow(1024, $base - floor($base)), $precision) .' '. $suffixes[floor($base)];
+  }
+
+  function wms7_mail_attach($msgno, $arr_attach){
+    $item = get_option('wms7_main_settings');
+    $path_tmp = $item["mail_box_tmp"].'/';    
+    $path = 'http://'.$_SERVER['HTTP_HOST'].$path_tmp;
+
+    $page =get_option('wms7_current_page');
+    if ($arr_attach){
+      $str_attach = '';
+      $img_attach = plugins_url('/images/attachment.png', __FILE__);
+      $img_attach = "<img src='$img_attach' class='alignright' style='padding:0;'>";
+      foreach ($arr_attach as $attach) {
+        $filename = $attach['filename'];
+        $fileinfo = $attach['filename'].' ('.$this->wms7_formatBytes($attach['size']).') ';
+        $attach = "<a class='alignright' href='$path$filename' download><big>$fileinfo</big></a>".$img_attach;
+        $str_attach = $str_attach . $attach;
+      }
+    }
+    return $str_attach;
+  }
+
+  function wms7_mail_new($str_head, $draft){
+  	if ($draft){
+		    $msgno = $_GET['msgno'];
+		    $box_name = $_GET['mailbox'];
+	  		$str_head = $str_head." ($box_name id=".$msgno.")";
+		    $header = wms7_mail_header($msgno);
+
+		    $subject = iconv_mime_decode($header['subject'], 0 , "UTF-8");
+		    $subject =str_replace(' ', '&#32', $subject); //не понятный костыль!?
+
+		    $to = iconv_mime_decode($header['to'], 0 , "UTF-8");
+
+		    $arr = wms7_mail_body($msgno);
+		    $body = $arr[0];
+		    $attach = $this->wms7_mail_attach($msgno, $arr[1]);
+  		}else{
+  			$str_head = $str_head;
+  	}
+    $win_popup = "
+    <div class='win-popup'>
+      <label class='btn' for='win-popup'></label>
+      <input type='checkbox' style='display: none;' checked>
+      <div class='popup-content'>
+        <div class='popup-header'>
+          <h2>$str_head</h2>
+          <label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
+        </div>
+          <form id='popup_mail_view' method='POST' enctype='multipart/form-data'>
+          <label style='margin-left:10px;font-weight:bold;'><big>Subject: </label></big>
+<input type='text' placeholder = 'Subject' style='width: 590px; margin-left: 5px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;text-overflow:ellipsis;' name='mail_new_subject' value=$subject ><br>
+          <label style='margin-left:10px;font-weight:bold;'><big>To: </label></big>
+<input type='text' placeholder = 'user name <mail@address>' size='18' style='width: 590px; margin-left: 40px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;' name='mail_new_to' value=$to >
+            <div class='popup-body-mail' style='margin-top: -5px;'>
+              <textarea name='mail_new_content'>$body</textarea>
+            </div>
+            <div class='popup-footer'>
+              <input type='submit' value='save' id='submit' class='button-primary' name='mail_new_save'/>
+              <input type='submit' value='send' id='submit' class='button-primary' name='mail_new_send'/>
+              <input type='submit' value='quit' id='submit' class='button-primary' name='mail_new_quit'/>
+              <input type='file' name='mail_new_attach'>
+            </div>
+          </form>  
+      </div>
+    </div>
+    ";
+    echo $win_popup;
+  }  
+
+	function wms7_mail_save(){
+	  $val = get_option('wms7_main_settings');    
+	  $select_box = $val["mail_select"];
+	  $box = $val[$select_box];
+
+	  //массив папок почтового ящика
+		$folder =explode(';',$box['mail_folders'],-1);
+		$i=0;
+		$draft = false;
+		foreach ($folder as $key => $value) {
+			$pos = strpos($value, 'Draft');
+			if ($pos) {
+					$draft = true;
+					break;
+				}else{
+					$pos = strpos($value, 'Черновик');
+					if ($pos) {
+						$draft = true;
+						break;
+					}
+			}
+			$i++;
+		}
+		if ($draft === FALSE) exit;
+		//массив папок почтового ящика
+		$folder =explode(';',$box['mail_folders_alt'],-1);
+		$folder = substr($folder[$i], strpos($folder[$i], '{'));
+
+		$date = date('D, d M Y h:i:s', time());
+		//$envelope["date"] = date("j M, g.ia", strtotime($date));
+		$envelope["date"] = $date;
+		$envelope["subject"]  = '=?utf-8?B?'.base64_encode($_POST["mail_new_subject"]).'?=';
+		$envelope["from"]  = $box["mail_box_name"];
+		$envelope["to"]  = $_POST["mail_new_to"];
+
+		$part["type"] = TYPETEXT;
+		$part["subtype"] = PLAIN;
+		$part["charset"] = "UTF-8";
+		$part["contents.data"] = $_POST["mail_new_content"];
+
+		$body[1] = $part;
+
+		$msg = imap_mail_compose($envelope, $body);
+
+		$imap = wms7_mail_connection();
+
+		if (imap_append($imap, $folder, $msg) === false) {
+		   die( "could not append message: " . imap_last_error() );
+		}
+	}	
+
+  function wms7_mail_view($str_head){
+    $msgno = $_GET['msgno'];
+    $box_name = $_GET['mailbox'];
+    $header = wms7_mail_header($msgno);
+    $subject = iconv_mime_decode($header['subject'], 0 , "UTF-8");
+    $from = iconv_mime_decode($header['from'], 0 , "UTF-8");
+    $to = iconv_mime_decode($header['to'], 0 , "UTF-8");
+    $date = $header['date'];
+    $arr = wms7_mail_body($msgno);
+    $body = $arr[0];
+    $attach = $this->wms7_mail_attach($msgno, $arr[1]);
+
+    $win_popup = "
+    <div class='win-popup'>
+      <label class='btn' for='win-popup'></label>
+      <input type='checkbox' style='display: none;' checked>
+      <div class='popup-content'>
+        <div class='popup-header'>
+          <h2>$str_head  ($box_name id=$msgno)</h2>
+          <label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
+        </div>
+          <form id='popup_mail_view' method='POST'>
+          <label style='margin-left:10px;font-weight:bold;'><big>Subject: </label>$subject</big><br>
+          <label style='margin-left:10px;font-weight:bold;'><big>From: </label>$from</big><br>
+          <label style='margin-left:10px;font-weight:bold;'><big>To: </label>$to</big><br>
+          <label style='margin-left:10px;font-weight:bold;'><big>Date: </label>$date</big><br>
+          <div class='popup-body-mail'>
+              <textarea name='content' style='height:200px'>$body</textarea>
+            </div>
+            <div class='popup-footer'>
+              <input type='submit' value='reply' id='submit' class='button-primary' name='mail_view_reply'/>
+              <input type='submit' value='quit' id='submit' class='button-primary' name='mail_view_quit' onClick='wms7_quit_btn()'/>
+              $attach
+            </div>
+          </form>  
+      </div>
+    </div>
+    ";
+    echo $win_popup;
+  }
+
+  function wms7_mail($str_head){
+    $mail_box_selector= wms7_mailbox_selector();
+    $context = isset($_POST['mail_search_context']) ? $_POST['mail_search_context'] : '';
+    if (isset($_POST['mail_search'])) {
+      $arr = wms7_mail_search();
+      $mail_table = $arr[0];
+      $str_head = $str_head.' (found:'.$arr[1].')';
+    }else{
+      $mail_table = wms7_mail_inbox();
+    }
+    $win_popup = "
+    <div class='win-popup'>
+      <label class='btn' for='win-popup'></label>
+      <input type='checkbox' style='display: none;' checked>    
+      <div class='popup-content'>
+        <div class='popup-header'>
+          <h2>$str_head</h2>
+          <label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
+        </div>
+        <form id='mailbox' method='POST'>
+          $mail_box_selector
+  <input type='submit' value='search' id='doaction' class='button alignright' name='mail_search' style='margin-right: 10px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;'/>
+  <input type='text' class='text alignright' placeholder = 'context' size='18' style='width: 80px; margin-right: 5px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;' name='mail_search_context' value=$context >
+          <div class='popup-body'>
+          $mail_table
+          </div>
+          <div class='popup-footer'>
+  <input type='submit' value='delete' id='submit' class='button-primary' name='mail_delete'/>
+  <input type='submit' value='new' id='submit' class='button-primary' name='mail_new'/>
+  <input type='submit' value='move' id='doaction' class='button alignright' name='mail_move' style='-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin: 0 0 5px 0;'/>
+  <select name='move_box' class='text alignright' style='width: 80px; margin-right: 5px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;'><option value='Inbox'>Inbox</option><option value='Sent'>Outbox</option><option value='Drafts'>Drafts</option><option value='Trash'>Trash</option></select>
+          </div>
+        </form> 
+      </div>
+    </div>  
+    ";
+
+    echo $win_popup;
+  }
+
   function wms7_stat($str_head){
-    $arr = wms7_create_table_stat();
-    $stat_graph =json_encode($arr);
-    $stat_table = wms7_table_stat($arr);
+  	$val_options = get_option('wms7_current_param');
+
+		$allTotal 			= $val_options['allTotal'];
+    $visitsTotal 		= $val_options['visitsTotal'];		
+    $successTotal 	= $val_options['successTotal'];
+    $failedTotal 		= $val_options['failedTotal'];
+    $robotsTotal 		= $val_options['robotsTotal'];
+    $blacklistTotal = $val_options['blacklistTotal'];
+
+  	if (isset($_POST['stat_data'])) {
+	    $arr = wms7_create_table_stat();
+	    $stat_table = wms7_table_stat($arr);
+  		}else{
+			$stat_table = "<div style='width: 660px; height: 260px; padding: 0; margin:5px 0 0 10px; background-color: #7D7970;'> </div>";
+  	}
     $win_popup = "
     <div class='win-popup'>
       <label class='btn' for='win-popup'></label>
@@ -1541,12 +1786,25 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
           <label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
         </div>
         <form id='popup_win' method='POST'>
+  <div style='position:relative; float:left; margin: -5px 0 10px 10px;'>
+  	<input class='radio' type='radio' id='visits' name='radio_stat' value='visits' onClick='wms7_stat_btn()'/>
+    <label for='visits' style='color:black;'> ".__('Visits All','wms7')."($allTotal)</label>
+    <input class='radio' type='radio' id='unlogged' name='radio_stat' value='unlogged' onClick='wms7_stat_btn()'/>
+    <label for='unlogged' style='color:black;'> ".__('Unlogged','wms7')."($visitsTotal)</label>
+    <input class='radio' type='radio' id='success' name='radio_stat' value='success' onClick='wms7_stat_btn()'/>
+    <label for='success' style='color:black;'> ".__('Success','wms7')."($successTotal)</label>
+    <input class='radio' type='radio' id='failed' name='radio_stat' value='failed' onClick='wms7_stat_btn()'/>
+    <label for='failed' style='color:black;'> ".__('Failed','wms7')."($failedTotal)</label>
+    <input class='radio' type='radio' id='robots' name='radio_stat' value='robots' onClick='wms7_stat_btn()'/>
+    <label for='robots' style='color:black;'> ".__('Robots','wms7')."($robotsTotal)</label> 
+    <input class='radio' type='radio' id='blacklist' name='radio_stat' value='blacklist' onClick='wms7_stat_btn()'/>
+    <label for='blacklist' style='color:black;'> ".__('Black List','wms7')."($blacklistTotal)</label>
+  </div>
           <div class='popup-body'>
             $stat_table
           </div>
           <div class='popup-footer'>
-  <input type='submit' value='Table' id='submit' class='button-primary' name='stat_table'>
-  <input type='submit' value='Graph' id='submit' class='button-primary' name='stat_graph' onClick='wms7_stat_graph($stat_graph)'>
+  <input type='submit' value='Table' id='submit' class='button-primary' name='stat_data'>
           </div>
         </form> 
       </div>
@@ -1577,14 +1835,16 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
              <li class = 'tasks' style='color: brown;font-weight:bold;'>".__('WP task', 'wms7')." : $wms7_cron->wp_count</li>
             </ul>
             <table class='table'>
-            <thead class='thead'><tr class='tr'><th class='th' width='9%'>id</th><th class='th' width='35%'>".__('Task name', 'wms7')."</th><th class='th' width='15%'>".__('Recurrence', 'wms7')."</th><th class='th' width='20%'>".__('Next run', 'wms7')."</th><th class='th'>".__('Source task', 'wms7')."</th></tr></thead>
+            <div class='loader' id='win-loader'></div>
+            <thead class='thead'><tr class='tr'><th class='th' width='9%'>id</th><th class='th' width='35%'>".__('Task name', 'wms7')."</th><th class='th' width='15%'>".__('Recurrence', 'wms7')."</th><th class='th' width='20%'>".__('Next run', 'wms7')."</th><th class='th'>".__('Source task', 'wms7')."</th></tr>
+            </thead>
               $cron_table
             <tfoot class='tfoot'><tr class='tr'><th class='th' width='9%'>id</th><th class='th' width='35%'>".__('Task name', 'wms7')."</th><th class='th' width='15%'>".__('Recurrence', 'wms7')."</th><th class='th' width='20%'>".__('Next run', 'wms7')."</th><th class='th'>".__('Source task', 'wms7')."</th></tr></tfoot>
             </table>
           </div>
           <div class='popup-footer'>
             <input type='submit' value='Delete' id='submit' class='button-primary'  name='cron_delete'>
-            <input type='submit' value='Refresh' id='submit' class='button-primary'  name='cron_refresh'>
+            <input type='submit' value='Refresh' id='submit' class='button-primary'  name='cron_refresh' onClick='wms7_popup_loader()'>
           </div>
         </form> 
       </div>
@@ -1635,34 +1895,53 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     $table = new wms7_List_Table();
     $table->prepare_items();
     $message = '';
-    $id = get_option('wms7_id');
+    $id =  get_option('wms7_id') ? get_option('wms7_id') : null;
+    $id_del = get_option('wms7_id_del') ? get_option('wms7_id_del') : null;
 
     if ('delete' == get_option('wms7_action')) {
-          $message = '<div class="updated notice is-dismissible" id="message"><p>' . 
-        __('Items deleted', 'wms7').': (count='. count($id) . ') date-time: ('.current_time('mysql') .'). '.'Attention!!! Items will not be deleted if they are in the black list.'. '</p></div>';
+      if ( ($id) && ($id_del) && count ($id) == $id_del) {
+          $message = '<div class="notice notice-success is-dismissible" id="message"><p>' . 
+        __('Items deleted', 'wms7').': (count='. count($id) . ') date-time: ('.current_time('mysql') .')</p></div>';
+        }else{
+          $message = '<div class="notice notice-warning is-dismissible" id="message"><p>' . 
+        __('Attention! Not all records deleted since the field "Black list" is not empty.', 'wms7'). ' Records to delete: '.count($id). '. Deleted records: '.$id_del.'.</p></div>';
+      }  
     }
     if ('clear' == get_option('wms7_action')) {
         $this->wms7_ctrl_htaccess();
-        $message = '<div class="updated notice is-dismissible" id="message"><p>' . 
-      __('Black list item data cleaned successful', 'wms7').': (id='. $id . ') date-time: ('.current_time('mysql') . ')</p></div>';
+        $message = '<div class="notice notice-success is-dismissible" id="message"><p>' . 
+      __('Black list item data cleaned successful', 'wms7').': (id='. $id . ') date-time: ('.current_time('mysql') . ')</p></div>';     
     }
     if ('export' == get_option('wms7_action')) {
-      $message = '<div class="updated notice is-dismissible" id="message"><p>' . 
+      if ( ($id) ){
+      $message = '<div class="notice notice-success is-dismissible" id="message"><p>' . 
       __('Export data items executed successful', 'wms7'). ': (count='. count($id) . ') date-time: ('.current_time('mysql') . ')</p></div>';
+        }else{
+      $message = '<div class="notice notice-warning is-dismissible" id="message"><p>' . 
+      __('No items selected for export.', 'wms7') . '</p></div>';   
+      }
     }
     echo $message;
-    ?>
 
+    $opt = get_option('wms7_id');
+    if (isset($opt)) delete_option('wms7_id');
+    $opt = get_option('wms7_id_del');
+    if (isset($opt)) delete_option('wms7_id_del');    
+    $opt = get_option('wms7_action');
+    if (isset($opt)) delete_option('wms7_action');    
+    ?>
+<a href="https://plugintests.com/plugins/watchman-site7/latest-report"><img src="https://plugintests.com/plugins/watchman-site7/php-badge.svg" style="position:absolute; margin:0 5px 5px 23px;"></a>
+<a href="https://plugintests.com/plugins/watchman-site7/latest-report"><img src="https://plugintests.com/plugins/watchman-site7/wp-badge.svg" style="position:absolute;margin:0 0 0 135px;"></a>
     <div class="sse" onclick="wms7_sse()" title="<?php echo __('Refresh table of visits', 'wms7'); ?>">
       <input type="checkbox" id="sse">
-      <label><i></i></label>
+      <label><i></i></label>     
     </div>
     
     <div class="wrap">
 
       <span class="dashicons dashicons-shield" style="float: left;"></span>
 
-      <h1><?php echo $plugine_info["Name"].': '.__('visitors of site', 'wms7').'<span style="font-size: 70%"> (v.'.$plugine_info["Version"].')</span>'; ?></h1>
+      <h1><?php echo $plugine_info["Name"].': '.__('visitors of site', 'wms7').'<span style="font-size:70%;"> (v.'.$plugine_info["Version"].')</span>'; ?></h1>
 
       <div class="alignleft actions">
         <?php echo $this->wms7_role_time_country_filter(); ?>
@@ -1707,17 +1986,147 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     // refresh cron table
     if ( isset($_POST['cron_refresh']) || isset($_POST['cron_delete']) ) {
       $str_head = 'wp-cron tasks';
-      $this->wms7_wp_cron($str_head);
+      $this->wms7_wp_cron($str_head);  
     }
     // refresh stat table
-    if ( isset($_POST['stat_table']) || isset($_POST['stat_graph']) ) {
-      $str_head = 'statistics of visits';
+    if ( isset($_POST['stat_data']) ) {
+      $str_head = 'statistic of visits';
       $this->wms7_stat($str_head);
+    }
+    //view mail №msgno
+    if ( isset($_GET['msgno']) ) {
+      $val = get_option('wms7_main_settings');    
+      $select_box = $val["mail_select"];
+      $box = $val[$select_box];
+      $str_head = 'e-mail box: '.$box["mail_box_name"];
+      //check - draft folder
+			$num = substr($_GET['mailbox'], -1);
+		  //массив папок почтового ящика
+			$folder =explode(';',$box['mail_folders'],-1);
+
+			$draft = false;
+			$pos = strpos($folder[$num-1], 'Draft');
+			if ($pos) {
+					$draft = true;
+				}else{
+					$pos = strpos($folder[$num-1], 'Черновик');
+					if ($pos) {
+						$draft = true;
+					}
+			}
+			if ($draft === FALSE) {
+      		$this->wms7_mail_view($str_head);
+      	}else{
+      		$this->wms7_mail_new($str_head, true);
+      }
+    }
+    //move mail
+    if ( isset($_POST['mail_move']) ) {
+      wms7_mail_move();      
+    }
+    //send mail
+    if ( isset($_POST['mail_new_send']) ) {
+      $val = get_option('wms7_main_settings');    
+      $select_box = $val["mail_select"];
+      $box = $val[$select_box];
+      $str_head = 'e-mail box: '.$box["mail_box_name"];
+			wms7_mail_send();
+			$this->wms7_mail($str_head);
+    }    
+    //new mail
+    if ( isset($_POST['mail_new']) ) {
+      $val = get_option('wms7_main_settings');    
+      $select_box = $val["mail_select"];
+      $box = $val[$select_box];
+      $str_head = 'e-mail box: '.$box["mail_box_name"];
+      $this->wms7_mail_new($str_head, false);
+    }
+    //new mail save
+    if ( isset($_POST['mail_new_save']) ) {
+      $val = get_option('wms7_main_settings');    
+      $select_box = $val["mail_select"];
+      $box = $val[$select_box];
+      $str_head = 'e-mail box: '.$box["mail_box_name"];
+      $this->wms7_mail_save();
+			$this->wms7_goto_draft();
+    }
+    //delete mail 
+    if ( isset($_POST['mail_delete']) ) {         
+      wms7_mail_delete();
+      $val = get_option('wms7_main_settings');    
+      $select_box = $val["mail_select"];
+      $box = $val[$select_box];
+      $str_head = 'e-mail box: '.$box["mail_box_name"];
+
+      $folder = $_GET['mailbox'];
+			echo "<div class='loader' id='win-loader' style='top:350px;'></div>";
+			echo "<script>wms7_popup_loader();</script>";      
+      echo "<script>mailbox_selector('$folder');</script>";
+    }
+    
+    if ( 
+    	(isset($_GET['mailbox']) && !isset($_GET['msgno']) && !isset($_POST['mail_new']) && !isset($_POST['mail_search'])) || 
+    	isset($_POST['mail_view_quit']) || 
+    	isset($_POST['mail_new_quit']) ) {
+
+      $val = get_option('wms7_main_settings');
+      $select_box = $val["mail_select"];
+      $box = $val[$select_box];
+      $str_head = 'e-mail box: '.$box["mail_box_name"];
+      $this->wms7_mail($str_head);
+    } 
+
+    if ( isset($_GET['file']) ) {
+      wms7_output_attach($_GET['file']);
+    }
+
+    //mail_search_context
+    if ( isset($_POST['mail_search']) ) {
+      $val = get_option('wms7_main_settings');
+      $select_box = $val["mail_select"];  
+      $box = $val[$select_box];
+      $str_head = 'search in: '.$box["mail_box_name"];
+      $this->wms7_mail($str_head);
     }
   }
 
+  function wms7_goto_draft(){
+	  $val = get_option('wms7_main_settings');    
+	  $select_box = $val["mail_select"];
+	  $box = $val[$select_box];
+
+	  //массив папок почтового ящика
+		$folder =explode(';',$box['mail_folders'],-1);
+		$i=0;
+		$draft = false;
+		foreach ($folder as $key => $value) {
+			$pos = strpos($value, 'Draft');
+			if ($pos) {
+					$draft = true;
+					break;
+				}else{
+					$pos = strpos($value, 'Черновик');
+					if ($pos) {
+						$draft = true;
+						break;
+					}
+			}
+			$i++;
+		}
+		if ($draft === FALSE) exit;
+		$i++;
+
+		$folder = 'folder'.$i;
+		echo "<div class='loader' id='win-loader' style='top:350px;'></div>";
+		echo "<script>wms7_popup_loader();</script>";
+		echo "<script>mailbox_selector('$folder');</script>";
+  }
+
   function wms7_settings(){
-    
+    $opt = get_option('wms7_id');
+    if (isset($opt)) delete_option('wms7_id');
+    $opt = get_option('wms7_id_del');
+    if (isset($opt)) delete_option('wms7_id_del');    
     $opt = get_option('wms7_action');
     if (isset($opt)) delete_option('wms7_action');
 
@@ -1733,24 +2142,24 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       <h1><?php echo $plugine_info["Name"].': '.__('settings', 'wms7'); ?></h1>
       <br />
       <?php $message = (isset($message)) ? $message : ''; echo $message; ?>
+      <form method="POST" action="options.php">
       <table bgcolor="white" width="100%" cellspacing="2" cellpadding="5" RULES="rows" style="border:1px solid #DDDDDD";>
         <tr>
-          <td height="25"><font size="4"><b><?php _e("General settings of plugin","wms7") ?></b></font></td>
+          <td height="25"><font size="4"><b><?php _e("General settings","wms7") ?></b></font></td>
         </tr>
         <tr>
           <td>
-            <form method="POST" action="options.php">
-              <?php
-              settings_fields( 'option_group' );
-              do_settings_sections( 'wms7_settings' );
-              ?>
+            <?php
+            settings_fields( 'option_group' );
+            do_settings_sections( 'wms7_settings' );
+            ?>
           </td>
         </tr>
       </table>
       <br />
-      <input type="submit" value="<?php _e('Save', 'wms7')?>" id="submit" class="button-primary" name="settings-save">
-      <input type="button" value="<?php _e('Quit', 'wms7')?>" id="quit" class="button-primary" name="quit" onClick="location.href='<?php echo get_option('wms7_current_url') . '&paged='.get_option('wms7_current_page')?>'">
-            </form>      
+      <button type="submit" class="button-primary" name="save">Save</button>
+      <button type="button" class="button-primary" name="quit" onClick="location.href='<?php echo get_option('wms7_current_url') . '&paged='.get_option('wms7_current_page')?>'">Quit</button>
+      </form>
     </div>
   <?php
   }
@@ -1784,7 +2193,13 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     add_settings_field('field7', '<label for="wms7_main_settings[key_api]">'.__('Google Maps API key','wms7').':</label>', 
       array($this,'wms7_main_setting_field7'), 'wms7_settings', 'wms7_section' );
     add_settings_field('field8', '<label for="wms7_main_settings[export_csv]">'.__('Exporting Table Fields','wms7').':</label>', 
-      array($this,'wms7_main_setting_field8'), 'wms7_settings', 'wms7_section' );    
+      array($this,'wms7_main_setting_field8'), 'wms7_settings', 'wms7_section' );
+    add_settings_field('field9', '<label for="wms7_main_settings[mail_boxes]">'.__('E-mail boxes','wms7').':</label>',
+      array($this,'wms7_main_setting_field9'), 'wms7_settings', 'wms7_section' );
+    add_settings_field('field10', '<label for="wms7_main_settings[mail_box_select]">'.__('E-mail box select','wms7').':</label>',
+      array($this,'wms7_main_setting_field10'), 'wms7_settings', 'wms7_section' );
+    add_settings_field('field11', '<label for="wms7_main_settings[mail_box_tmp]">'.__('E-mail folder tmp','wms7').':</label>', 
+      array($this,'wms7_main_setting_field11'), 'wms7_settings', 'wms7_section' );
   }
 
   //Filling out an option 1
@@ -1913,6 +2328,564 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     <?php
   }
 
+  //Filling out an option 9
+  function wms7_main_setting_field9(){
+  	//this_site------------------------------------------------------------------	
+    $val = get_option('wms7_main_settings');
+    $val1_box0 = $val['box0']['imap_server'];
+    $val2_box0 = $val['box0']['mail_box_name'];
+    $val3_box0 = $val['box0']['mail_box_pwd'];
+    $val4_box0 = $val['box0']['mail_box_encryption'];  
+    $val5_box0 = $val['box0']['mail_box_port'];
+    $val6_box0 = $val['box0']['pwd_box'];
+
+    $val7_box0 = $val['box0']['mail_folders'];
+		$val7_box0 = str_replace(';', ';&#010', $val7_box0);
+    $val7_box0_alt = $val['box0']['mail_folders_alt'];
+		$val7_box0_alt = str_replace(';', ';&#010', $val7_box0_alt);	
+
+    $val8_box0 = $val['box0']['smtp_server'];
+		$val9_box0 = $val['box0']['smtp_box_encryption'];
+		$val10_box0 = $val['box0']['smtp_box_port'];
+    $sel1 = $sel2 = $sel3 = $sel4 = '';
+    switch ($val4_box0) {
+    case 'Auto':
+        $sel1 = 'selected';
+        break;    
+    case 'No':
+        $sel2 = 'selected';
+        break;
+    case 'SSL':
+        $sel3 = 'selected';
+        break;
+    case 'TLS':
+        $sel4 = 'selected';
+        break;    
+    }
+    $sel1_smtp = $sel2_smtp = $sel3_smtp = $sel4_smtp = '';
+    switch ($val9_box0) {
+    case 'Auto':
+        $sel1_smtp = 'selected';
+        break;    
+    case 'No':
+        $sel2_smtp = 'selected';
+        break;
+    case 'SSL':
+        $sel3_smtp = 'selected';
+        break;
+    case 'TLS':
+        $sel4_smtp = 'selected';
+        break;    
+    }    
+    if ( isset($_GET['checkbox']) && $_GET['checkbox'] == 'box0' ) {
+      	$tbl_folders0 = $this->wms7_imap_list($_GET['checkbox']);
+    	}else{
+    		$tbl_folders0 = '';
+    }
+    ?>
+  	<div id="param_mail_box_this_site" style="width:370px;">
+    <fieldset style="width:860px;height:200px;border: 2px groove;margin:0;padding:0;">
+      <legend><b>This site</b></legend>
+
+    <input id="imap_server_box0" style="margin-left: 5px; width: 200px;" name="wms7_main_settings[box0][imap_server]" type="text" placeholder="imap server" value="<?php echo sanitize_text_field( $val1_box0 ) ?>" /><br/>
+    <label for="imap_server_box0" style="position:relative;left:5px;"><?php _e('IMAP Server name','wms7') ?></label><br/>
+
+    <input id="mail_box_name_box0" style="position:relative;left:5px;width:200px;" name="wms7_main_settings[box0][mail_box_name]" type="text" placeholder="mail box name" value="<?php echo sanitize_text_field( $val2_box0 ) ?>" /><br/>
+    <label for="mail_box_name_box0" style="position:relative;left:5px;"><?php _e('E-mail box name','wms7') ?></label><br/>
+
+    <input id="mail_box_pwd_box0" style="position:relative;left:5px;width:200px;" name="wms7_main_settings[box0][mail_box_pwd]" type="text" placeholder="mail box password" value="<?php echo sanitize_text_field( $val3_box0 ) ?>" /><br/>
+    <label for="mail_box_pwd_box0" style="position:relative;left:5px;"><?php _e('E-mail box password','wms7') ?></label>
+
+    <select id="encryption_box0" name="wms7_main_settings[box0][mail_box_encryption]" style="position:relative;left:90px;top:-150px;"><option <?php echo $sel1 ?> value="Auto">Auto</option><option <?php echo $sel2 ?> value="No">No</option><option <?php echo $sel3 ?> value="SSL">SSL</option><option <?php echo $sel4 ?> value="TLS">TLS</option></select>
+    <label for="encryption_box0" style="position:relative;left:25px;top:-120px;"><?php _e('Encrypt','wms7') ?></label>
+
+    <input id="mail_box_port_box0" style="position:relative;left:-25px;top:-87px;width:60px;" name="wms7_main_settings[box0][mail_box_port]" type=text placeholder="993" value="<?php echo sanitize_text_field( $val5_box0 ) ?>" />
+    <label for="mail_box_port_box0" style="position:relative;left:-90px;top:-60px;"><?php _e('Port','wms7') ?></label><br/>
+
+    <button type="button" id="box0" name="check_boxes" class="button-primary" onClick="wms7_check_boxes(id)" style="position:relative;left:225px;top:-60px;" />Check</button>
+    <button type="button" id="textbox0" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box0','tbl_folders_box0','text_folders_box0','text_folders_box0_alt')" style="position:relative;left:165px;top:-30px;" />Insert</button>
+    <input id="pwd_box0" name="wms7_main_settings[box0][pwd_box]" type="checkbox" style="position:relative;left:70px;top:-32px;" value="1" <?php checked( $val6_box0 ) ?> onClick="wms7_check_pwd(id)"/>
+
+    <input id="smtp_server_box0" style="position:relative;width: 200px;top:-180px;left:505px;" name="wms7_main_settings[box0][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box0 ) ?>" />
+    <label for="smtp_server_box0" style="position:relative;top:-155px;left:300px;"><?php _e('SMTP Server name','wms7') ?></label>
+
+    <select id="smtp_encryption_box0" name="wms7_main_settings[box0][smtp_box_encryption]" style="position:relative;left:180px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
+    <label for="smtp_encryption_box0" style="position:relative;left:115px;top:-95px;"><?php _e('SMTP Encrypt','wms7') ?></label>
+
+    <input id="smtp_box_port_box0" style="position:relative;left:165px;top:-123px;width:60px;" name="wms7_main_settings[box0][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box0 ) ?>" />
+    <label for="smtp_box_port_box0" style="position:relative;left:100px;top:-95px;"><?php _e('SMTP Port','wms7') ?></label><br/>
+
+    <div id="tbl_folders_box0" style="position:relative;left:290px;top:-212px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders0 ?></div>
+
+    <textarea readonly id="text_folders_box0" name="wms7_main_settings[box0][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px;"><?php echo sanitize_text_field( $val7_box0 ) ?></textarea>
+
+    <textarea readonly id="text_folders_box0_alt" name="wms7_main_settings[box0][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px; display:none;"><?php echo sanitize_text_field( $val7_box0_alt ) ?></textarea> 
+
+  	</fieldset>
+  	</div>
+  <?php
+  //mail.ru--------------------------------------------------------------------
+
+    $val = get_option('wms7_main_settings');
+    $val1_box1 = $val['box1']['imap_server'];
+    $val2_box1 = $val['box1']['mail_box_name'];
+    $val3_box1 = $val['box1']['mail_box_pwd'];
+    $val4_box1 = $val['box1']['mail_box_encryption'];  
+    $val5_box1 = $val['box1']['mail_box_port'];
+    $val6_box1 = $val['box1']['pwd_box'];
+
+    $val7_box1 = $val['box1']['mail_folders'];
+		$val7_box1 = str_replace(';', ';&#010', $val7_box1);
+    $val7_box1_alt = $val['box1']['mail_folders_alt'];
+		$val7_box1_alt = str_replace(';', ';&#010', $val7_box1_alt);			
+
+    $val8_box1 = $val['box1']['smtp_server'];
+		$val9_box1 = $val['box1']['smtp_box_encryption'];
+		$val10_box1 = $val['box1']['smtp_box_port'];
+    $sel1 = $sel2 = $sel3 = $sel4 = '';
+    switch ($val4_box1) {
+	    case 'Auto':
+	        $sel1 = 'selected';
+	        break;    
+	    case 'No':
+	        $sel2 = 'selected';
+	        break;
+	    case 'SSL':
+	        $sel3 = 'selected';
+	        break;
+	    case 'TLS':
+	        $sel4 = 'selected';
+	        break;    
+    }
+    $sel1_smtp = $sel2_smtp = $sel3_smtp = $sel4_smtp = '';
+    switch ($val9_box1) {
+	    case 'Auto':
+	        $sel1_smtp = 'selected';
+	        break;    
+	    case 'No':
+	        $sel2_smtp = 'selected';
+	        break;
+	    case 'SSL':
+	        $sel3_smtp = 'selected';
+	        break;
+	    case 'TLS':
+	        $sel4_smtp = 'selected';
+	        break;    
+    }    
+    if ( isset($_GET['checkbox']) && $_GET['checkbox'] == 'box1' ) {
+      	$tbl_folders1 = $this->wms7_imap_list($_GET['checkbox']);
+    	}else{
+    		$tbl_folders1 = '';
+    }
+  ?>
+  	<div id="param_mail_box_mail_ru" style="width:370px;">
+    <fieldset style="width:860px;height:200px;border: 2px groove;margin:0;padding:0;">
+      <legend><b>Mail.ru</b></legend>
+
+    <input id="imap_server_box1" style="margin-left: 5px; width: 200px;" name="wms7_main_settings[box1][imap_server]" type="text" placeholder="imap server" value="<?php echo sanitize_text_field( $val1_box1 ) ?>" /><br/>
+    <label for="imap_server_box1" style="position:relative;left:5px;"><?php _e('IMAP Server name','wms7') ?></label><br/>
+
+    <input id="mail_box_name_box1" style="position:relative;left:5px;width:200px;" name="wms7_main_settings[box1][mail_box_name]" type="text" placeholder="mail box name" value="<?php echo sanitize_text_field( $val2_box1 ) ?>" /><br/>
+    <label for="mail_box_name_box1" style="position:relative;left:5px;"><?php _e('E-mail box name','wms7') ?></label><br/>
+
+    <input id="mail_box_pwd_box1" style="position:relative;left:5px;width:200px;" name="wms7_main_settings[box1][mail_box_pwd]" type="text" placeholder="mail box password" value="<?php echo sanitize_text_field( $val3_box1 ) ?>" /><br/>
+    <label for="mail_box_pwd_box1" style="position:relative;left:5px;"><?php _e('E-mail box password','wms7') ?></label>
+
+    <select id="encryption_box1" name="wms7_main_settings[box1][mail_box_encryption]" style="position:relative;left:90px;top:-150px;"><option <?php echo $sel1 ?> value="Auto">Auto</option><option <?php echo $sel2 ?> value="No">No</option><option <?php echo $sel3 ?> value="SSL">SSL</option><option <?php echo $sel4 ?> value="TLS">TLS</option></select>
+    <label for="encryption_box1" style="position:relative;left:25px;top:-120px;"><?php _e('Encrypt','wms7') ?></label>
+
+    <input id="mail_box_port_box1" style="position:relative;left:-25px;top:-87px;width:60px;" name="wms7_main_settings[box1][mail_box_port]" type=text placeholder="993" value="<?php echo sanitize_text_field( $val5_box1 ) ?>" />
+    <label for="mail_box_port_box1" style="position:relative;left:-90px;top:-60px;"><?php _e('Port','wms7') ?></label><br/>
+
+    <button type="button" id="box1" name="check_boxes" class="button-primary" onClick="wms7_check_boxes(id)" style="position:relative;left:225px;top:-60px;" />Check</button>
+    <button type="button" id="textbox1" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box1','tbl_folders_box1','text_folders_box1','text_folders_box1_alt')" style="position:relative;left:165px;top:-30px;" />Insert</button>
+    <input id="pwd_box1" name="wms7_main_settings[box1][pwd_box]" type="checkbox" style="position:relative;left:70px;top:-32px;" value="1" <?php checked( $val6_box1 ) ?> onClick="wms7_check_pwd(id)"/>
+
+    <input id="smtp_server_box1" style="position:relative;width: 200px;top:-180px;left:505px;" name="wms7_main_settings[box1][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box1 ) ?>" />
+    <label for="smtp_server_box1" style="position:relative;top:-155px;left:300px;"><?php _e('SMTP Server name','wms7') ?></label>
+
+    <select id="smtp_encryption_box1" name="wms7_main_settings[box1][smtp_box_encryption]" style="position:relative;left:180px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
+    <label for="smtp_encryption_box1" style="position:relative;left:115px;top:-95px;"><?php _e('SMTP Encrypt','wms7') ?></label>
+
+    <input id="smtp_box_port_box1" style="position:relative;left:165px;top:-123px;width:60px;" name="wms7_main_settings[box1][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box1 ) ?>" />
+    <label for="smtp_box_port_box1" style="position:relative;left:100px;top:-95px;"><?php _e('SMTP Port','wms7') ?></label><br/>
+
+    <div id="tbl_folders_box1" style="position:relative;left:290px;top:-212px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders1 ?></div>
+
+    <textarea readonly id="text_folders_box1" name="wms7_main_settings[box1][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px;"><?php echo sanitize_text_field( $val7_box1 ) ?></textarea>
+
+    <textarea readonly id="text_folders_box1_alt" name="wms7_main_settings[box1][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px; display:none;"><?php echo sanitize_text_field( $val7_box1_alt ) ?></textarea> 
+
+  	</fieldset>
+  	</div>
+
+  <?php
+  //yandex.ru--------------------------------------------------------------------
+    $val = get_option('wms7_main_settings');
+    $val1_box2 = $val['box2']['imap_server'];
+    $val2_box2 = $val['box2']['mail_box_name'];
+    $val3_box2 = $val['box2']['mail_box_pwd'];
+    $val4_box2 = $val['box2']['mail_box_encryption'];  
+    $val5_box2 = $val['box2']['mail_box_port'];
+    $val6_box2 = $val['box2']['pwd_box'];
+
+    $val7_box2 = $val['box2']['mail_folders'];
+		$val7_box2 = str_replace(';', ';&#010', $val7_box2);
+    $val7_box2_alt = $val['box2']['mail_folders_alt'];
+		$val7_box2_alt = str_replace(';', ';&#010', $val7_box2_alt);			
+
+    $val8_box2 = $val['box2']['smtp_server'];
+		$val9_box2 = $val['box2']['smtp_box_encryption'];
+		$val10_box2 = $val['box2']['smtp_box_port'];
+    $sel1 = $sel2 = $sel3 = $sel4 = '';
+    switch ($val4_box2) {
+	    case 'Auto':
+	        $sel1 = 'selected';
+	        break;    
+	    case 'No':
+	        $sel2 = 'selected';
+	        break;
+	    case 'SSL':
+	        $sel3 = 'selected';
+	        break;
+	    case 'TLS':
+	        $sel4 = 'selected';
+	        break;    
+    }
+    $sel1_smtp = $sel2_smtp = $sel3_smtp = $sel4_smtp = '';
+    switch ($val9_box2) {
+	    case 'Auto':
+	        $sel1_smtp = 'selected';
+	        break;    
+	    case 'No':
+	        $sel2_smtp = 'selected';
+	        break;
+	    case 'SSL':
+	        $sel3_smtp = 'selected';
+	        break;
+	    case 'TLS':
+	        $sel4_smtp = 'selected';
+	        break;    
+    }    
+    if ( isset($_GET['checkbox']) && $_GET['checkbox'] == 'box2' ) {
+      	$tbl_folders2 = $this->wms7_imap_list($_GET['checkbox']);
+    	}else{
+    		$tbl_folders2 = '';
+    }
+  ?>
+  	<div id="param_mail_box_yandex_ru" style="width:370px;">
+    <fieldset style="width:860px;height:200px;border: 2px groove;margin:0;padding:0;">
+      <legend><b>Yandex.ru</b></legend>
+
+    <input id="imap_server_box2" style="margin-left: 5px; width: 200px;" name="wms7_main_settings[box2][imap_server]" type="text" placeholder="imap server" value="<?php echo sanitize_text_field( $val1_box2 ) ?>" /><br/>
+    <label for="imap_server_box2" style="position:relative;left:5px;"><?php _e('IMAP Server name','wms7') ?></label><br/>
+
+    <input id="mail_box_name_box2" style="position:relative;left:5px;width:200px;" name="wms7_main_settings[box2][mail_box_name]" type="text" placeholder="mail box name" value="<?php echo sanitize_text_field( $val2_box2 ) ?>" /><br/>
+    <label for="mail_box_name_box2" style="position:relative;left:5px;"><?php _e('E-mail box name','wms7') ?></label><br/>
+
+    <input id="mail_box_pwd_box2" style="position:relative;left:5px;width:200px;" name="wms7_main_settings[box2][mail_box_pwd]" type="text" placeholder="mail box password" value="<?php echo sanitize_text_field( $val3_box2 ) ?>" /><br/>
+    <label for="mail_box_pwd_box2" style="position:relative;left:5px;"><?php _e('E-mail box password','wms7') ?></label>
+
+    <select id="encryption_box2" name="wms7_main_settings[box2][mail_box_encryption]" style="position:relative;left:90px;top:-150px;"><option <?php echo $sel1 ?> value="Auto">Auto</option><option <?php echo $sel2 ?> value="No">No</option><option <?php echo $sel3 ?> value="SSL">SSL</option><option <?php echo $sel4 ?> value="TLS">TLS</option></select>
+    <label for="encryption_box2" style="position:relative;left:25px;top:-120px;"><?php _e('Encrypt','wms7') ?></label>
+
+    <input id="mail_box_port_box2" style="position:relative;left:-25px;top:-87px;width:60px;" name="wms7_main_settings[box2][mail_box_port]" type=text placeholder="993" value="<?php echo sanitize_text_field( $val5_box2 ) ?>" />
+    <label for="mail_box_port_box2" style="position:relative;left:-90px;top:-60px;"><?php _e('Port','wms7') ?></label><br/>
+
+    <button type="button" id="box2" name="check_boxes" class="button-primary" onClick="wms7_check_boxes(id)" style="position:relative;left:225px;top:-60px;" />Check</button>
+    <button type="button" id="textbox2" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box2','tbl_folders_box2','text_folders_box2','text_folders_box2_alt')" style="position:relative;left:165px;top:-30px;" />Insert</button>
+    <input id="pwd_box2" name="wms7_main_settings[box2][pwd_box]" type="checkbox" style="position:relative;left:70px;top:-32px;" value="1" <?php checked( $val6_box2 ) ?> onClick="wms7_check_pwd(id)"/>
+
+    <input id="smtp_server_box2" style="position:relative;width: 200px;top:-180px;left:505px;" name="wms7_main_settings[box2][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box2 ) ?>" />
+    <label for="smtp_server_box2" style="position:relative;top:-155px;left:300px;"><?php _e('SMTP Server name','wms7') ?></label>
+
+    <select id="smtp_encryption_box2" name="wms7_main_settings[box2][smtp_box_encryption]" style="position:relative;left:180px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
+    <label for="smtp_encryption_box2" style="position:relative;left:115px;top:-95px;"><?php _e('SMTP Encrypt','wms7') ?></label>
+
+    <input id="smtp_box_port_box2" style="position:relative;left:165px;top:-123px;width:60px;" name="wms7_main_settings[box2][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box2 ) ?>" />
+    <label for="smtp_box_port_box2" style="position:relative;left:100px;top:-95px;"><?php _e('SMTP Port','wms7') ?></label><br/>
+
+    <div id="tbl_folders_box2" style="position:relative;left:290px;top:-212px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders2 ?></div>
+
+    <textarea readonly id="text_folders_box2" name="wms7_main_settings[box2][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px;"><?php echo sanitize_text_field( $val7_box2 ) ?></textarea>
+
+    <textarea readonly id="text_folders_box2_alt" name="wms7_main_settings[box2][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px; display:none;"><?php echo sanitize_text_field( $val7_box2_alt ) ?></textarea> 
+
+  	</fieldset>
+  	</div>
+  <?php
+  //yahoo.com--------------------------------------------------------------------
+    $val = get_option('wms7_main_settings');
+    $val1_box3 = $val['box3']['imap_server'];
+    $val2_box3 = $val['box3']['mail_box_name'];
+    $val3_box3 = $val['box3']['mail_box_pwd'];
+    $val4_box3 = $val['box3']['mail_box_encryption'];  
+    $val5_box3 = $val['box3']['mail_box_port'];
+    $val6_box3 = $val['box3']['pwd_box'];
+
+    $val7_box3 = $val['box3']['mail_folders'];
+		$val7_box3 = str_replace(';', ';&#010', $val7_box3);
+    $val7_box3_alt = $val['box3']['mail_folders_alt'];
+		$val7_box3_alt = str_replace(';', ';&#010', $val7_box3_alt);			
+
+    $val8_box3 = $val['box3']['smtp_server'];
+		$val9_box3 = $val['box3']['smtp_box_encryption'];
+		$val10_box3 = $val['box3']['smtp_box_port'];
+    $sel1 = $sel2 = $sel3 = $sel4 = '';
+    switch ($val4_box3) {
+	    case 'Auto':
+	        $sel1 = 'selected';
+	        break;    
+	    case 'No':
+	        $sel2 = 'selected';
+	        break;
+	    case 'SSL':
+	        $sel3 = 'selected';
+	        break;
+	    case 'TLS':
+	        $sel4 = 'selected';
+	        break;    
+    }
+    $sel1_smtp = $sel2_smtp = $sel3_smtp = $sel4_smtp = '';
+    switch ($val9_box3) {
+	    case 'Auto':
+	        $sel1_smtp = 'selected';
+	        break;    
+	    case 'No':
+	        $sel2_smtp = 'selected';
+	        break;
+	    case 'SSL':
+	        $sel3_smtp = 'selected';
+	        break;
+	    case 'TLS':
+	        $sel4_smtp = 'selected';
+	        break;    
+    }    
+    if ( isset($_GET['checkbox']) && $_GET['checkbox'] == 'box3' ) {
+      	$tbl_folders3 = $this->wms7_imap_list($_GET['checkbox']);
+    	}else{
+    		$tbl_folders3 = '';
+    }
+  ?>
+  	<div id="param_mail_box_yahoo_com" style="width:370px;">
+    <fieldset style="width:860px;height:200px;border: 2px groove;margin:0;padding:0;">
+      <legend><b>Yahoo.com</b></legend>
+
+    <input id="imap_server_box3" style="margin-left: 5px; width: 200px;" name="wms7_main_settings[box3][imap_server]" type="text" placeholder="imap server" value="<?php echo sanitize_text_field( $val1_box3 ) ?>" /><br/>
+    <label for="imap_server_box3" style="position:relative;left:5px;"><?php _e('IMAP Server name','wms7') ?></label><br/>
+
+    <input id="mail_box_name_box3" style="position:relative;left:5px;width:200px;" name="wms7_main_settings[box3][mail_box_name]" type="text" placeholder="mail box name" value="<?php echo sanitize_text_field( $val2_box3 ) ?>" /><br/>
+    <label for="mail_box_name_box3" style="position:relative;left:5px;"><?php _e('E-mail box name','wms7') ?></label><br/>
+
+    <input id="mail_box_pwd_box3" style="position:relative;left:5px;width:200px;" name="wms7_main_settings[box3][mail_box_pwd]" type="text" placeholder="mail box password" value="<?php echo sanitize_text_field( $val3_box3 ) ?>" /><br/>
+    <label for="mail_box_pwd_box3" style="position:relative;left:5px;"><?php _e('E-mail box password','wms7') ?></label>
+
+    <select id="encryption_box3" name="wms7_main_settings[box3][mail_box_encryption]" style="position:relative;left:90px;top:-150px;"><option <?php echo $sel1 ?> value="Auto">Auto</option><option <?php echo $sel2 ?> value="No">No</option><option <?php echo $sel3 ?> value="SSL">SSL</option><option <?php echo $sel4 ?> value="TLS">TLS</option></select>
+    <label for="encryption_box3" style="position:relative;left:25px;top:-120px;"><?php _e('Encrypt','wms7') ?></label>
+
+    <input id="mail_box_port_box3" style="position:relative;left:-25px;top:-87px;width:60px;" name="wms7_main_settings[box3][mail_box_port]" type=text placeholder="993" value="<?php echo sanitize_text_field( $val5_box3 ) ?>" />
+    <label for="mail_box_port_box3" style="position:relative;left:-90px;top:-60px;"><?php _e('Port','wms7') ?></label><br/>
+
+    <button type="button" id="box3" name="check_boxes" class="button-primary" onClick="wms7_check_boxes(id)" style="position:relative;left:225px;top:-60px;" />Check</button>
+    <button type="button" id="textbox3" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box3','tbl_folders_box3','text_folders_box3','text_folders_box3_alt')" style="position:relative;left:165px;top:-30px;" />Insert</button>
+    <input id="pwd_box3" name="wms7_main_settings[box3][pwd_box]" type="checkbox" style="position:relative;left:70px;top:-32px;" value="1" <?php checked( $val6_box3 ) ?> onClick="wms7_check_pwd(id)"/>
+
+    <input id="smtp_server_box3" style="position:relative;width: 200px;top:-180px;left:505px;" name="wms7_main_settings[box3][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box3 ) ?>" />
+    <label for="smtp_server_box3" style="position:relative;top:-155px;left:300px;"><?php _e('SMTP Server name','wms7') ?></label>
+
+    <select id="smtp_encryption_box3" name="wms7_main_settings[box3][smtp_box_encryption]" style="position:relative;left:180px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
+    <label for="smtp_encryption_box3" style="position:relative;left:115px;top:-95px;"><?php _e('SMTP Encrypt','wms7') ?></label>
+
+    <input id="smtp_box_port_box3" style="position:relative;left:165px;top:-123px;width:60px;" name="wms7_main_settings[box3][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box3 ) ?>" />
+    <label for="smtp_box_port_box3" style="position:relative;left:100px;top:-95px;"><?php _e('SMTP Port','wms7') ?></label><br/>
+
+    <div id="tbl_folders_box3" style="position:relative;left:290px;top:-212px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders3 ?></div>
+
+    <textarea readonly id="text_folders_box3" name="wms7_main_settings[box3][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px;"><?php echo sanitize_text_field( $val7_box3 ) ?></textarea>
+
+    <textarea readonly id="text_folders_box3_alt" name="wms7_main_settings[box3][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px; display:none;"><?php echo sanitize_text_field( $val7_box3_alt ) ?></textarea> 
+
+  	</fieldset>
+  	</div>
+  <?php
+  //gmail.com--------------------------------------------------------------------
+    $val = get_option('wms7_main_settings');
+    $val1_box4 = $val['box4']['imap_server'];
+    $val2_box4 = $val['box4']['mail_box_name'];
+    $val3_box4 = $val['box4']['mail_box_pwd'];
+    $val4_box4 = $val['box4']['mail_box_encryption'];  
+    $val5_box4 = $val['box4']['mail_box_port'];
+    $val6_box4 = $val['box4']['pwd_box'];
+
+    $val7_box4 = $val['box4']['mail_folders'];
+		$val7_box4 = str_replace(';', ';&#010', $val7_box4);
+    $val7_box4_alt = $val['box4']['mail_folders_alt'];
+		$val7_box4_alt = str_replace(';', ';&#010', $val7_box4_alt);		
+
+    $val8_box4 = $val['box4']['smtp_server'];
+		$val9_box4 = $val['box4']['smtp_box_encryption'];
+		$val10_box4 = $val['box4']['smtp_box_port'];
+    $sel1 = $sel2 = $sel3 = $sel4 = '';
+    switch ($val4_box4) {
+	    case 'Auto':
+	        $sel1 = 'selected';
+	        break;    
+	    case 'No':
+	        $sel2 = 'selected';
+	        break;
+	    case 'SSL':
+	        $sel3 = 'selected';
+	        break;
+	    case 'TLS':
+	        $sel4 = 'selected';
+	        break;    
+    }
+    $sel1_smtp = $sel2_smtp = $sel3_smtp = $sel4_smtp = '';
+    switch ($val9_box4) {
+	    case 'Auto':
+	        $sel1_smtp = 'selected';
+	        break;    
+	    case 'No':
+	        $sel2_smtp = 'selected';
+	        break;
+	    case 'SSL':
+	        $sel3_smtp = 'selected';
+	        break;
+	    case 'TLS':
+	        $sel4_smtp = 'selected';
+	        break;    
+    }    
+    if ( isset($_GET['checkbox']) && $_GET['checkbox'] == 'box4' ) {
+      	$tbl_folders4 = $this->wms7_imap_list($_GET['checkbox']);
+    	}else{
+    		$tbl_folders4 = '';
+    }
+  ?>
+  	<div id="param_mail_box_gmail_com" style="width:370px;">
+    <fieldset style="width:860px;height:200px;border: 2px groove;margin:0;padding:0;">
+      <legend><b>Gmail.com</b></legend>
+
+    <input id="imap_server_box4" style="margin-left: 5px; width: 200px;" name="wms7_main_settings[box4][imap_server]" type="text" placeholder="imap server" value="<?php echo sanitize_text_field( $val1_box4 ) ?>" /><br/>
+    <label for="imap_server_box4" style="position:relative;left:5px;"><?php _e('IMAP Server name','wms7') ?></label><br/>
+
+    <input id="mail_box_name_box4" style="position:relative;left:5px;width:200px;" name="wms7_main_settings[box4][mail_box_name]" type="text" placeholder="mail box name" value="<?php echo sanitize_text_field( $val2_box4 ) ?>" /><br/>
+    <label for="mail_box_name_box4" style="position:relative;left:5px;"><?php _e('E-mail box name','wms7') ?></label><br/>
+
+    <input id="mail_box_pwd_box4" style="position:relative;left:5px;width:200px;" name="wms7_main_settings[box4][mail_box_pwd]" type="text" placeholder="mail box password" value="<?php echo sanitize_text_field( $val3_box4 ) ?>" /><br/>
+    <label for="mail_box_pwd_box4" style="position:relative;left:5px;"><?php _e('E-mail box password','wms7') ?></label>
+
+    <select id="encryption_box4" name="wms7_main_settings[box4][mail_box_encryption]" style="position:relative;left:90px;top:-150px;"><option <?php echo $sel1 ?> value="Auto">Auto</option><option <?php echo $sel2 ?> value="No">No</option><option <?php echo $sel3 ?> value="SSL">SSL</option><option <?php echo $sel4 ?> value="TLS">TLS</option></select>
+    <label for="encryption_box4" style="position:relative;left:25px;top:-120px;"><?php _e('Encrypt','wms7') ?></label>
+
+    <input id="mail_box_port_box4" style="position:relative;left:-25px;top:-87px;width:60px;" name="wms7_main_settings[box4][mail_box_port]" type=text placeholder="993" value="<?php echo sanitize_text_field( $val5_box4 ) ?>" />
+    <label for="mail_box_port_box4" style="position:relative;left:-90px;top:-60px;"><?php _e('Port','wms7') ?></label><br/>
+
+    <button type="button" id="box4" name="check_boxes" class="button-primary" onClick="wms7_check_boxes(id)" style="position:relative;left:225px;top:-60px;" />Check</button>
+    <button type="button" id="textbox4" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box4','tbl_folders_box4','text_folders_box4', 'text_folders_box4_alt')" style="position:relative;left:165px;top:-30px;" />Insert</button>
+    <input id="pwd_box4" name="wms7_main_settings[box4][pwd_box]" type="checkbox" style="position:relative;left:70px;top:-32px;" value="1" <?php checked( $val6_box4 ) ?> onClick="wms7_check_pwd(id)"/>
+
+    <input id="smtp_server_box4" style="position:relative;width: 200px;top:-180px;left:505px;" name="wms7_main_settings[box4][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box4 ) ?>" />
+    <label for="smtp_server_box4" style="position:relative;top:-155px;left:300px;"><?php _e('SMTP Server name','wms7') ?></label>
+
+    <select id="smtp_encryption_box4" name="wms7_main_settings[box4][smtp_box_encryption]" style="position:relative;left:180px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
+    <label for="smtp_encryption_box4" style="position:relative;left:115px;top:-95px;"><?php _e('SMTP Encrypt','wms7') ?></label>
+
+    <input id="smtp_box_port_box4" style="position:relative;left:165px;top:-123px;width:60px;" name="wms7_main_settings[box4][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box4 ) ?>" />
+    <label for="smtp_box_port_box4" style="position:relative;left:100px;top:-95px;"><?php _e('SMTP Port','wms7') ?></label><br/>
+
+    <div id="tbl_folders_box4" style="position:relative;left:290px;top:-212px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders4 ?></div>
+
+    <textarea readonly id="text_folders_box4" name="wms7_main_settings[box4][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px;"><?php echo sanitize_text_field( $val7_box4 ) ?></textarea>
+
+    <textarea readonly id="text_folders_box4_alt" name="wms7_main_settings[box4][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px; display:none;"><?php echo sanitize_text_field( $val7_box4_alt ) ?></textarea>    
+
+  	</fieldset>
+  	</div>
+  <?php
+  }
+
+  //Filling out an option 10
+  function wms7_main_setting_field10(){
+    $val = get_option('wms7_main_settings');
+    $val = isset($val['mail_select']) ? $val['mail_select'] : 'box0';
+
+    $Rbtn0='<label><input type="radio" value="box0" name="wms7_main_settings[mail_select]"/>'.__('This site', 'wms7').'</label>';
+    $Rbtn1='<label><input type="radio" value="box1" name="wms7_main_settings[mail_select]"/>Mail.ru</label>';
+    $Rbtn2='<label><input type="radio" value="box2" name="wms7_main_settings[mail_select]"/>Yandex.ru</label>';
+    $Rbtn3='<label><input type="radio" value="box3" name="wms7_main_settings[mail_select]"/>Yahoo.com</label>';
+    $Rbtn4='<label><input type="radio" value="box4" name="wms7_main_settings[mail_select]"/>Gmail.com</label>';
+
+    switch ($val) {
+      case "box0":
+      $Rbtn0='<label><input type="radio" value="box0" checked name="wms7_main_settings[mail_select]"/>'.__('This site', 'wms7').'</label>'; break;      
+      case "box1":
+      $Rbtn1='<label><input type="radio" value="box1" checked name="wms7_main_settings[mail_select]"/>Mail.ru</label>'; break;       
+      case "box2":
+      $Rbtn2='<label><input type="radio" value="box2" checked name="wms7_main_settings[mail_select]"/>Yandex.ru</label>'; break;
+      case "box3":
+      $Rbtn3='<label><input type="radio" value="box3" checked name="wms7_main_settings[mail_select]"/>Yahoo.com</label>';break;      
+      case "box4":
+      $Rbtn4='<label><input type="radio" value="box4" checked name="wms7_main_settings[mail_select]"/>Gmail.com</label>'; 
+        break;
+    }
+    $output=$Rbtn0.'<br/>'.$Rbtn1.'<br/>'.$Rbtn2.'<br/>'.$Rbtn3.'<br/>'. $Rbtn4.'<br/>'. __('Select a mailbox to manage it', 'wms7');
+    echo $output;                  
+  }  
+
+  //Filling out an option 11
+  function wms7_main_setting_field11(){
+    $val = get_option('wms7_main_settings');
+    $val = isset($val['mail_box_tmp']) ? $val['mail_box_tmp'] : '';
+    ?>
+    <input id="wms7_main_settings[mail_box_tmp]" style="margin: 0px; width: 320px; height: 25px;" name="wms7_main_settings[mail_box_tmp]" type="text" placeholder="/tmp"value="<?php echo sanitize_text_field( $val ) ?>" /><br/><label><?php _e('Create a directory in the root of the site for temporary storage of files attached to the mail','wms7') ?></label>
+    <?php
+  }
+
+  function wms7_imap_list(){
+    $prm = $_GET['checkbox'];
+    $val = get_option('wms7_main_settings');
+    $box = $val[$prm];
+ 
+		if($box['imap_server']){
+      $server = '{'.$box["imap_server"].':'.$box["mail_box_port"].'/imap/'.$box["mail_box_encryption"].'/novalidate-cert}INBOX';
+			$imap = imap_open($server, $box["mail_box_name"], $box["mail_box_pwd"])or die(
+				imap_last_error().
+				"<br>server: ".$server.
+				"<br>username: ".$box["mail_box_name"].
+				"<br>password: ".$box["mail_box_pwd"]);
+
+	    $list = imap_list($imap, "{".$box['imap_server']."}", "*");
+
+	    $tbl_head = '<table class="table_box" style="background-color: #5B5B59;"><thead class="thead_box"><tr class="tr_box">'.
+	                "<td class='td_box' width='16%' style='cursor: pointer;'>id</td>".
+	                "<td class='td_box' width='84%' style='cursor: pointer;'>mail box</td>".
+	                '</tr></thead>';
+	    $tbl_foot = '<tfoot class="tfoot_box"><tr class="tr_box">'.
+	                "<td class='td_box' width='16%' style='cursor: pointer;'>id</td>".
+	                "<td class='td_box' width='84%' style='cursor: pointer;'>mail box</td>".
+	                '</tr></tfoot></table>';
+
+	    $tbl_body = '<tbody class="tbody_box">';
+	    if (is_array($list)) {
+	    		$list = wms7_imap_list_decode($list);
+	        $i = 0;
+	        foreach ($list as $value) {
+	        	$str = explode('|', $value);
+	          $tbl_body = $tbl_body."<tr class='tr_box'><td class='td_box' width='16%'><input name=$prm"."_chk id=$prm"."_chk$i type='checkbox'>$i</td>";
+	          $tbl_body = $tbl_body."<td class='td_box' data='".$str[1]."' width='84%'>$str[0]</td></tr>";
+	          $i++;
+	        }
+	      }else{
+	        $tbl_body = "imap_list failed: " . imap_last_error();
+	    }
+
+	    $tbl_body = $tbl_body.'</tbody>';
+	    $tbl = $tbl_head.$tbl_body.$tbl_foot;
+
+	    return $tbl;
+  	}
+  }  
+
   function wms7_info_panel(){
     $val = get_option('wms7_screen_settings');
     $setting_list = isset($val['setting_list']) ? $val['setting_list'] : 0;
@@ -1924,13 +2897,13 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
 
     switch ($val) {
       case "1":
-      $width = '98%'; break;
+      $width_box = '98%'; break;
       case "2":
-      $width = '49%'; break; 
+      $width_box = '49%'; break; 
       case "3":
-      $width = '32.5%'; break; 
+      $width_box = '32.5%'; break; 
       case "4":
-      $width = '24.5%'; break;    
+      $width_box = '24.5%'; break;    
     }
 
     $this->hidden = ($setting_list !=='1' && $history_list !=='1' && $robots_list  !=='1' && $black_list !=='1') ? 'hidden' : '';
@@ -1944,29 +2917,38 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     $log_duration = isset($val['log_duration']) ? $val['log_duration'] : 0;
     $ip_excluded = isset($val['ip_excluded']) ? $val['ip_excluded'] : '';
     $robots_reg = isset($val['robots_reg']) ? __('Yes', 'wms7') : __('No', 'wms7');    
-    $whois_service = isset($val['whois_service']) ? $val['whois_service'] : 'whois_service';    
+    $whois_service = isset($val['whois_service']) ? $val['whois_service'] : 'whois_service';
+
+	  $val = get_option('wms7_main_settings');    
+	  $select_box = $val['mail_select'];
+	  $box = $val["$select_box"];
+		$box = $box["imap_server"];
+		$pos = strpos($box, '.');
+		$box = substr($box, $pos+1);
 
     echo '<fieldset class=info_panel title="'.__('Panel info', 'wms7').'" '.$this->hidden.' >';
 
-    echo '<fieldset class=info_settings title="'.__('General settings', 'wms7').'" ' .$hidden_setting_list. ' style="width:'.$width. '">';
+    echo '<fieldset class=info_settings title="'.__('General settings', 'wms7').'" ' .$hidden_setting_list. ' style="width:'.$width_box. '">';
     echo '<legend class=panel_title>'.__('Settings', 'wms7').'</legend>';
     $str=__('Duration log entries', 'wms7').': '.$log_duration.' '.__('day','wms7').';&#010;'.
     __('Do not include visits for','wms7').': '.$ip_excluded.';&#010;'.
-    __('Visits of robots','wms7').': '.$robots_reg;                   
+    __('Visits of robots','wms7').': '.$robots_reg.';&#010;'.
+    __('Mail box','wms7').': '.$box;
+
     echo '<textarea class ="textarea_panel_info">'.$str.'</textarea>';              
     echo '</fieldset>';
 
-    echo '<fieldset class=info_whois title="'.__('History visits', 'wms7').'" ' .$hidden_history_list. ' style="width:'.$width. '" >';
+    echo '<fieldset class=info_whois title="'.__('History visits', 'wms7').'" ' .$hidden_history_list. ' style="width:'.$width_box. '" >';
     echo '<legend class=panel_title>'.$whois_service.'</legend>';
     echo '<textarea class ="textarea_panel_info">'.$this->wms7_whois_service_info($whois_service).'</textarea>';
     echo '</fieldset>';
 
-    echo '<fieldset class=info_robots title="'.__('Robots-last day visit', 'wms7').'" ' .$hidden_robots_list. ' style="width:'.$width. '" >';
+    echo '<fieldset class=info_robots title="'.__('Robots-last day visit', 'wms7').'" ' .$hidden_robots_list. ' style="width:'.$width_box. '" >';
     echo '<legend class=panel_title>'.__('Robots list', 'wms7').'</legend>';     
     echo '<textarea class ="textarea_panel_info">'.$this->wms7_robot_visit_info().'</textarea>';
     echo '</fieldset>';
 
-    echo '<fieldset class=info_blacklist title="'.__('Black list', 'wms7').'" ' .$hidden_black_list. ' style="width:'.$width. '" >';
+    echo '<fieldset class=info_blacklist title="'.__('Black list', 'wms7').'" ' .$hidden_black_list. ' style="width:'.$width_box. '" >';
     echo '<legend class=panel_title>'.__('Black list', 'wms7').'</legend>';
     echo '<textarea class ="textarea_panel_info">'.$this->wms7_black_list_info().'</textarea>';
     echo '</fieldset>';
@@ -2049,12 +3031,16 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
 
   function wms7_black_list(){
     global $wpdb;
+    $table_name = $wpdb->prefix . 'watchman_site';
+    $plugine_info = get_plugin_data(__DIR__ . '/watchman-site7.php');
 
+    $opt = get_option('wms7_id');
+    if (isset($opt)) delete_option('wms7_id');
+    $opt = get_option('wms7_id_del');
+    if (isset($opt)) delete_option('wms7_id_del');    
     $opt = get_option('wms7_action');
     if (isset($opt)) delete_option('wms7_action');
 
-    $table_name = $wpdb->prefix . 'watchman_site';
-    $plugine_info = get_plugin_data(__DIR__ . '/watchman-site7.php');
     $id = sanitize_text_field($_GET['id']);
 
     if (isset($_REQUEST['ban_start_date']) && isset($_REQUEST['ban_end_date'])){

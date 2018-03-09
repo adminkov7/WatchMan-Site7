@@ -3,29 +3,30 @@
 Contributors: adminkov
 Plugin Name:  WatchMan-Site7
 Plugin URI:   https://wordpress.org/plugins/watchman-site7/
-Tags:         login, black list, cron, IP, security
+Tags:         login, blacklist, cron, ip, mail
 Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
-Donate link:  https://www.adminkov.bcr.by/category/wordpress/
-Requires at least: WP 4.5
-Tested up to: WP 4.9
+Donate link:  https://www.adminkov.bcr.by/donate/
+Requires at least: 4.5.1
+Tested up to: 4.9.2
 Stable tag:   2.0
-Version:      2.2.2
+Version:      2.2.3
 License:      GPL3
 
 == Description ==
 
 The plugin keeps a log of site visits, monitors system files and site events. The main functions of the plugin are: 
-1. Record the date and time of visit to the site by people, robots. 
-2. The entry registration site visit: successful, unsuccessful, no registration. 
-3. Country, city  of visitor site. 
-4. Record information about the browser, OS of the visitor. 
+1. Record the date and time of visit to the site by people, robots
+2. The entry registration site visit: successful, unsuccessful, no registration
+3. Country, city  of visitor site
+4. Record information about the browser, OS of the visitor
 5. Recording site visits for various categories of visitors 
-6. The deletion of unnecessary records on the visit in automatic and manual modes. 
-7. Export records of visits to the site in an external file for later analysis.
-8. Automatic screen refresh mode using SSE technology (Server-Sent Events).
+6. The deletion of unnecessary records on the visit in automatic and manual modes
+7. Export records of visits to the site in an external file for later analysis
+8. Automatic screen refresh mode using SSE technology (Server-Sent Events)
+9. SMA - Simple Mail Agent, managing the mailboxes of your site, as well as mail.ru, yandex.ru, yahoo.com, gmail.com
 
-[Demo Video](...is preparing for publication)
+<a href="https://www.youtube.com/watch?v=iB-7anPcUxU&list=PLe_4Q0gv64g3WgA1Mo_S3arSrK3htZ1Nt" target="_blank">Demo video - [RU]</a>
 
 ==Features include:==
 
@@ -46,6 +47,8 @@ The plugin keeps a log of site visits, monitors system files and site events. Th
 15. black list of visitors and blocking the IP for the selected period of time
 16. blocking intrusive robots
 17. Automatic updating of the list of site visits using SSE technology
+18. SMA - Simple Mail Agent, managing the mailboxes of your site, as well as mail.ru, yandex.ru, yahoo.com, gmail.com
+
 
 ==Translations:==
 
@@ -57,9 +60,9 @@ The plugin keeps a log of site visits, monitors system files and site events. Th
 
 == Installation ==
 
-1. Install and activate like any other basic plugin.
-2. Define basic plugin settings menu: Visitors/settings. 
-3. Click on the Screen Options tab to expand the options section. You'll be able to change the number of results per page as well as hide/display table columns.
+1. Install and activate like any other basic plugin
+2. Define basic plugin settings menu: Visitors/settings
+3. Click on the Screen Options tab to expand the options section. You'll be able to change the number of results per page as well as hide/display table columns
 
 == Upgrade Notice ==
 
@@ -69,21 +72,30 @@ Missing.
 
 1. Screen basic settings of the plugin
 2. Screen basic settings of the plugin (continue). Insert only your key for the Google Maps API KEY field, which you will receive by clicking on the link: https://console.developers.google.com/apis/credentials
-3. Example of registering and receiving a Google Maps API key
-4. Screen Options are available at the top of the this plugin page
-5. Compliance of the information panel with filters II level
-6. An example of working with a black list. The visitor's IP is automatically entered in .htaccess
-7. Example of filling in the fields Black list for selected visitor's IP
+3. Setting up IMAP and SMTP access to mailboxes
+4. Example of registering and receiving a Google Maps API key
+5. Screen Options are available at the top of the this plugin page
+6. Compliance of the information panel with filters II level
+7. An example of working with a black list. The visitor's IP is automatically entered in .htaccess
+8. Example of filling in the fields Black list for selected visitor's IP
+9. File editor for: index.php, robots.txt, .htaccess, wp-config.php
+10. Viewer wp-cron tasks
+11. Statistic of visits to site
+12. Geolocation of visitor to site
+13. Managing the mailbox from this plugin
 
 == Changelog ==
-= 2.1.1 =
-Expanded the functionality of the widget.
+= 2.1.0 =
+Expanded the functionality of the widget
 
 = 2.2.1 =
-Automatic screen refresh mode using SSE technology (Server-Sent Events).
+Automatic screen refresh mode using SSE technology (Server-Sent Events)
 
 = 2.2.2 =
-The code is optimized. The work of modal windows has been improved.
+The code is optimized. The work of modal windows has been improved
+
+= 2.2.3 =
+Managing the mailboxes of your site, as well as mail.ru, yandex.ru, yahoo.com, gmail.com
 
 == Frequently Asked Questions ==
 
