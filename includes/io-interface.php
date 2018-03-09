@@ -2,7 +2,7 @@
 /*
 Slave module: io-interface.php
 Description:  Various interface functions processing of external data
-Version:      2.2.2
+Version:      2.2.3
 Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 */
@@ -158,24 +158,15 @@ function wms7_flds_csv() {
 
 function wms7_output_csv() {
 	global $wpdb;
+	$table_name = $wpdb->prefix . 'watchman_site';
 
-	if (isset($_REQUEST["action"]) && ($_REQUEST["action"] == 'export') || 
-		 (isset($_REQUEST["action2"]) && $_REQUEST["action2"] == 'export')) {
-			$export = TRUE;
-		}else{
-			$export = FALSE;
-	}
-	if ($export) {
+	$export = get_option('wms7_action');
+	if ($export == 'export') {
 		//do not sanitize_text_field $_REQUEST['id']
 		$ids = isset($_REQUEST['id']) ? $_REQUEST['id'] : FALSE;
 		if (!$ids) return;
 		$flds = wms7_flds_csv();
 		if (!$flds) return;
-
-		update_option('wms7_action','export');		
-		update_option('wms7_id',($_REQUEST['id']));
-
-		$table_name = $wpdb->prefix . 'watchman_site';
 
 		if (is_array($ids)) $ids = implode(',', $ids);
 
@@ -184,21 +175,63 @@ function wms7_output_csv() {
 		}
 
 		$DataArray = $wpdb->get_results($sql, 'ARRAY_A');
-
 		$filename = 'wms7_export_'.date("Y-m-d").'.csv';
+
+		//reset the PHP output buffer
+		if (ob_get_level()) {
+		      ob_end_clean();
+		}
 
 		header( 'Content-Type: text/csv' );
 		header( 'Content-Disposition: attachment;filename='.$filename);
-
 		$fp = fopen('php://output', 'w');
-		fputcsv($fp, array_keys($DataArray['0']));
-
 		foreach($DataArray as $values){
 			fputcsv($fp, $values);
 		}
 		unset($values);
 		fclose($fp);
-
 		exit;
 	}
+}
+
+function wms7_output_attach($filename) {
+
+	$file_extension = strtolower(substr(strrchr($filename,"."),1));
+	$path_file = $_SERVER['DOCUMENT_ROOT'].'/tmp/';
+
+	if( $filename == "" )	{
+	          echo "ОШИБКА: не указано имя файла.";
+	          exit;
+		}elseif ( ! file_exists( $path_file.$filename ) ) {
+	          echo "ОШИБКА: данного файла не существует.";
+	          exit;
+	}
+	switch( $file_extension ){
+	  case "pdf": $ctype="application/pdf"; break;
+	  case "exe": $ctype="application/octet-stream"; break;
+	  case "zip": $ctype="application/zip"; break;
+	  case "doc": $ctype="application/msword"; break;
+	  case "xls": $ctype="application/vnd.ms-excel"; break;
+	  case "ppt": $ctype="application/vnd.ms-powerpoint"; break;
+	  case "mp3": $ctype="audio/mp3"; break;
+	  case "gif": $ctype="image/gif"; break;
+	  case "png": $ctype="image/png"; break;  
+	  case "jpeg":
+	  case "jpg": $ctype="image/jpg"; break;
+	  default: $ctype="application/force-download";
+	}
+	//reset the PHP output buffer
+	if (ob_get_level()) {
+	      ob_end_clean();
+	}
+	header("Pragma: public"); 
+	header("Expires: 0");
+	header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+	header("Cache-Control: private",false); // нужен для некоторых браузеров
+	header("Content-Type: $ctype");
+	header("Content-Disposition: attachment; filename=$filename");
+	header("Content-Transfer-Encoding: binary");
+	header("Content-Length: ".filesize($path_file.$filename));
+	readfile($path_file.$filename);
+	exit();
 }

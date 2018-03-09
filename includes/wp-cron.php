@@ -2,7 +2,7 @@
 /*
 Slave module: wp-cron.php
 Description:  Lists all events in CRON
-Version:      2.2.2
+Version:      2.2.3
 Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 */
@@ -25,31 +25,31 @@ if( !class_exists( 'wms7_cron' )){
 		function wms7_delete_item_crons(){
 
 			foreach ($_REQUEST as $key=>$value) {
-
 				if ($value == 'cron'){
 					wp_clear_scheduled_hook($key);
 				}
 			}
-			unset($key);
+			//unset($key);
 		}
 
 		function wms7_create_cron_table(){
-
+			$this->wms7_delete_item_crons();
+			
 			$arr_cron = $this->wms7_cron_view();
 			$table_row = explode(";", $arr_cron);
-			$str='<tbody class="tbody">';
+			$str='<tbody class="tbody" style="max-height: 200px;height: 200px;">';
 			$i=0;
 			foreach ($table_row as $val) {
 				$i++;
 				$val = explode("|", $val);
-				if ($val[0] != '') {
+				if ($val[0] !== '') {
 					if (isset($_REQUEST['cron_refresh'])) {
 							$source_task = $this->wms7_search_into_directory ($val[0]);
 						}else{
 							$source_task[0] = '';
 							$source_task[1] =  __('press Refresh', 'wms7');
 					}
-					$str=$str.'<tr class="tr"><td class="td" width="9%" style="padding-left:5px;"><input type="checkbox" name="'.$val[0].'" value="cron">'.$i.'</td><td class="td" width="35%">'.$val[0].'</td><td class="td" width="15%">'.$val[1].'</td><td class="td" width="20%">'.$val[2].'</td><td class="td" title="'.$source_task[0].'">'.$source_task[1].'</td></tr>';
+					$str=$str.'<tr class="tr"><td class="td" width="8%" style="padding-left:5px;"><input type="checkbox" name="'.$val[0].'" value="cron">'.$i.'</td><td class="td" width="36%">'.$val[0].'</td><td class="td" width="15%">'.$val[1].'</td><td class="td" width="20%">'.$val[2].'</td><td class="td" width="21%" title="'.$source_task[0].'">'.$source_task[1].'</td></tr>';
 				}
 			}
 			$str = $str.'</tbody>';

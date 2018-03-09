@@ -2,7 +2,7 @@
 /*
 Slave module:   widget.php
 Description:    Create widget for WatchMan-site7
-Version:        2.2.2
+Version:        2.2.3
 Author:         Oleg Klenitskiy
 Author URI: 		https://www.adminkov.bcr.by/category/wordpress/
 */
