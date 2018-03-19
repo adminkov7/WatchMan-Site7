@@ -6,7 +6,7 @@ Description:  This plugin is designed for site administrators and is used to con
 Author:       Oleg Klenitskiy
 Author URI:   https://www.adminkov.bcr.by/category/wordpress/
 Contributors: adminkov
-Version:      2.2.3
+Version:      2.2.5
 License:      GPL2
 License URI:  https://www.gnu.org/licenses/gpl-2.0.html
 Domain Path:  /languages
@@ -954,6 +954,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       $img6 = plugins_url('/images/other_functions.png', __FILE__);
       $img7 = plugins_url('/images/map1.png', __FILE__);
       $img8 = plugins_url('/images/map2.png', __FILE__);
+      $img9 = plugins_url('/images/sse.png', __FILE__);
       $url = site_url();
         //if per page option is not set, use default
       $per_page_val = get_option($per_page_option, '10');
@@ -996,13 +997,18 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       get_current_screen() -> add_help_tab(array(
         'id'        => 'wms7-tab-7',
         'title'     => __('7.Other functions', 'wms7'),
-        'content'   => __('Additional features of the plugin are in the form of buttons located at the bottom of the main table, visit the website:<br />- « index » feature edit and save in a modal window file index.php<br />- « robots » feature edit and save in a modal window file rorots.txt<br />- « htaccess » edit function and save in a modal window file.htaccess<br />- « wp-config » function to edit and save it in a modal window file wp-config.php<br />- « wp-cron » output function and removal of task wp-cron in a modal window<br />- « statistic » statistic of visits to the site<br /><br />Additional features','wms7').'<br /><img src='.$img6.' style="float: left;">',
+        'content'   => __('Additional features of the plugin are in the form of buttons located at the bottom of the main table, visit the website:<br />- « index » feature edit and save in a modal window file index.php<br />- « robots » feature edit and save in a modal window file rorots.txt<br />- « htaccess » edit function and save in a modal window file.htaccess<br />- « wp-config » function to edit and save it in a modal window file wp-config.php<br />- « wp-cron » output function and removal of task wp-cron in a modal window<br />- « statistic » statistic of visits to the site<br />- « sma » managing of current mail box<br /><br />Additional features','wms7').'<br /><img src='.$img6.' style="float: left;">',
         ));
       get_current_screen() -> add_help_tab(array(
         'id'        => 'wms7-tab-8',
         'title'     => __('8.Map', 'wms7'),
         'content'   => __('The function « Map » is in each row of the main table of the plugin, in the field « Visitor IP ». For use this function, you must register <a href="https://console.developers.google.com/apis/credentials" target="_blank">Google Maps API key</a> and save it on the plugin page <a href="'.$url.'/wp-admin/admin.php?page=wms7_settings " target="_blank">Settings</a> in the field " Google Maps API key "<br /><br />Example of displaying the location of the visitor and of the this provider:','wms7').'<br /><img src='.$img7.' style="float: left;margin: 0;"><img src='.$img8.' style="float: right;margin: 0;">',
         ));
+      get_current_screen() -> add_help_tab(array(
+        'id'        => 'wms7-tab-9',
+        'title'     => __('9.SSE', 'wms7'),
+        'content'   => __('The SSE function (Server Send Events) is made in the form of a button located at the top of the plugin main screen. The function is designed to automatically update the screen when new visitors to the site or new mail to the Inbox of the current mailbox. Access and mailbox name is defined in the settings on the basic plug - in settings page. If you are actively working with the plug - in, it is recommended to disable SSE mode, and after the work-re-enable SSE mode','wms7').'<br /><br /><img src='.$img9.'>',
+        ));      
         // Help sidebars are optional
       get_current_screen()->set_help_sidebar(
         '<p><strong>' . __( 'Additional information:', 'wms7' ) . '</strong></p>' .
@@ -1018,7 +1024,11 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       $img5 = plugins_url('/images/robots.png', __FILE__);
       $img7 = plugins_url('/images/robots_banned.png', __FILE__);
       $img8 = plugins_url('/images/google_map_api.png', __FILE__);
-      $img9 = plugins_url('/images/export_fields_csv.png', __FILE__);      
+      $img9 = plugins_url('/images/export_fields_csv.png', __FILE__);
+      $img10 = plugins_url('/images/mail_ru.png', __FILE__);
+      $img11 = plugins_url('/images/yandex_ru.png', __FILE__);
+			$img12 = plugins_url('/images/yahoo_com.png', __FILE__);
+			$img13 = plugins_url('/images/gmail_com.png', __FILE__);
 
       get_current_screen() -> add_help_tab(array(
         'id'        => 'wms7-tab-1',
@@ -1068,7 +1078,12 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
         'id'        => 'wms7-tab-9',
         'title'     => __('9.field: Exporting Table Fields', 'wms7'),
         'content'   => __('Select the fields you want in the export file -csv. The Export - command is located on the main page of the plug-in in the drop-down list - Bulk action.', 'wms7').'<br /><br /><img src='.$img9.' style="float: left;">',
-        ));      
+        ));
+      get_current_screen() -> add_help_tab(array(
+        'id'        => 'wms7-tab-9',
+        'title'     => __('10.field: E-mail boxes', 'wms7'),
+        'content'   => __('Examples of settings for a mailbox access the main providers of postal services.', 'wms7').'<br /><br /><img src='.$img10.' style="float: left;"><img src='.$img11.' style="float: left;"><img src='.$img12.' style="float: left;"><img src='.$img13.' style="float: left;">',
+        ));
       // Help sidebars are optional
       get_current_screen()->set_help_sidebar(
         '<p><strong>' . __( 'Additional information:', 'wms7' ) . '</strong></p>' .
@@ -1620,6 +1635,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
               <input type='submit' value='send' id='submit' class='button-primary' name='mail_new_send'/>
               <input type='submit' value='quit' id='submit' class='button-primary' name='mail_new_quit'/>
               <input type='file' name='mail_new_attach'>
+              $attach
             </div>
           </form>  
       </div>
@@ -1663,12 +1679,39 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
 		$envelope["from"]  = $box["mail_box_name"];
 		$envelope["to"]  = $_POST["mail_new_to"];
 
-		$part["type"] = TYPETEXT;
-		$part["subtype"] = PLAIN;
-		$part["charset"] = "UTF-8";
-		$part["contents.data"] = $_POST["mail_new_content"];
+		if ($_FILES['mail_new_attach']['name'] == '') {
+				$part1["type"] = TYPETEXT;
+				$part1["subtype"] = PLAIN;
+				$part1["charset"] = "UTF-8";
+				$part1["contents.data"] = $_POST["mail_new_content"];
+				$body[1] = $part1;
+			}else{
+				$part1["type"] = TYPEMULTIPART;
+				$part1["subtype"] = "mixed";
 
-		$body[1] = $part;
+				$part2["type"] = TYPETEXT;
+				$part2["subtype"] = PLAIN;
+				$part2["charset"] = "UTF-8";
+				$part2["contents.data"] = $_POST["mail_new_content"];	
+
+				$filename = $_FILES['mail_new_attach']['tmp_name'];
+				$fp = fopen($filename, "r");
+				$contents = fread($fp, filesize($filename));
+				fclose($fp);
+
+				$part3["type"] = TYPEAPPLICATION;
+				$part3["encoding"] = ENCBINARY;
+				$part3["subtype"] = "octet-stream";
+				$part3["description"] = $_FILES['mail_new_attach']['name'];
+        $part3['disposition.type'] = 'attachment';
+        $part3['disposition'] = array ('filename' => $_FILES['mail_new_attach']['name']);
+        $part3['type.parameters'] = array('name' => $_FILES['mail_new_attach']['name']);
+				$part3["contents.data"] = $contents;	
+
+				$body[1] = $part1;
+				$body[2] = $part2;
+				$body[3] = $part3;
+		}
 
 		$msg = imap_mail_compose($envelope, $body);
 
@@ -1931,7 +1974,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     if (isset($opt)) delete_option('wms7_action');    
     ?>
 <a href="https://plugintests.com/plugins/watchman-site7/latest-report"><img src="https://plugintests.com/plugins/watchman-site7/php-badge.svg" style="position:absolute; margin:0 5px 5px 23px;"></a>
-<a href="https://plugintests.com/plugins/watchman-site7/latest-report"><img src="https://plugintests.com/plugins/watchman-site7/wp-badge.svg" style="position:absolute;margin:0 0 0 135px;"></a>
+<a href="https://plugintests.com/plugins/watchman-site7/latest-report"><img src="https://plugintests.com/plugins/watchman-site7/wp-badge.svg" style="position:absolute;margin:0 0 0 150px;"></a>
     <div class="sse" onclick="wms7_sse()" title="<?php echo __('Refresh table of visits', 'wms7'); ?>">
       <input type="checkbox" id="sse">
       <label><i></i></label>     
@@ -2075,10 +2118,6 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       $str_head = 'e-mail box: '.$box["mail_box_name"];
       $this->wms7_mail($str_head);
     } 
-
-    if ( isset($_GET['file']) ) {
-      wms7_output_attach($_GET['file']);
-    }
 
     //mail_search_context
     if ( isset($_POST['mail_search']) ) {
@@ -2848,7 +2887,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
  
 		if($box['imap_server']){
       $server = '{'.$box["imap_server"].':'.$box["mail_box_port"].'/imap/'.$box["mail_box_encryption"].'/novalidate-cert}INBOX';
-			$imap = imap_open($server, $box["mail_box_name"], $box["mail_box_pwd"])or die(
+			$imap = @imap_open($server, $box["mail_box_name"], $box["mail_box_pwd"])or die(
 				imap_last_error().
 				"<br>server: ".$server.
 				"<br>username: ".$box["mail_box_name"].
@@ -2894,7 +2933,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     $black_list = isset($val['black_list']) ? $val['black_list'] : 0; 
 
     $val = $setting_list + $history_list + $robots_list + $black_list;
-
+    $width_box = '';
     switch ($val) {
       case "1":
       $width_box = '98%'; break;
@@ -2925,15 +2964,16 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
 		$box = $box["imap_server"];
 		$pos = strpos($box, '.');
 		$box = substr($box, $pos+1);
+		$unseen = wms7_mail_unseen();
 
     echo '<fieldset class=info_panel title="'.__('Panel info', 'wms7').'" '.$this->hidden.' >';
 
     echo '<fieldset class=info_settings title="'.__('General settings', 'wms7').'" ' .$hidden_setting_list. ' style="width:'.$width_box. '">';
     echo '<legend class=panel_title>'.__('Settings', 'wms7').'</legend>';
-    $str=__('Duration log entries', 'wms7').': '.$log_duration.' '.__('day','wms7').';&#010;'.
+    $str=__('Mail box','wms7').': '.$box.' ('.$unseen.')'.';&#010;'.
+    __('Duration log entries', 'wms7').': '.$log_duration.' '.__('day','wms7').';&#010;'.
     __('Do not include visits for','wms7').': '.$ip_excluded.';&#010;'.
-    __('Visits of robots','wms7').': '.$robots_reg.';&#010;'.
-    __('Mail box','wms7').': '.$box;
+    __('Visits of robots','wms7').': '.$robots_reg.';&#010;';
 
     echo '<textarea class ="textarea_panel_info">'.$str.'</textarea>';              
     echo '</fieldset>';

@@ -10,7 +10,7 @@ Donate link:  https://www.adminkov.bcr.by/donate/
 Requires at least: 4.5.1
 Tested up to: 4.9.2
 Stable tag:   2.0
-Version:      2.2.3
+Version:      2.2.5
 License:      GPL3
 
 == Description ==
@@ -97,6 +97,12 @@ The code is optimized. The work of modal windows has been improved
 = 2.2.3 =
 Managing the mailboxes of your site, as well as mail.ru, yandex.ru, yahoo.com, gmail.com
 
+= 2.2.4 =
+SSE technology is used in the control of new, unread emails
+
+= 2.2.5 =
+Improved and extended HELP, added pictures, optimized code
+
 == Frequently Asked Questions ==
 
 = Question: When you change the WHO-is service provider, the info panel shows not all the statistics of visits to your website. Why? =
@@ -106,3 +112,5 @@ The answer: Replace WHO-is provider need to spend as little as possible. First, 
 The answer: The plugin remembers your blocking decision and automatically enters a blocking entry in htaccess when it's time to start blocking. Then, when it's time to end the lock, the plug-in removes the blocking entry from the htaccess. However, a record of this IP is stored in the database. And when, after some time, this visitor will go to your site, his IP will be marked in red. Although the visitor will walk quietly through your pages. the expiration date has expired. By the way, you can not delete this entry until you clear the Black list field. Then you can safely delete this entry or it will be automatically deleted when the visitor log is truncated automatically.
 = Question: After clicking the "wp-cron" button (at the bottom of the plug-in table), a modal window appears. What's next? =
 The answer: In the modal window, a list of cron-events appears, which work on your site. You can click the - refresh button. After 20 seconds the list will be updated. If you bring the cursor to the cell - Source task, a context line will appear with the full path to the file - the source of this event. There are bad plugins, when they are deleted, there are stray events. You can see and delete them.
+= Question: Why, sometimes when working on the main page of the plugin displays a message: an Error in establishing a connection to the database? =
+The answer: This situation may occur when SSE mode is enabled. Disable this mode, do the rest of your work on the plugin page and re-enable SSE mode if you need it. This message, although unpleasant, will not happen in a bad situation. When SSE mode is enabled, the plugin makes one query per 10 seconds to the database. And in that moment, when you give a team - WordPress can't execute two commands at the same time. But I repeat-a bad situation will not happen.
