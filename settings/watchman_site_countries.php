@@ -2,7 +2,7 @@
 /*
 Slave module:   wp-cron.php
 Description:    creates a table prefix_watchman_site_countries reference data about ip visitors
-Version:        2.2.3
+Version:        2.2.5
 Author:         Oleg Klenitskiy
 Author URI: 		https://www.adminkov.bcr.by/category/wordpress/
 */
