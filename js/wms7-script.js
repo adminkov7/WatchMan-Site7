@@ -8,8 +8,10 @@ function wms7_sse() {
 
           source.addEventListener('message', function(e) {
               console.log(e.data);
-              if (get_cookie('wms7_count') !== e.data) {
-                  document.cookie = 'wms7_count=' + e.data;
+              var arr = e.data.split('|');
+              if (get_cookie('wms7_records_count') !== arr[0] || get_cookie('wms7_unseen_count') !== arr[1]) {
+                  document.cookie = 'wms7_records_count=' + arr[0];
+                  document.cookie = 'wms7_unseen_count=' + arr[1];
                   location.replace(window.location.href);
               }
           }, false);
