@@ -2,7 +2,7 @@
 /*
 Slave module: wp-cron.php
 Description:  Lists all events in CRON
-Version:      2.2.3
+Version:      2.2.5
 Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 */

@@ -2,7 +2,7 @@
 /*
 Slave module: mail.php
 Description:  SMA (Simple Mail Agent) for email box of the website
-Version:      2.2.3
+Version:      2.2.5
 Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 */
@@ -18,11 +18,11 @@ function wms7_mail_connection() {
 	foreach ($folder as $key => $value) {
 		$str_alt[] = substr($value, strpos($value, '}')+1);
 	}
-
+	$server = '';
 	if (!isset($_REQUEST['mailbox'])) {$_REQUEST['mailbox'] = '';}
   switch ($_REQUEST['mailbox']) {
   case '' :
-      $server = '{'.$box["imap_server"].':'.$box["mail_box_port"].'/imap/'.$box["mail_box_encryption"].'/novalidate-cert}'.$str_alt[0];
+      $server = '{'.$box["imap_server"].':'.$box["mail_box_port"].'/imap/'.$box["mail_box_encryption"].'/novalidate-cert}INBOX';
       break;  	
   case 'folder1':
       $server = '{'.$box["imap_server"].':'.$box["mail_box_port"].'/imap/'.$box["mail_box_encryption"].'/novalidate-cert}'.$str_alt[0];
@@ -40,14 +40,14 @@ function wms7_mail_connection() {
 
 	$username = $box["mail_box_name"];
 	$password = $box["mail_box_pwd"];
-
-	$imap = imap_open($server, $username, $password)or die(
+	if ($server !=='' && $username !=='' && $password !==''){
+		$imap = @imap_open($server, $username, $password)or print_r(
 		imap_last_error().
 		"<br>server: ".$server.
 		"<br>username: ".$username.
 		"<br>password: ".$password);
-
-	return $imap;
+		return $imap;
+	}
 }
 
 function wms7_mail_header($msgno) {
@@ -136,15 +136,17 @@ function wms7_mailbox_selector(){
   $box = $val[$select_box];
   //массив папок почтового ящика
 	$folder =explode(';',$box['mail_folders'],-1);
-	$i=0;
-	foreach ($folder as $key => $value) {
-		$str[] = substr($value, strpos($value, '}')+1);
+	if (!empty($folder)){
+		foreach ($folder as $key => $value) {
+			$str[] = substr($value, strpos($value, '}')+1);
+		}
 	}
 	//массив папок почтового ящика
 	$folder =explode(';',$box['mail_folders_alt'],-1);
-	$i=0;
-	foreach ($folder as $key => $value) {
-		$str_alt[] = substr($value, strpos($value, '}')+1);
+	if (!empty($folder)){
+		foreach ($folder as $key => $value) {
+			$str_alt[] = substr($value, strpos($value, '}')+1);
+		}
 	}
 
 	$folder1_alt = '{'.$box["imap_server"].':'.$box["mail_box_port"].'/imap/'.$box["mail_box_encryption"].'/novalidate-cert}'.$str_alt[0];
@@ -154,36 +156,46 @@ function wms7_mailbox_selector(){
 
 	$username = $box["mail_box_name"];
 	$password = $box["mail_box_pwd"];
-  //
-	$imap = imap_open($folder1_alt, $username, $password);
-	$check = imap_check($imap);
-	$folder1_alt = $check->Nmsgs;
-	imap_close($imap);
-	//
-	$imap = imap_open($folder2_alt, $username, $password);
-	$check = imap_check($imap);
-	$folder2_alt = $check->Nmsgs;
-	imap_close($imap);
-	//
-	$imap = imap_open($folder3_alt, $username, $password);
-	$check = imap_check($imap);
-	$folder3_alt = $check->Nmsgs;
-	imap_close($imap);
-	//
-	$imap = imap_open($folder4_alt, $username, $password);
-	$check = imap_check($imap);
-	$folder4_alt = $check->Nmsgs;
-	imap_close($imap);
 
+	$str1_alt = $str2_alt = $str3_alt = $str4_alt = '';
+
+	$str_alt[0] = str_replace(' ', '', $str_alt[0]);
+  if($str_alt[0] !=='' && $username !=='' && $password !==''){
+		$imap = @imap_open($folder1_alt, $username, $password);
+		$check = @imap_check($imap);
+		if ($check) $str1_alt = '('.$check->Nmsgs.')';
+		@imap_close($imap);
+	}
+	$str_alt[1] = str_replace(' ', '', $str_alt[1]);
+  if($str_alt[1] !=='' && $username !=='' && $password !==''){
+		$imap = @imap_open($folder2_alt, $username, $password);
+		$check = @imap_check($imap);
+		if ($check) $str2_alt = '('.$check->Nmsgs.')';
+		@imap_close($imap);
+	}
+	$str_alt[2] = str_replace(' ', '', $str_alt[2]);
+  if($str_alt[2] !=='' && $username !=='' && $password !==''){	
+		$imap = @imap_open($folder3_alt, $username, $password);
+		$check = @imap_check($imap);
+		if ($check) $str3_alt = '('.$check->Nmsgs.')';
+		@imap_close($imap);
+	}
+	$str_alt[3] = str_replace(' ', '', $str_alt[3]);
+  if($str_alt[3] !=='' && $username !=='' && $password !==''){	
+		$imap = @imap_open($folder4_alt, $username, $password);
+		$check = @imap_check($imap);
+		if ($check) $str4_alt = '('.$check->Nmsgs.')';
+		@imap_close($imap);
+	}
 	$str = "  <div style='position:relative; float:left; margin: -5px 0 10px 10px;'>
     <input class='radio' type='radio' id='folder1' name='radio_mail' value=$str[0] onclick='mailbox_selector(id)'/>
-    <label for='folder1' style='color:black;'> ".$str[0]."($folder1_alt)</label>
+    <label for='folder1' style='color:black;'> ".$str[0]."$str1_alt</label>
     <input class='radio' type='radio' id='folder2' name='radio_mail' value=$str[1] onclick='mailbox_selector(id)'/>
-    <label for='folder2' style='color:black;'> ".$str[1]."($folder2_alt)</label>
+    <label for='folder2' style='color:black;'> ".$str[1]."$str2_alt</label>
     <input class='radio' type='radio' id='folder3' name='radio_mail' value=$str[2] onclick='mailbox_selector(id)'/>
-    <label for='folder3' style='color:black;'> ".$str[2]."($folder3_alt)</label>
+    <label for='folder3' style='color:black;'> ".$str[2]."$str3_alt</label>
     <input class='radio' type='radio' id='folder4' name='radio_mail' value=$str[3] onclick='mailbox_selector(id)'/>
-    <label for='folder4' style='color:black;'> ".$str[3]."($folder4_alt)</label>
+    <label for='folder4' style='color:black;'> ".$str[3]."$str4_alt</label>
   </div>";
   
 
@@ -367,10 +379,20 @@ function wms7_mail_send() {
 	$path_tmp = $item["mail_box_tmp"].'/';	
 
 	if ($_FILES['mail_new_attach']['name'] !== '') {
-		$file = $_SERVER['DOCUMENT_ROOT'].$path_tmp.$_FILES['mail_new_attach']['name'];		
+		$file = $_SERVER['DOCUMENT_ROOT'].$path_tmp.$_FILES['mail_new_attach']['name'];
 		move_uploaded_file($_FILES['mail_new_attach']['tmp_name'], $file);
 		$mailer->AddAttachment($file);
 	}
+
+	if (isset($_GET['msgno'])){
+		$arr = wms7_mail_body($_GET['msgno']);
+		$arr_attach = $arr[1];
+		if ($arr_attach[0]['filename'] !== ''){
+			$file = $_SERVER['DOCUMENT_ROOT'].$path_tmp.$arr_attach[0]['filename'];
+			$mailer->AddAttachment($file);
+		}
+	}
+
 	//$mailer->SMTPDebug = 2;
 
   //send the message, check for errors
@@ -478,4 +500,41 @@ function wms7_mail_search() {
 	$list[0] = wms7_mail_table($arr);
 	$list[1] = count($arr);
 	return $list;
+}
+
+function wms7_mail_inbox_connection() {
+	//функция с таким же названием есть в файле sse.php плагина
+  $val = get_option('wms7_main_settings');    
+  $select_box = $val['mail_select'];
+  $box = $val[$select_box];
+
+	if ($box["imap_server"] == '' || $box["mail_box_port"] == '' || $box["mail_box_encryption"] == '' ||
+			$box["mail_box_name"] == '' || $box["mail_box_pwd"] == '') return;
+		
+  $server = '{'.$box["imap_server"].':'.$box["mail_box_port"].'/imap/'.$box["mail_box_encryption"].'/novalidate-cert}INBOX';
+
+  $username = $box["mail_box_name"];
+  $password = $box["mail_box_pwd"];
+
+  $imap = @imap_open($server, $username, $password);
+
+  return $imap;
+}
+
+function wms7_mail_unseen() {
+	//функция с таким же названием есть в файле sse.php плагина
+  $imap = wms7_mail_inbox_connection();
+  $i=0;
+  if($imap) {
+      $MC = imap_check($imap);
+      // Получим обзор всех писем в ящике
+      $result = imap_fetch_overview($imap,"1:{$MC->Nmsgs}",0);
+      foreach ($result as $overview) {
+          if ($overview->seen == '0'){
+              $i++;
+          }
+      }
+      imap_close($imap);
+  }
+  return $i;
 }

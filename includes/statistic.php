@@ -2,7 +2,7 @@
 /*
 Slave module: statistic.php
 Description:  Create statistics table of visits
-Version:      2.2.3
+Version:      2.2.5
 Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 */
