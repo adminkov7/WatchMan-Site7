@@ -1088,8 +1088,8 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       get_current_screen()->set_help_sidebar(
         '<p><strong>' . __( 'Additional information:', 'wms7' ) . '</strong></p>' .
         '<p><a href="https://wordpress.org/plugins/watchman-site7/" target="_blank">' .  __( 'page the Wordpress repository','wms7') . '</a></p>'.
-        '<p><a href="https://www.adminkov.bcr.by/category/wordpress/" target="_blank">' .  __( 'home page support plugin','wms7') . '</a></p>'.
-        '<p><a href="https://www.adminkov.bcr.by/chat/" target="_blank">' .  __( 'video communication with the developer of the plugin','wms7') . '</a></p>'
+        '<p><a href="https://github.com/adminkov7/WatchMan-Site7" target="_blank">' .  __( 'page the GitHub repository','wms7') . '</a></p>'.        
+        '<p><a href="https://www.adminkov.bcr.by/category/wordpress/" target="_blank">' .  __( 'home page support plugin','wms7') . '</a></p>'
         );      
       return current_user_can( 'manage_options' );
     }
@@ -1128,8 +1128,8 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       get_current_screen()->set_help_sidebar(
         '<p><strong>' . __( 'Additional information:', 'wms7' ) . '</strong></p>' .
         '<p><a href="https://wordpress.org/plugins/watchman-site7/" target="_blank">' .  __( 'page the Wordpress repository','wms7') . '</a></p>'.
-        '<p><a href="https://www.adminkov.bcr.by/category/wordpress/" target="_blank">' .  __( 'home page support plugin','wms7') . '</a></p>'.
-        '<p><a href="https://www.adminkov.bcr.by/chat/" target="_blank">' .  __( 'video communication with the developer of the plugin','wms7') . '</a></p>'
+        '<p><a href="https://github.com/adminkov7/WatchMan-Site7" target="_blank">' .  __( 'page the GitHub repository','wms7') . '</a></p>'.        
+        '<p><a href="https://www.adminkov.bcr.by/category/wordpress/" target="_blank">' .  __( 'home page support plugin','wms7') . '</a></p>'
         );        
       return current_user_can( 'manage_options' );   
     } 
