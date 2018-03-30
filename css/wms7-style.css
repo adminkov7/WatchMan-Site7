@@ -184,13 +184,13 @@ content: "■";
     0 -1px 0 #6b8659;
 }
 
-#doaction, #doaction2{
+#doaction1, #doaction2, #doaction3, #doaction4, #doaction5{
 float:right;
 margin-right:10px;  
 border-radius: 10px;
 background: linear-gradient(#f2f2f2, #ababab);
 }
-#btn_bottom{
+#btn_bottom1, #btn_bottom2, #btn_bottom3, #btn_bottom4, #btn_bottom5, #btn_bottom6, #btn_bottom7{
 float:left;
 margin-right:10px;  
 border-radius: 10px;  
