@@ -2,7 +2,7 @@
 /*
 Slave module: ip-info7.php
 Description:  Takes the IP of the visitor. Returns an array of information about IP.
-Version:      2.2.5
+Version:      2.2.7
 Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 */

@@ -2,7 +2,7 @@
 /*
 Slave module:   sse.php
 Description:    to send a count of records of visitor
-Version:        2.2.5
+Version:        2.2.7
 Author:         Oleg Klenitskiy
 Author URI:     https://www.adminkov.bcr.by/category/wordpress/
 */

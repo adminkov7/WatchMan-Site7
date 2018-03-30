@@ -2,7 +2,7 @@
 /*
 Slave module: create-tables.php
 Description:  Creates 2 tables in the database of the website for the plugin
-Version:      2.2.5
+Version:      2.2.7
 Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 */

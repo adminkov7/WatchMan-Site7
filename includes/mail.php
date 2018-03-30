@@ -2,7 +2,7 @@
 /*
 Slave module: mail.php
 Description:  SMA (Simple Mail Agent) for email box of the website
-Version:      2.2.5
+Version:      2.2.7
 Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 */
@@ -386,8 +386,8 @@ function wms7_mail_send() {
 
 	if (isset($_GET['msgno'])){
 		$arr = wms7_mail_body($_GET['msgno']);
-		$arr_attach = $arr[1];
-		if ($arr_attach[0]['filename'] !== ''){
+		$arr_attach = $arr[1];	
+		if ($arr_attach){
 			$file = $_SERVER['DOCUMENT_ROOT'].$path_tmp.$arr_attach[0]['filename'];
 			$mailer->AddAttachment($file);
 		}

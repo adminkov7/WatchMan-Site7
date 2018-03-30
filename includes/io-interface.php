@@ -2,7 +2,7 @@
 /*
 Slave module: io-interface.php
 Description:  Various interface functions processing of external data
-Version:      2.2.5
+Version:      2.2.7
 Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 */
