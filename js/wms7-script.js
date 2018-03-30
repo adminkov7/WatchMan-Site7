@@ -33,6 +33,51 @@ function wms7_sse() {
       document.cookie = 'wms7_sse=off';
       location.replace(window.location.href);
   }
+  wms_ctrl_btn_href();
+}
+
+function wms_ctrl_btn_href() {
+  var sse = document.getElementById('sse');
+
+  if (sse.checked) {
+      //disable all controls
+      document.getElementById('doaction1').disabled=true;
+      document.getElementById('doaction2').disabled=true;
+      document.getElementById('doaction3').disabled=true;
+      document.getElementById('btn_bottom1').disabled=true;
+      document.getElementById('btn_bottom2').disabled=true;
+      document.getElementById('btn_bottom3').disabled=true;
+      document.getElementById('btn_bottom4').disabled=true;
+      document.getElementById('btn_bottom5').disabled=true;
+      document.getElementById('btn_bottom6').disabled=true;
+      document.getElementById('btn_bottom7').disabled=true;
+
+      // create a new style sheet 
+      var styleTag = document.createElement ("style");
+      var a = document.getElementsByTagName ("a")[0];
+      a.appendChild (styleTag);
+
+      var sheet = styleTag.sheet ? styleTag.sheet : styleTag.styleSheet;
+      
+          // add a new rule to the style sheet
+      if (sheet.insertRule) {
+          sheet.insertRule ("a {pointer-events: none;}", 0);
+        }else{
+          sheet.addRule ("a", "pointer-events: none;", 0);
+      }
+    }else{
+      //enable all controls
+      document.getElementById('doaction1').disabled=false;
+      document.getElementById('doaction2').disabled=false;
+      document.getElementById('doaction3').disabled=false;
+      document.getElementById('btn_bottom1').disabled=false;
+      document.getElementById('btn_bottom2').disabled=false;
+      document.getElementById('btn_bottom3').disabled=false;
+      document.getElementById('btn_bottom4').disabled=false;
+      document.getElementById('btn_bottom5').disabled=false;
+      document.getElementById('btn_bottom6').disabled=false;
+      document.getElementById('btn_bottom7').disabled=false;
+  }
 }
 
 function wms7_getUrlVars() {
@@ -108,19 +153,18 @@ function wms7_popup_loader() {
 
 function wms7_popup_close() {
   var page = 'page='+wms7_getUrlVars()['page'];
-  var paged = 'paged='+wms7_getUrlVars()['paged'];
-  var result = wms7_getUrlVars()['result'];
+  var paged = (wms7_getUrlVars()['paged']) ? '&paged='+wms7_getUrlVars()['paged'] : '';
+  var result = (wms7_getUrlVars()['result']) ? '&result='+wms7_getUrlVars()['result'] : '&result=5';
+  var filter_role = (wms7_getUrlVars()['filter_role']) ? '&filter_role='+wms7_getUrlVars()['filter_role'] : '';
+  var filter_time = (wms7_getUrlVars()['filter_time']) ? '&filter_time='+wms7_getUrlVars()['filter_time'] : '';
+  var filter_country = (wms7_getUrlVars()['filter_country']) ? '&filter_country='+wms7_getUrlVars()['filter_country'] : '';
   //переводим в исходное состояние
   document.cookie = 'wms7_mail_btn=folder1';
   //
-  if (result) {
-    result = 'result='+wms7_getUrlVars()['result']
-  }else{
-    result='result=5';
-  };
   var url = window.location.href.slice(0,window.location.href.indexOf('\?'));
 
-  url = url + '?'+ page + '&' + result + '&' + paged;
+  url = url + '?' + page +  paged + result + filter_role + filter_time + filter_country;
+
   location.replace(url);
  }
 

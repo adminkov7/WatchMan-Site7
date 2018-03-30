@@ -1,7 +1,7 @@
 if (navigator.geolocation) {
   /* Geolocation enabled */
  	navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
-} else {
+	}else{
   /* Geolocation not enabled */
   //alert('GPS not supported');
 }
