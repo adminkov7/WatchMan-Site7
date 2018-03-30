@@ -6,11 +6,12 @@ Description:  This plugin is designed for site administrators and is used to con
 Author:       Oleg Klenitskiy
 Author URI:   https://www.adminkov.bcr.by/category/wordpress/
 Contributors: adminkov
-Version:      2.2.5
+Version:      2.2.7
 License:      GPL2
 License URI:  https://www.gnu.org/licenses/gpl-2.0.html
 Domain Path:  /languages
 Text Domain:  wms7
+Initiation:		is dedicated to Inna Voronich
 */
 
 //For use standart class WP_List_Table
@@ -180,37 +181,63 @@ class wms7_List_Table extends WP_List_Table {
               </form>';
       echo ($btn0);
       $btn1 = '<form id="win1" method="POST">
-              <input type="submit" value="index" id="btn_bottom" class="button"  name="footer" '.$hidden_index_php.' title="'.__('index.php of site', 'wms7').'" style="width:80px;" >
+              <input type="submit" value="index" id="btn_bottom1" class="button"  name="footer" '.$hidden_index_php.' title="'.__('index.php of site', 'wms7').'" style="width:80px;" >
               </form>';
       echo ($btn1);
       $btn2 = '<form id="win2" method="POST">
-              <input type="submit" value="robots" id="btn_bottom" class="button"  name="footer" '.$hidden_robots_txt.' title="'.__('robots.txt of site', 'wms7').'" style="width:80px;" >
+              <input type="submit" value="robots" id="btn_bottom2" class="button"  name="footer" '.$hidden_robots_txt.' title="'.__('robots.txt of site', 'wms7').'" style="width:80px;" >
               </form>';
       echo ($btn2);
       $btn3 = '<form id="win3" method="POST">
-              <input type="submit" value="htaccess" id="btn_bottom" class="button"  name="footer" '.$hidden_htaccess.' title="'.__('.htaccess of site', 'wms7').'" style="width:80px;" >
+              <input type="submit" value="htaccess" id="btn_bottom3" class="button"  name="footer" '.$hidden_htaccess.' title="'.__('.htaccess of site', 'wms7').'" style="width:80px;" >
               </form>';
       echo ($btn3);
       $btn4 = '<form id="win4" method="POST">
-              <input type="submit" value="wp_config" id="btn_bottom" class="button"  name="footer" '.$hidden_wp_config_php.' title="'.__('wp-config.php of site', 'wms7').'" style="width:80px;" >
+              <input type="submit" value="wp_config" id="btn_bottom4" class="button"  name="footer" '.$hidden_wp_config_php.' title="'.__('wp-config.php of site', 'wms7').'" style="width:80px;" >
               </form>';
       echo ($btn4);
       $btn5 = '<form id="win5" method="POST">
-              <input type="submit" value="wp_cron" id="btn_bottom" class="button"  name="footer" '.$hidden_wp_cron.'  title="'.__('wp-cron events of site', 'wms7').'" style="width:80px;" >
+              <input type="submit" value="wp_cron" id="btn_bottom5" class="button"  name="footer" '.$hidden_wp_cron.'  title="'.__('wp-cron events of site', 'wms7').'" style="width:80px;" >
               </form>';
       echo ($btn5);
       $btn6 = '<form id="win6" method="POST">
-              <input type="submit" value="statistic" id="btn_bottom" class="button"  name="footer" '.$hidden_statistic.' title="'.__('statistic of visits to site', 'wms7').'" style="width:80px;" >
+              <input type="submit" value="statistic" id="btn_bottom6" class="button"  name="footer" '.$hidden_statistic.' title="'.__('statistic of visits to site', 'wms7').'" style="width:80px;" >
               </form>';
       echo ($btn6);
       $btn7 = '<form id="win7" method="POST">
-              <input type="submit" value="sma" id="btn_bottom" class="button"  name="footer" '.$hidden_mail.' title="'.__('simple mail agent', 'wms7').'" style="width:80px;" >
+              <input type="submit" value="sma" id="btn_bottom7" class="button"  name="footer" '.$hidden_mail.' title="'.__('simple mail agent', 'wms7').'" style="width:80px;" >
               </form>';
       echo ($btn7);
     }
   }
 
-  function wms7_IP_compromising( $user_IP ) {
+  function wms7_login_compromising($uid) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'watchman_site';
+ 
+    $login_compromising = $wpdb->get_results( $wpdb->prepare( 
+      "
+      SELECT `black_list` 
+      FROM $table_name  
+      WHERE `uid` = %s
+      ",
+      $uid
+      ),
+      'ARRAY_A'
+    );
+    $compromising = FALSE;
+    foreach ($login_compromising as $arr) {
+      $str = implode("^", $arr);
+      $arr1 = unserialize($str);
+	      
+      if (isset($arr1['ban_login']) && ($arr1['ban_login'] == '1')) {
+      		return TRUE;
+      }     
+    }
+    return $compromising;
+  }
+
+  function wms7_ip_compromising($user_ip) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'watchman_site';
  
@@ -220,7 +247,7 @@ class wms7_List_Table extends WP_List_Table {
       FROM $table_name  
       WHERE `user_ip` = %s AND `black_list` <> %s
       ",
-      $user_IP,''
+      $user_ip,''
       ),
       'ARRAY_A'
     );     
@@ -236,16 +263,8 @@ class wms7_List_Table extends WP_List_Table {
       case 'id':
       case 'uid':
       case 'time_visit':
-      return $item[$column_name];
       case 'user_login':
-      if( $item['uid'] ) {
-      	$avatar = get_avatar( $item['uid'], 30 );
-    	}
-    	if (isset($avatar)){
-    		return $avatar.'<br>'.$item[$column_name];
-    	}else{
-    		return $item[$column_name];
-    	}
+      return $item[$column_name];
       case 'user_role':
       if( !$item['uid'] )
         return;
@@ -279,6 +298,33 @@ class wms7_List_Table extends WP_List_Table {
     }
   }
   //Standart function: WP_List_Table
+  function column_user_login($item) {
+
+    if( $item['uid'] ) {
+	    	$avatar = get_avatar( $item['uid'], 30 );
+		  	if (isset($avatar)){
+		  			$user_login = $avatar.'<br>'.$item['user_login'];
+		  		}else{
+		  			$user_login = $item['user_login'];
+		  	}
+		    $URL = $this->wms7_get_current_url();
+		    $actions = array(
+		      'message' => sprintf('<a href="'.$URL.'&uid=%s&paged=%s">%s</a>', $item['uid'], get_option('wms7_current_page'), __('Message', 'wms7'))
+		    );
+
+		    if ($this->wms7_login_compromising($item['uid'])) {
+		      $user_login = '<span class="failed">'.$user_login.'</span>';
+		    }
+
+		    return sprintf('%s %s',
+		      $user_login,
+		      $this->row_actions($actions)
+		    );
+  		}else{
+  			return $item['user_login'];
+  	}
+  }  
+  //Standart function: WP_List_Table
   function column_user_role($item) {
     if( !$item['uid'] ) return;
 
@@ -289,7 +335,7 @@ class wms7_List_Table extends WP_List_Table {
   //Standart function: WP_List_Table
   function column_user_ip($item) {
     //Checking the compromising IP
-    if ($this->wms7_IP_compromising($item['user_ip']) == TRUE) {
+    if ($this->wms7_ip_compromising($item['user_ip']) == TRUE) {
       $item['user_ip'] = '<span class="failed">'.$item['user_ip'].'</span>';
     }
 
@@ -442,7 +488,7 @@ class wms7_List_Table extends WP_List_Table {
       );
       $fld = implode("^", $user_ip[0]);
 
-       wms7_ip_delete_from_file($fld);
+      wms7_ip_delete_from_file($fld);
     }
   }
 
@@ -456,8 +502,9 @@ class wms7_List_Table extends WP_List_Table {
 
     $where = $wms7->wms7_make_where_query();
 
-    $where6 = $where5 = $where4 = $where3 = $where2 = $where;
+    $where6 = $where5 = $where4 = $where3 = $where2 = $where1 = $where;
 
+		unset($where1['result']);
     unset($where2['result']);
     unset($where3['result']);
     unset($where4['result']);
@@ -470,6 +517,12 @@ class wms7_List_Table extends WP_List_Table {
     $where5['login_result'] = "login_result = '3'"; // robots visits
     $where6['login_result'] = "black_list <> ''";   // black list
 
+    if(is_array($where) && !empty($where)){
+      $where = 'WHERE ' . implode(' AND ', $where);
+      }else{$where = '';}
+    if(is_array($where1) && !empty($where1)){
+      $where1 = 'WHERE ' . implode(' AND ', $where1);
+      }else{$where1 = '';}      
     if(is_array($where2) && !empty($where2)){
       $where2 = 'WHERE ' . implode(' AND ', $where2);
       }else{$where2 = '';}
@@ -486,7 +539,7 @@ class wms7_List_Table extends WP_List_Table {
       $where6 = 'WHERE ' . implode(' AND ', $where6);
       }else{$where6 = '';}
 
-    $sql1 = "SELECT count(*) FROM $table_name ";
+    $sql1 = "SELECT count(*) FROM $table_name ".$where1;
     $allTotal = $wpdb->get_var($sql1);
     $sql2 = "SELECT count(*) FROM $table_name ".$where2;
     $successTotal = $wpdb->get_var($sql2);
@@ -511,7 +564,8 @@ class wms7_List_Table extends WP_List_Table {
     																						'successTotal'=>$successTotal,
     																						'failedTotal'=> $failedTotal,
     																						'robotsTotal'=> $robotsTotal,
-    																						'blacklistTotal'=> $blacklistTotal) ); 
+    																						'blacklistTotal'=> $blacklistTotal,
+    																						'where'=> $where)); 
 
     $screen = get_current_screen();
     $per_page_option = 'wms7_visitors_per_page';
@@ -546,7 +600,7 @@ class wms7_List_Table extends WP_List_Table {
       $total_items = $wpdb->get_var("SELECT COUNT(*) FROM $wms7->table {$where3}");
 
     }else{
-      $where = ($where) ? ('WHERE ' . implode(' AND ', $where)) : false;
+      //$where = ($where) ? ('WHERE ' . implode(' AND ', $where)) : false;
       $total_items = $wpdb->get_var("SELECT COUNT(*) FROM $wms7->table {$where}");
     }
 
@@ -573,6 +627,8 @@ if( !class_exists( 'WatchManSite7' ) ) {
 
     $this->table = $wpdb->prefix . $this->table_name;
 
+		add_filter( 'wp_authenticate_user', array($this, 'wms7_authenticate_user'), 1 );
+
     add_action('init', array($this, 'wms7_languages'));
     add_action('init', array($this, 'wms7_init_visit_actions'));
     add_action('init', array($this, 'wms7_lat_lon_save'));
@@ -589,23 +645,64 @@ if( !class_exists( 'WatchManSite7' ) ) {
     if (!wp_next_scheduled('wms7_htaccess')) {wp_schedule_event(time(), 'hourly', 'wms7_htaccess');}
   }
 
+	function wms7_authenticate_user($user){
+		if (is_wp_error($user)){
+      return $user;
+    }
+    // Return error if user account is blocked
+    $blocked = wms7_List_Table::wms7_login_compromising($user->id);
+    if ($blocked){
+        return new WP_Error( 'broke', __('<strong>ERROR</strong>: Access is denied.', 'wms7') );
+    }
+    return $user;
+	}
+
   function wms7_ctrl_htaccess(){
     //insert/delete - Deny from IP
-    $output = explode('&#010;',$this->wms7_black_list_info());
+    $arr = $this->wms7_black_list_info();
+    $output_id = explode('&#010;',$arr[0]);    
+    $output = explode('&#010;',$arr[1]);
     foreach($output as $step1){
-      if (!empty($step1)) { 
-          $step2 = explode('&#009;', $step1);
-          if (date('Y-m-d') >= $step2[0] &&  date('Y-m-d') <= $step2[1]){
-              wms7_ip_insert_to_file($step2[2]);
-            }else{
-              wms7_ip_delete_from_file($step2[2]);
-          }
-      }
+    	foreach($output_id as $step1_id){    	
+	      if (!empty($step1)) { 
+	          $step2 = explode('&#009;', $step1);
+
+	          if (date('Y-m-d') >= $step2[0] &&  date('Y-m-d') <= $step2[1]){
+	              wms7_ip_insert_to_file($step2[2]);
+	            }else{
+	              wms7_ip_delete_from_file($step2[2]);
+								$this->wms7_login_unbaned($step1_id);
+	          }
+	      }
+	    }  
     }
     unset($step1);
+    unset($step1_id);
   }
-    
-  function wms7_ctrl_htaccess_add(){    
+
+  function wms7_login_unbaned($id){
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'watchman_site';
+
+    $results = $wpdb->get_results( $wpdb->prepare( 
+      "
+      SELECT `black_list` 
+      FROM $table_name  
+      WHERE `id` = %s
+      ",
+      $id
+      )
+    );
+    $results = $results[0];
+    $results = unserialize($results->black_list);
+    //unbaned user login
+    $results['ban_login'] = '0';
+    //save result into field black_list
+    $results = serialize($results);
+    $wpdb->update( $table_name, array( 'black_list' => $results), array( 'ID' => $id ), array('%s'));
+  }	
+
+  function wms7_ctrl_htaccess_add(){
     //insert/delete - RewriteCond %{HTTP_USER_AGENT} name robot
     $val =  get_option('wms7_main_settings');
     $val = $val['robots_banned'];
@@ -722,6 +819,34 @@ if( !class_exists( 'WatchManSite7' ) ) {
     $this->wms7_login_action($user_login);
   }
 
+function wms7_get_user_ip(){
+  // Просто получайте заголовки, если мы можем или будем использовать глобальный SERVER.
+  if ( function_exists ( 'apache_request_headers' )){      
+    	$headers = apache_request_headers();
+  	}else{
+    	$headers = $_SERVER;
+  }
+  // Получаем переадресованный IP-адрес, если он существует.
+  if (array_key_exists('X-Forwarded-For', $headers) && filter_var($headers['X-Forwarded-For'] , FILTER_VALIDATE_IP , FILTER_FLAG_IPV4)){
+    $the_ip = 'X-Forwarded-For = '.$headers['X-Forwarded-For'];
+  	}elseif( array_key_exists('HTTP_X_FORWARDED_FOR', $headers) && filter_var($headers['HTTP_X_FORWARDED_FOR'] , FILTER_VALIDATE_IP , FILTER_FLAG_IPV4)){
+    $the_ip = 'HTTP_X_FORWARDED_FOR = '.$headers['HTTP_X_FORWARDED_FOR'];
+  	}elseif( array_key_exists('HTTP_X_FORWARDED', $headers) && filter_var($headers['HTTP_X_FORWARDED'] , FILTER_VALIDATE_IP , FILTER_FLAG_IPV4)){
+    $the_ip = 'HTTP_X_FORWARDED = '.$headers['HTTP_X_FORWARDED'];
+  	}elseif( array_key_exists('HTTP_X_CLUSTER_CLIENT_IP', $headers) && filter_var($headers['HTTP_X_CLUSTER_CLIENT_IP'] , FILTER_VALIDATE_IP , FILTER_FLAG_IPV4)){
+    $the_ip = 'HTTP_X_CLUSTER_CLIENT_IP = '.$headers['HTTP_X_CLUSTER_CLIENT_IP'];
+  	}elseif( array_key_exists('HTTP_FORWARDED_FOR', $headers) && filter_var($headers['HTTP_FORWARDED_FOR'] , FILTER_VALIDATE_IP , FILTER_FLAG_IPV4)){
+    $the_ip = 'HTTP_FORWARDED_FOR = '.$headers['HTTP_FORWARDED_FOR'];
+  	}elseif( array_key_exists('HTTP_FORWARDED', $headers) && filter_var($headers['HTTP_FORWARDED'] , FILTER_VALIDATE_IP , FILTER_FLAG_IPV4)){
+    $the_ip = 'HTTP_FORWARDED = '.$headers['HTTP_FORWARDED'];
+  	}elseif( array_key_exists('HTTP_CLIENT_IP', $headers) && filter_var($headers['HTTP_CLIENT_IP'] , FILTER_VALIDATE_IP , FILTER_FLAG_IPV4)){
+    $the_ip = 'HTTP_CLIENT_IP = '.$headers['HTTP_CLIENT_IP'];
+  	}else{
+    $the_ip = 'REMOTE_ADDR = '.filter_var($_SERVER['REMOTE_ADDR'] , FILTER_VALIDATE_IP , FILTER_FLAG_IPV4);   
+  }
+  return $the_ip;
+}
+
   function wms7_login_action($user_login){
     //get user role
     global $current_user;
@@ -730,11 +855,11 @@ if( !class_exists( 'WatchManSite7' ) ) {
     $user_IP = isset($_SERVER['HTTP_X_FORWARDED_FOR']) ? sanitize_text_field($_SERVER['HTTP_X_FORWARDED_FOR']) : sanitize_text_field($_SERVER['REMOTE_ADDR']);
 
     //get user IP info
-    $user_IP_info = 'REQUEST_URI = '.sanitize_text_field($_SERVER['REQUEST_URI']). '&#010;'.
-                    'REMOTE_ADDR = '.sanitize_text_field($_SERVER['REMOTE_ADDR']). '&#010;'.                   
+    $user_IP_info = 'REQUEST_URI = '.sanitize_text_field($_SERVER['REQUEST_URI']). '&#010;'.                
                     'SERVER_ADDR = '.sanitize_text_field($_SERVER['SERVER_ADDR']). '&#010;'.
                     'SERVER_NAME = '.sanitize_text_field($_SERVER['SERVER_NAME']). '&#010;'.
-                    'SERVER_SOFTWARE = '.sanitize_text_field($_SERVER['SERVER_SOFTWARE']);
+                    'SERVER_SOFTWARE = '.sanitize_text_field($_SERVER['SERVER_SOFTWARE']). '&#010;'.
+										$this->wms7_get_user_ip();
 
     //Check $user_IP is excluded from the protocol visits
     if ($this->wms7_IP_excluded( $user_IP )) {
@@ -1286,7 +1411,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     $output .='<select name="filter_role" title="'.__('Select role of visitors','wms7').' "><option value="">' . __('Role All', 'wms7') . '</option>' . $role_option . '</select>';
     $output .= '<select name="filter_time" title="'.__('Select time of visits','wms7').' " ><option value="">' . __('Time All', 'wms7') . '</option>' . $time_option . '</select>';
     $output .='<select name="filter_country" title="'.__('Select country of visitors','wms7').' "><option value="">' . __('Country All', 'wms7') . '</option>' . $country_option . '</select>';    
-    $output .= '<input class="button" id="doaction" type="submit" title="' . __('Filter 1 level, I group', 'wms7') . '" value="' . __('Filter', 'wms7') . '" />';
+    $output .= '<input class="button" id="doaction1" type="submit" title="' . __('Filter 1 level, I group', 'wms7') . '" value="' . __('Filter', 'wms7') . '" />';
     $output .= '</form>';
     return $output;
   }
@@ -1297,7 +1422,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     $output = '<form method="GET">';
     $output .= '<input type="hidden" name="page" value="wms7_visitors" />';
     $output .= '<input type="text" title="'.__('Enter login or visitor IP','wms7').'" placeholder = "Login or Visitor IP" name="filter" size="18" class="filter_login_ip" value="' . $login_ip . '" />';
-    $output .='<input class="button" id="doaction" type="submit" title="' . __('Filter 1 level, II group', 'wms7') . '" value="'.__('Filter','wms7').'" />';
+    $output .='<input class="button" id="doaction3" type="submit" title="' . __('Filter 1 level, II group', 'wms7') . '" value="'.__('Filter','wms7').'" />';
     $output .='</form>';
     return $output;
   }
@@ -1610,8 +1735,15 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
 		    $arr = wms7_mail_body($msgno);
 		    $body = $arr[0];
 		    $attach = $this->wms7_mail_attach($msgno, $arr[1]);
-  		}else{
+  		}else{		
   			$str_head = $str_head;
+  			if($_GET['uid']){
+  				$subject = 'Message for '. get_user_option( 'user_login', $_GET['uid'] );
+  				$subject =str_replace(' ', '&#32', $subject); //не понятный костыль!?  				
+  				$to =  get_user_option( 'user_email', $_GET['uid'] );
+  				$body = '';
+  				$attach = '';
+  			}
   	}
     $win_popup = "
     <div class='win-popup'>
@@ -1784,7 +1916,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
         </div>
         <form id='mailbox' method='POST'>
           $mail_box_selector
-  <input type='submit' value='search' id='doaction' class='button alignright' name='mail_search' style='margin-right: 10px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;'/>
+  <input type='submit' value='search' id='doaction4' class='button alignright' name='mail_search' style='margin-right: 10px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;'/>
   <input type='text' class='text alignright' placeholder = 'context' size='18' style='width: 80px; margin-right: 5px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;' name='mail_search_context' value=$context >
           <div class='popup-body'>
           $mail_table
@@ -1792,7 +1924,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
           <div class='popup-footer'>
   <input type='submit' value='delete' id='submit' class='button-primary' name='mail_delete'/>
   <input type='submit' value='new' id='submit' class='button-primary' name='mail_new'/>
-  <input type='submit' value='move' id='doaction' class='button alignright' name='mail_move' style='-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin: 0 0 5px 0;'/>
+  <input type='submit' value='move' id='doaction5' class='button alignright' name='mail_move' style='-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin: 0 0 5px 0;'/>
   <select name='move_box' class='text alignright' style='width: 80px; margin-right: 5px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;'><option value='Inbox'>Inbox</option><option value='Sent'>Outbox</option><option value='Drafts'>Drafts</option><option value='Trash'>Trash</option></select>
           </div>
         </form> 
@@ -1807,14 +1939,15 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
   	$val_options = get_option('wms7_current_param');
 
 		$allTotal 			= $val_options['allTotal'];
-    $visitsTotal 		= $val_options['visitsTotal'];		
+    $visitsTotal 		= $val_options['visitsTotal'];
     $successTotal 	= $val_options['successTotal'];
     $failedTotal 		= $val_options['failedTotal'];
     $robotsTotal 		= $val_options['robotsTotal'];
     $blacklistTotal = $val_options['blacklistTotal'];
-
+    $where 					= $val_options['where'];
+    
   	if (isset($_POST['stat_data'])) {
-	    $arr = wms7_create_table_stat();
+	    $arr = wms7_create_table_stat($where);
 	    $stat_table = wms7_table_stat($arr);
   		}else{
 			$stat_table = "<div style='width: 660px; height: 260px; padding: 0; margin:5px 0 0 10px; background-color: #7D7970;'> </div>";
@@ -2084,6 +2217,16 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       $str_head = 'e-mail box: '.$box["mail_box_name"];
       $this->wms7_mail_new($str_head, false);
     }
+
+    //send mail to a registered website visitor
+    if ( isset($_GET['uid']) ) {
+      $val = get_option('wms7_main_settings');    
+      $select_box = $val["mail_select"];
+      $box = $val[$select_box];
+      $str_head = 'e-mail box: '.$box["mail_box_name"];
+      $this->wms7_mail_new($str_head, false);
+    }
+
     //new mail save
     if ( isset($_POST['mail_new_save']) ) {
       $val = get_option('wms7_main_settings');    
@@ -2990,7 +3133,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
 
     echo '<fieldset class=info_blacklist title="'.__('Black list', 'wms7').'" ' .$hidden_black_list. ' style="width:'.$width_box. '" >';
     echo '<legend class=panel_title>'.__('Black list', 'wms7').'</legend>';
-    echo '<textarea class ="textarea_panel_info">'.$this->wms7_black_list_info().'</textarea>';
+    echo '<textarea class ="textarea_panel_info">'.$this->wms7_black_list_info()[1].'</textarea>';
     echo '</fieldset>';
     echo '</fieldset>';
   }
@@ -3010,13 +3153,18 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     );
 
     $output = '';
+    $output_id = '';
     foreach($results as $row){
+    	$row_id = $row->id;
       $row_ip = $row->user_ip;
       $row = unserialize($row->black_list);
+      $output_id .= $row_id.'&#010;';
       $output .= $row['ban_start_date'].'&#009;'.$row['ban_end_date'].'&#009;'.$row_ip.'&#010;';
     }
     unset($row);
-    return $output;
+    $arr[0] = $output_id;
+    $arr[1] = $output;
+    return $arr;
   }
 
   function wms7_robot_visit_info(){
@@ -3090,6 +3238,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
         'ban_end_date' => sanitize_text_field($_REQUEST['ban_end_date']),
         'ban_message' => sanitize_text_field($_REQUEST['ban_message']),
         'ban_notes' => sanitize_text_field($_REQUEST['ban_notes']),
+        'ban_login' => sanitize_text_field($_REQUEST['ban_login']),
         );
 
       $serialized_data = serialize($arr);
@@ -3155,9 +3304,9 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     $table_name = $wpdb->prefix . 'watchman_site';
     $id = sanitize_text_field($_GET['id']);
 
-    $black_list = $wpdb->get_results( $wpdb->prepare( 
+    $result = $wpdb->get_results( $wpdb->prepare( 
       "
-      SELECT `black_list` 
+      SELECT `uid`, `black_list` 
       FROM $table_name  
       WHERE `id` = %s
       ",
@@ -3165,9 +3314,9 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       ),
       'ARRAY_A'
     );
-
-    $fld = unserialize(implode("^", $black_list[0])); 
-
+		$black_list = $result[0]['black_list'];
+		$fld = unserialize($black_list); 
+		$uid = $result[0]['uid'];
     ?>
     <table cellspacing="2" cellpadding="5" style="width: 100%;" class="form-table">
         <tr class="form-field">        
@@ -3177,11 +3326,11 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
           <td>
             <input id="ban_start_date" name="ban_start_date" type="date" value="<?php echo sanitize_text_field($fld['ban_start_date'])?>"  placeholder="<?php _e('Ban start date', 'wms7')?>" required>
           </td>
-          <th>
-            <label for="ip_info"><?php _e('IP info', 'wms7')?></label>
+          <th style="width: 50px;">
+            <label for="ip_info" style="margin: 0 0 0 -50px;width: 50px;" ><?php _e('IP info', 'wms7')?></label>
           </th>
           <td rowspan="2">
-            <textarea id ="ip_info" name="ip_info" rows="6" style="width: 100%"><?php echo $this->wms7_ip_info()?></textarea>
+            <textarea readonly id ="ip_info" name="ip_info" rows="6" style="position:relative;left: -50px;margin: 0;width: 110%"><?php echo $this->wms7_ip_info()?></textarea>
           </td>
         </tr>
 
@@ -3211,6 +3360,20 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
             <input id="ban_notes" name="ban_notes" type="text" style="width: 100%" value="<?php echo sanitize_text_field($fld['ban_notes'])?>" placeholder="<?php _e('Ban notes', 'wms7')?>" required>
           </td>
         </tr>
+		<?php
+			if($uid !=='0'){
+		?>
+        <tr class="form-field">
+          <th>
+            <label for="ban_login"><?php _e('Ban user login', 'wms7')?></label>
+          </th>
+          <td colspan="3">
+            <input id="ban_login" name="ban_login" type="checkbox" value="1" <?php checked(sanitize_text_field($fld['ban_login']))?>" >
+          </td>
+        </tr>
+		<?php
+		}
+		?>
     </table>
             <label><?php _e('Note: Insert the shortcode - [black_list] in a page or an entry to display the table compromised IP addresses stored in the database -Black list.', 'wms7')?></label>
     <?php

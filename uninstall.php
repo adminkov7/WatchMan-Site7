@@ -2,7 +2,7 @@
 /*
 Slave module:   uninstall.php
 Description:    Deletes the tables of the plugin and plugin settings from the database of the website
-Version:        2.2.5
+Version:        2.2.7
 Author:         Oleg Klenitskiy
 Author URI: 		https://www.adminkov.bcr.by/category/wordpress/
 */

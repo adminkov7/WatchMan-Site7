@@ -10,8 +10,9 @@ Donate link:  https://www.adminkov.bcr.by/donate/
 Requires at least: 4.5.1
 Tested up to: 4.9.2
 Stable tag:   2.0
-Version:      2.2.5
+Version:      2.2.7
 License:      GPL3
+Initiation		is dedicated to Inna Voronich
 
 == Description ==
 
@@ -103,6 +104,12 @@ SSE technology is used in the control of new, unread emails
 = 2.2.5 =
 Improved and extended HELP, added pictures, optimized code
 
+= 2.2.6 =
+Sending an email message to a registered website visitor
+
+= 2.2.7 =
+Website visitor blocking by his login
+
 == Frequently Asked Questions ==
 
 = Question: When you change the WHO-is service provider, the info panel shows not all the statistics of visits to your website. Why? =
@@ -114,3 +121,5 @@ The answer: The plugin remembers your blocking decision and automatically enters
 The answer: In the modal window, a list of cron-events appears, which work on your site. You can click the - refresh button. After 20 seconds the list will be updated. If you bring the cursor to the cell - Source task, a context line will appear with the full path to the file - the source of this event. There are bad plugins, when they are deleted, there are stray events. You can see and delete them.
 = Question: Why, sometimes when working on the main page of the plugin displays a message: an Error in establishing a connection to the database? =
 The answer: This situation may occur when SSE mode is enabled. Disable this mode, do the rest of your work on the plugin page and re-enable SSE mode if you need it. This message, although unpleasant, will not happen in a bad situation. When SSE mode is enabled, the plugin makes one query per 10 seconds to the database. And in that moment, when you give a team - WordPress can't execute two commands at the same time. But I repeat-a bad situation will not happen.
+= Question: How to use the SSE button correctly? =
+The answer: The SSE function in the plugin should be used in cases when you want to WATCH for the arrival of new visitors to the site or for the receipt of new emails in the mailbox. In another case, when you want to perform some actions on the plugin page (for example: delete records using bulk actions), it is recommended before starting these steps to disable SSE. And then, when you've done your job, you can re-enable SSE to dynamically retrieve data.
