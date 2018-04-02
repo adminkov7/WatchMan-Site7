@@ -662,19 +662,18 @@ if( !class_exists( 'WatchManSite7' ) ) {
     $arr = $this->wms7_black_list_info();
     $output_id = explode('&#010;',$arr[0]);    
     $output = explode('&#010;',$arr[1]);
-    foreach($output as $step1){
-    	foreach($output_id as $step1_id){    	
-	      if (!empty($step1)) { 
-	          $step2 = explode('&#009;', $step1);
-
-	          if (date('Y-m-d') >= $step2[0] &&  date('Y-m-d') <= $step2[1]){
-	              wms7_ip_insert_to_file($step2[2]);
-	            }else{
-	              wms7_ip_delete_from_file($step2[2]);
-								$this->wms7_login_unbaned($step1_id);
-	          }
-	      }
-	    }  
+    $i=0;
+    foreach($output as $step1){      	
+      if (!empty($step1)) {      	
+          $step2 = explode('&#009;', $step1);
+          if (date('Y-m-d') >= $step2[0] &&  date('Y-m-d') <= $step2[1]){
+              wms7_ip_insert_to_file($step2[2]);
+            }else{
+              wms7_ip_delete_from_file($step2[2]);
+							$this->wms7_login_unbaned($output_id[$i]);
+          }
+      }
+      $i++;
     }
     unset($step1);
     unset($step1_id);
