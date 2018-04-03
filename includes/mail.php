@@ -114,10 +114,10 @@ function wms7_mail_body($msgno) {
       $mail_body = imap_utf8($mail_body);
       break;
   case 3: //Base64	ENCBASE64
-      $mail_body = base64_decode($mail_body);	      
+      $mail_body = base64_decode($mail_body);
       break;
   case 4: //Quoted-Printable	ENCQUOTEDPRINTABLE
-      $mail_body = imap_utf8($mail_body);
+      $mail_body = quoted_printable_decode($mail_body);
       break;
   }
 	$arr[0] = $mail_body;
