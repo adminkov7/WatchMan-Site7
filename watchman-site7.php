@@ -1719,29 +1719,38 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     return $str_attach;
   }
 
-  function wms7_mail_new($str_head, $draft){
+  function wms7_mail_new($str_head, $draft){  
   	if ($draft){
-		    $msgno = $_GET['msgno'];
-		    $box_name = $_GET['mailbox'];
-	  		$str_head = $str_head." ($box_name id=".$msgno.")";
-		    $header = wms7_mail_header($msgno);
+        $msgno = $_GET['msgno'];
+        $box_name = $_GET['mailbox'];
+        $str_head = $str_head." ($box_name id=".$msgno.")";
+        $header = wms7_mail_header($msgno);
 
 		    $subject = iconv_mime_decode($header['subject'], 0 , "UTF-8");
-		    $subject =str_replace(' ', '&#32', $subject); //не понятный костыль!?
-
 		    $to = iconv_mime_decode($header['to'], 0 , "UTF-8");
 
 		    $arr = wms7_mail_body($msgno);
 		    $body = $arr[0];
 		    $attach = $this->wms7_mail_attach($msgno, $arr[1]);
-  		}else{		
-  			$str_head = $str_head;
+  		}else{
   			if($_GET['uid']){
-  				$subject = 'Message for '. get_user_option( 'user_login', $_GET['uid'] );
-  				$subject =str_replace(' ', '&#32', $subject); //не понятный костыль!?  				
-  				$to =  get_user_option( 'user_email', $_GET['uid'] );
-  				$body = '';
-  				$attach = '';
+    				$subject = 'Message for '. get_user_option( 'user_login', $_GET['uid'] );			
+    				$to =  get_user_option( 'user_email', $_GET['uid'] );
+    				$body = '';
+    				$attach = '';
+          }else{
+            if($_POST['mail_view_reply']){
+              $msgno = $_GET['msgno'];
+              $box_name = $_GET['mailbox'];
+              $str_head = $str_head." (reply to $box_name id=".$msgno.")";
+              $header = wms7_mail_header($msgno);
+
+              $subject = 'Re: '. iconv_mime_decode($header['subject'], 0 , "UTF-8");
+              $to = iconv_mime_decode($header['from'], 0 , "UTF-8");
+
+              $arr = wms7_mail_body($msgno);
+              $body = 'enter text'.'&#010'.'-----------'.'&#010'.$arr[0];              
+            }
   			}
   	}
     $win_popup = "
@@ -1755,9 +1764,9 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
         </div>
           <form id='popup_mail_view' method='POST' enctype='multipart/form-data'>
           <label style='margin-left:10px;font-weight:bold;'><big>Subject: </label></big>
-<input type='text' placeholder = 'Subject' style='width: 590px; margin-left: 5px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;text-overflow:ellipsis;' name='mail_new_subject' value=$subject ><br>
+<input type='text' placeholder = 'Subject' style='width: 590px; margin-left: 5px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;text-overflow:ellipsis;' name='mail_new_subject' value='$subject' ><br>
           <label style='margin-left:10px;font-weight:bold;'><big>To: </label></big>
-<input type='text' placeholder = 'user name <mail@address>' size='18' style='width: 590px; margin-left: 40px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;' name='mail_new_to' value=$to >
+<input type='text' placeholder = 'user name <mail@address>' size='18' style='width: 590px; margin-left: 40px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;' name='mail_new_to' value='$to' >
             <div class='popup-body-mail' style='margin-top: -5px;'>
               <textarea name='mail_new_content'>$body</textarea>
             </div>
@@ -1804,7 +1813,6 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
 		$folder = substr($folder[$i], strpos($folder[$i], '{'));
 
 		$date = date('D, d M Y h:i:s', time());
-		//$envelope["date"] = date("j M, g.ia", strtotime($date));
 		$envelope["date"] = $date;
 		$envelope["subject"]  = '=?utf-8?B?'.base64_encode($_POST["mail_new_subject"]).'?=';
 		$envelope["from"]  = $box["mail_box_name"];
@@ -2216,7 +2224,14 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       $str_head = 'e-mail box: '.$box["mail_box_name"];
       $this->wms7_mail_new($str_head, false);
     }
-
+    //reply mail
+    if ( isset($_POST['mail_view_reply']) ) {
+      $val = get_option('wms7_main_settings');    
+      $select_box = $val["mail_select"];
+      $box = $val[$select_box];
+      $str_head = 'e-mail box: '.$box["mail_box_name"];
+      $this->wms7_mail_new($str_head, false);
+    }
     //send mail to a registered website visitor
     if ( isset($_GET['uid']) ) {
       $val = get_option('wms7_main_settings');    
