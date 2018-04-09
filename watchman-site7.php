@@ -1873,6 +1873,14 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     $body = $arr[0];
     $attach = $this->wms7_mail_attach($msgno, $arr[1]);
 
+    if ($_POST['mail_view_code'] == 'text') {
+        $basis = "<textarea name='content' style='height:200px'>$body</textarea>";
+        $code = 'html';
+      }else{
+        $basis = "<div id='basis'>$body</div>";
+        $code = 'text';
+    }
+
     $win_popup = "
     <div class='win-popup'>
       <label class='btn' for='win-popup'></label>
@@ -1888,11 +1896,12 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
           <label style='margin-left:10px;font-weight:bold;'><big>To: </label>$to</big><br>
           <label style='margin-left:10px;font-weight:bold;'><big>Date: </label>$date</big><br>
           <div class='popup-body-mail'>
-              <textarea name='content' style='height:200px'>$body</textarea>
+              $basis
             </div>
             <div class='popup-footer'>
               <input type='submit' value='reply' id='submit' class='button-primary' name='mail_view_reply'/>
               <input type='submit' value='quit' id='submit' class='button-primary' name='mail_view_quit' onClick='wms7_quit_btn()'/>
+              <input type='submit' value='$code' id='submit' class='button-primary' name='mail_view_code'/>
               $attach
             </div>
           </form>  
@@ -1903,6 +1912,27 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
   }
 
   function wms7_mail($str_head){
+    $val = get_option('wms7_main_settings');    
+    $select_box = $val["mail_select"];
+    $box = $val[$select_box];
+    $folders = explode(';', $box['mail_folders']);
+    $folder0 = $folder1 = $folder2 = $folder3 = '';
+    if ($folders[0] !== '') {
+      $folders[0] = str_replace(' ', '', $folders[0]);
+      $folder0 = substr($folders[0], strpos($folders[0], '}')+1);
+    }
+    if ($folders[1] !== '') {
+      $folders[1] = str_replace(' ', '', $folders[1]);
+      $folder1 = substr($folders[1], strpos($folders[1], '}')+1);
+    }
+    if ($folders[2] !== '') {
+      $folders[2] = str_replace(' ', '', $folders[2]);
+      $folder2 = substr($folders[2], strpos($folders[2], '}')+1);
+    }
+    if ($folders[3] !== '') {
+      $folders[3] = str_replace(' ', '', $folders[3]);
+      $folder3 = substr($folders[3], strpos($folders[3], '}')+1);
+    }
     $mail_box_selector= wms7_mailbox_selector();
     $context = isset($_POST['mail_search_context']) ? $_POST['mail_search_context'] : '';
     if (isset($_POST['mail_search'])) {
@@ -1932,7 +1962,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
   <input type='submit' value='delete' id='submit' class='button-primary' name='mail_delete'/>
   <input type='submit' value='new' id='submit' class='button-primary' name='mail_new'/>
   <input type='submit' value='move' id='doaction5' class='button alignright' name='mail_move' style='-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin: 0 0 5px 0;'/>
-  <select name='move_box' class='text alignright' style='width: 80px; margin-right: 5px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;'><option value='Inbox'>Inbox</option><option value='Sent'>Outbox</option><option value='Drafts'>Drafts</option><option value='Trash'>Trash</option></select>
+  <select name='move_box' class='text alignright' style='width: 80px; margin-right: 5px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;'><option value='$folder0'>$folder0</option><option value='$folder1'>$folder1</option><option value='$folder2'>$folder2</option><option value='$folder3'>$folder3</option></select>
           </div>
         </form> 
       </div>
@@ -2205,7 +2235,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     }
     //move mail
     if ( isset($_POST['mail_move']) ) {
-      wms7_mail_move();      
+      wms7_mail_move();
     }
     //send mail
     if ( isset($_POST['mail_new_send']) ) {
