@@ -7,11 +7,11 @@ Author:       Oleg Klenitskiy
 Author URI:   https://www.adminkov.bcr.by/category/wordpress/
 Contributors: adminkov
 Version:      2.2.7
-License:      GPL2
+License:      GPL3
 License URI:  https://www.gnu.org/licenses/gpl-2.0.html
 Domain Path:  /languages
 Text Domain:  wms7
-Initiation:		is dedicated to Inna Voronich
+Initiation:   is dedicated to Inna Voronich
 */
 
 //For use standart class WP_List_Table
@@ -2383,7 +2383,7 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
         </tr>
       </table>
       <br />
-      <button type="submit" class="button-primary" name="save">Save</button>
+      <button type="submit" class="button-primary" name="save" onClick="wms7_setup_sound()">Save</button>
       <button type="button" class="button-primary" name="quit" onClick="location.href='<?php echo get_option('wms7_current_url') . '&paged='.get_option('wms7_current_page')?>'">Quit</button>
       </form>
     </div>
@@ -2426,6 +2426,8 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
       array($this,'wms7_main_setting_field10'), 'wms7_settings', 'wms7_section' );
     add_settings_field('field11', '<label for="wms7_main_settings[mail_box_tmp]">'.__('E-mail folder tmp','wms7').':</label>', 
       array($this,'wms7_main_setting_field11'), 'wms7_settings', 'wms7_section' );
+    add_settings_field('field12', '<label for="wms7_main_settings[sse_sound]">'.__('SSE sound','wms7').':</label>', 
+      array($this,'wms7_main_setting_field12'), 'wms7_settings', 'wms7_section' );    
   }
 
   //Filling out an option 1
@@ -3066,6 +3068,64 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     <input id="wms7_main_settings[mail_box_tmp]" style="margin: 0px; width: 320px; height: 25px;" name="wms7_main_settings[mail_box_tmp]" type="text" placeholder="/tmp"value="<?php echo sanitize_text_field( $val ) ?>" /><br/><label><?php _e('Create a directory in the root of the site for temporary storage of files attached to the mail','wms7') ?></label>
     <?php
   }
+
+  //Filling out an option 12
+  function wms7_main_setting_field12(){
+    $val = get_option('wms7_main_settings');
+    ?>
+<table>
+  <tr>
+    <td style='height:20px;padding:0;margin:0;'>
+      <label>frequency</label>
+    </td>
+    <td style='height:20px;padding:0;margin:0;'>
+      <input type="range" id="fIn" name="wms7_main_settings[fIn]" value="<?php echo sanitize_text_field( $val['fIn'] ) ?>" min="40" max="6000" oninput="wms7_show()" />
+    </td>
+    <td style='height:20px;padding:0;margin:0;'>
+      <span id="fOut"></span>
+    </td>
+  </tr>
+  <tr>
+    <td style='height:20px;padding:0;margin:0;'>
+      <label>type</label>
+    </td>
+    <td style='height:20px;padding:0;margin:0;'>
+      <input type="range" id="tIn" name="wms7_main_settings[tIn]" value="<?php echo sanitize_text_field( $val['tIn'] ) ?>" min="0" max="3" oninput="wms7_show()" />
+    </td>
+    <td style='height:20px;padding:0;margin:0;'>
+      <span id="tOut"></span>
+    </td>
+    </tr>
+  <tr>
+    <td style='height:20px;padding:0;margin:0;'>
+      <label>volume</label>
+    </td>
+    <td style='height:20px;padding:0;margin:0;'>
+      <input type="range" id="vIn" name="wms7_main_settings[vIn]" value="<?php echo sanitize_text_field( $val['vIn'] ) ?>" min="0" max="100" oninput="wms7_show()" />
+    </td>
+    <td style='height:20px;padding:0;margin:0;'>
+      <span id="vOut"></span>
+    </td>
+  </tr>
+  <tr>
+    <td style='height:20px;padding:0;margin:0;'>
+      <label>duration</label>
+    </td>
+    <td style='height:20px;padding:0;margin:0;'>
+      <input type="range" id="dIn" name="wms7_main_settings[dIn]" value="<?php echo sanitize_text_field( $val['dIn'] ) ?>" min="1" max="5000" oninput="wms7_show()" />
+    </td>
+    <td style='height:20px;padding:0;margin:0;'>
+      <span id="dOut"></span>
+    </td>
+  </tr>      
+</table>
+  <br>
+  <input type="button" value="Play" onclick='wms7_beep();' />
+
+  <br/>
+  <label><?php _e('It is intended for sound maintenance of updating of the screen at receipt of new visitors of the website','wms7') ?></label>
+  <?php
+  }  
 
   function wms7_imap_list(){
     $prm = $_GET['checkbox'];

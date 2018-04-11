@@ -8,8 +8,8 @@ Author:       Oleg Klenitskiy
 Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 Donate link:  https://www.adminkov.bcr.by/donate/
 Requires at least: 4.5.1
-Tested up to: 4.9.2
-Stable tag:   2.0
+Tested up to: 4.9.5
+Stable tag:   2.2.7
 Version:      2.2.7
 License:      GPL3
 Initiation		is dedicated to Inna Voronich
