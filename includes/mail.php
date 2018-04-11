@@ -336,6 +336,7 @@ if ($pos == 0){
 
 function wms7_mail_move() {
 	$imap = wms7_mail_connection();
+
 	foreach ($_POST as $key=>$value) {
 		if($value == 'mail_number') {
 			$uid = imap_uid($imap,$key);
