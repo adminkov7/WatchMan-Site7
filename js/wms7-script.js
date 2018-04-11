@@ -12,6 +12,7 @@ function wms7_sse() {
               if (get_cookie('wms7_records_count') !== arr[0] || get_cookie('wms7_unseen_count') !== arr[1]) {
                   document.cookie = 'wms7_records_count=' + arr[0];
                   document.cookie = 'wms7_unseen_count=' + arr[1];
+                  wms7_beep();
                   location.replace(window.location.href);
               }
           }, false);
@@ -102,46 +103,30 @@ window.onload = function() {
   var page = wms7_getUrlVars()['page'];
   var result = wms7_getUrlVars()['result'];
   var checkbox = wms7_getUrlVars()['checkbox'];
-  wms7_link_focus(page, result);
-  wms7_stat_focus();
-  wms7_mail_focus();
-  if (!get_cookie('wms7_sse')){
-    document.cookie = 'wms7_sse=off';
-    }else{
-    if (get_cookie('wms7_sse') == 'on'){
-      if (page =='wms7_visitors') {
-        var myElement = document.getElementById('sse');
-        myElement.checked = true;
-        //start SSE
-        wms7_sse();
-      }
-      if (page =='wms7_settings') {
-        wms7_check_pwd('pwd_box0');
-        wms7_check_pwd('pwd_box1');
-        wms7_check_pwd('pwd_box2');
-        wms7_check_pwd('pwd_box3');
-        wms7_check_pwd('pwd_box4');
-        if (checkbox == 'box0') {
-          myElement = document.getElementById('text_folders_box0');
-          myElement.style.display = 'none';
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  if (page =='wms7_settings') {
+    wms7_check_pwd('pwd_box0');
+    wms7_check_pwd('pwd_box1');
+    wms7_check_pwd('pwd_box2');
+    wms7_check_pwd('pwd_box3');
+    wms7_check_pwd('pwd_box4');
+
+    wms7_show();    
+  }
+  if (page =='wms7_visitors') {
+    wms7_link_focus(page, result);
+    wms7_stat_focus();
+    wms7_mail_focus();    
+    if (!get_cookie('wms7_sse')){
+        document.cookie = 'wms7_sse=off';
+      }else{
+        if (get_cookie('wms7_sse') == 'on'){
+          var myElement = document.getElementById('sse');
+          myElement.checked = true;
+          //start SSE
+          wms7_sse();
         }
-        if (checkbox == 'box1') {
-          myElement = document.getElementById('text_folders_box1');
-          myElement.style.display = 'none';
-        }
-        if (checkbox == 'box2') {
-          myElement = document.getElementById('text_folders_box2');
-          myElement.style.display = 'none';
-        }
-        if (checkbox == 'box3') {
-          myElement = document.getElementById('text_folders_box3');
-          myElement.style.display = 'none';
-        }
-        if (checkbox == 'box4') {
-          myElement = document.getElementById('text_folders_box4');
-          myElement.style.display = 'none';
-        }
-      }
     }
   }
 }
@@ -399,4 +384,70 @@ function wms7_mail_folders(box,id_tbl,id_textarea,id_textarea_alt){
   }  
   myElement2.innerHTML = mylist;
   myElement3.innerHTML = mylist_alt;
+}
+
+function wms7_show(){
+  frequency = document.getElementById("fIn").value;
+  document.getElementById("fOut").innerHTML=frequency + ' Hz';
+
+  switch(document.getElementById("tIn").value * 1){
+    case 0: type='sine'; break; 
+    case 1: type='square'; break;
+    case 2: type='sawtooth'; break;
+    case 3: type='triangle'; break;
+  }    
+  document.getElementById("tOut").innerHTML=type;
+
+  volume = document.getElementById("vIn").value / 100;
+  document.getElementById("vOut").innerHTML=volume;
+
+  duration = document.getElementById("dIn").value;
+  document.getElementById("dOut").innerHTML=duration + ' ms';
+}
+
+function wms7_beep() {
+  if (!get_cookie('wms7_sound_volume') && 
+      !get_cookie('wms7_sound_frequency') && 
+      !get_cookie('wms7_sound_type')&& 
+      !get_cookie('wms7_sound_duration')){
+
+      var volume = '0.12';
+      var frequency = '570';
+      var type = 'triangle';
+      var duration = '344';
+      document.cookie = 'wms7_sound_volume='+volume;
+      document.cookie = 'wms7_sound_frequency='+frequency;
+      document.cookie = 'wms7_sound_type='+type;
+      document.cookie = 'wms7_sound_duration='+duration;
+    }else{
+      var volume = get_cookie('wms7_sound_volume');
+      var frequency = get_cookie('wms7_sound_frequency');
+      var type = get_cookie('wms7_sound_type');
+      var duration = get_cookie('wms7_sound_duration');
+  }
+  var oscillator = audioCtx.createOscillator();
+  var gainNode = audioCtx.createGain();
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+
+  gainNode.gain.value = volume;
+  oscillator.frequency.value = frequency;
+  oscillator.type = type;
+
+  oscillator.start();
+
+  setTimeout(
+    function(){
+      oscillator.stop();
+    }, 
+    duration
+  );  
+}
+
+function wms7_setup_sound(){
+  document.cookie = 'wms7_sound_volume='+volume;
+  document.cookie = 'wms7_sound_frequency='+frequency;
+  document.cookie = 'wms7_sound_type='+type;
+  document.cookie = 'wms7_sound_duration='+duration;
 }
