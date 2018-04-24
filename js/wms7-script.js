@@ -328,6 +328,7 @@ function wms7_check_boxes(id){
   var paged = 'paged='+wms7_getUrlVars()['paged'];
   var checkbox = 'checkbox='+id;
   var result = wms7_getUrlVars()['result'];
+
   if (result) {
     result = 'result='+wms7_getUrlVars()['result'];
   }else{
@@ -336,6 +337,25 @@ function wms7_check_boxes(id){
   var stateParameters = { page: page, result: result, paged: paged };
   var url = window.location.href.slice(0,window.location.href.indexOf('\?'));
   url = url + '?'+ page + '&' + result + '&' + paged + '&' + checkbox;
+
+  history.pushState(stateParameters, "WatchMan-Site7", url);
+  window.location.replace(url);
+}
+
+function wms7_check_smtp(id){
+  var page = 'page='+wms7_getUrlVars()['page'];
+  var paged = 'paged='+wms7_getUrlVars()['paged'];
+  var smtp = 'smtp='+id;
+  var result = wms7_getUrlVars()['result'];
+
+  if (result) {
+    result = 'result='+wms7_getUrlVars()['result'];
+  }else{
+    result='result=5';
+  }
+  var stateParameters = { page: page, result: result, paged: paged };
+  var url = window.location.href.slice(0,window.location.href.indexOf('\?'));
+  url = url + '?'+ page + '&' + result + '&' + paged + '&' + smtp;
 
   history.pushState(stateParameters, "WatchMan-Site7", url);
   window.location.replace(url);
@@ -361,9 +381,9 @@ function wms7_mail_folders(box,id_tbl,id_textarea,id_textarea_alt){
   myElement1 = document.getElementById(id_tbl);
   myElement1.style.display = 'none';
   myElement2 = document.getElementById(id_textarea);
-  myElement2.style.display = 'block';
+  myElement2.style.visibility = 'visible';
   myElement3 = document.getElementById(id_textarea_alt);
-  myElement3.style.display = 'none';
+  myElement3.style.visibility = 'hidden';
 
   mylist = '';
   mylist_alt = '';
