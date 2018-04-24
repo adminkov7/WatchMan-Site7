@@ -819,7 +819,7 @@ if( !class_exists( 'WatchManSite7' ) ) {
   }
 
 function wms7_get_user_ip(){
-  // Просто получайте заголовки, если мы можем или будем использовать глобальный SERVER.
+  // Получаем  заголовки или используем глобальный SERVER.
   if ( function_exists ( 'apache_request_headers' )){      
     	$headers = apache_request_headers();
   	}else{
@@ -2556,25 +2556,79 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     <?php
   }
 
+function wms7_msg_smtp($box){
+  $val = get_option('wms7_main_settings');
+
+  $imap_server = isset($val['box0']['imap_server']) ? $val['box0']['imap_server'] : '';
+
+  $mail_box_name = isset($val[$box]['mail_box_name']) ? $val[$box]['mail_box_name'] : '';
+  $mail_box_pwd = isset($val[$box]['mail_box_pwd']) ? $val[$box]['mail_box_pwd'] : '';
+  $smtp_server = isset($val[$box]['smtp_server']) ? $val[$box]['smtp_server'] : '';
+  $smtp_box_encryption = isset($val[$box]['smtp_box_encryption']) ? $val[$box]['smtp_box_encryption'] : '';
+  $smtp_box_port = isset($val[$box]['smtp_box_port']) ? $val[$box]['smtp_box_port'] : '';
+
+  $to = isset($val['box0']['mail_box_name']) ? $val['box0']['mail_box_name'] : 'test@this_site.com';
+
+  if ( !is_object( $mailer ) || !is_a( $mailer, 'PHPMailer' ) ) {
+    require_once ABSPATH . WPINC . '/class-phpmailer.php';
+    require_once ABSPATH . WPINC . '/class-smtp.php';
+    $mailer = new PHPMailer( true );
+  }
+  $mailer->isSMTP();
+  $mailer->Host = $smtp_server;
+  $mailer->SMTPAuth = true;
+  $mailer->Username = $mail_box_name;
+  $mailer->Password = $mail_box_pwd;
+  $mailer->SMTPSecure = mb_strtolower($smtp_box_encryption);
+  $mailer->Port = $smtp_box_port;
+  $mailer->CharSet = 'UTF-8';
+  $mailer->isHTML(false);
+  // Дополнительные настройки…
+  $mailer->From = $mail_box_name; //'klenitskiy.oleg@mail.ru';//$from;
+  $blog_title = get_bloginfo('name');
+  $mailer->FromName = $blog_title;
+  $mailer->addAddress($to);
+  $mailer->Subject = 'Check connection';
+  $mailer->Body = 'Checking the connection to the server: '.$smtp_server;
+
+  //$mailer->SMTPDebug = 2;
+
+  //send the message, check for errors
+  try{
+    $mailer->Send();
+    $smtp_server =  'Check the letter on your site';
+  } 
+  catch (phpmailerException $e) {
+    //PHPMailer error messages
+    $smtp_server = $e->errorMessage();
+  } 
+  catch (Exception $e) {
+    // other error messages
+    $smtp_server = $e->getMessage();
+  }
+
+  return $smtp_server;
+}
+
   //Filling out an option 9
   function wms7_main_setting_field9(){
   	//this_site------------------------------------------------------------------	
     $val = get_option('wms7_main_settings');
-    $val1_box0 = $val['box0']['imap_server'];
-    $val2_box0 = $val['box0']['mail_box_name'];
-    $val3_box0 = $val['box0']['mail_box_pwd'];
-    $val4_box0 = $val['box0']['mail_box_encryption'];  
-    $val5_box0 = $val['box0']['mail_box_port'];
-    $val6_box0 = $val['box0']['pwd_box'];
+    $val1_box0 = isset($val['box0']['imap_server']) ? $val['box0']['imap_server'] : '';
+    $val2_box0 = isset($val['box0']['mail_box_name']) ? $val['box0']['mail_box_name'] : '';
+    $val3_box0 = isset($val['box0']['mail_box_pwd']) ? $val['box0']['mail_box_pwd'] : '';
+    $val4_box0 = isset($val['box0']['mail_box_encryption']) ? $val['box0']['mail_box_encryption'] : '';  
+    $val5_box0 = isset($val['box0']['mail_box_port']) ? $val['box0']['mail_box_port'] : '';
+    $val6_box0 = isset($val['box0']['pwd_box']) ? $val['box0']['pwd_box'] : '';
 
-    $val7_box0 = $val['box0']['mail_folders'];
+    $val7_box0 = isset($val['box0']['mail_folders']) ? $val['box0']['mail_folders'] : '';
 		$val7_box0 = str_replace(';', ';&#010', $val7_box0);
-    $val7_box0_alt = $val['box0']['mail_folders_alt'];
+    $val7_box0_alt = isset($val['box0']['mail_folders_alt']) ? $val['box0']['mail_folders_alt'] : '';
 		$val7_box0_alt = str_replace(';', ';&#010', $val7_box0_alt);	
 
-    $val8_box0 = $val['box0']['smtp_server'];
-		$val9_box0 = $val['box0']['smtp_box_encryption'];
-		$val10_box0 = $val['box0']['smtp_box_port'];
+    $val8_box0 = isset($val['box0']['smtp_server']) ? $val['box0']['smtp_server'] : '';
+		$val9_box0 = isset($val['box0']['smtp_box_encryption']) ? $val['box0']['smtp_box_encryption'] : '';
+		$val10_box0 = isset($val['box0']['smtp_box_port']) ? $val['box0']['smtp_box_port'] : '';
     $sel1 = $sel2 = $sel3 = $sel4 = '';
     switch ($val4_box0) {
     case 'Auto':
@@ -2607,9 +2661,17 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     }    
     if ( isset($_GET['checkbox']) && $_GET['checkbox'] == 'box0' ) {
       	$tbl_folders0 = $this->wms7_imap_list($_GET['checkbox']);
+        $visible = 'hidden;';
     	}else{
     		$tbl_folders0 = '';
+        $visible = 'visible;';
     }
+    if ( isset($_GET['smtp']) && $_GET['smtp'] == 'box0_smtp' ) {
+        $message_smtp = $this->wms7_msg_smtp('box0');
+      }else{
+        $message_smtp = '';
+    }
+
     ?>
   	<div id="param_mail_box_this_site" style="width:370px;">
     <fieldset style="width:860px;height:200px;border: 2px groove;margin:0;padding:0;">
@@ -2631,23 +2693,26 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     <label for="mail_box_port_box0" style="position:relative;left:-90px;top:-60px;"><?php _e('Port','wms7') ?></label><br/>
 
     <button type="button" id="box0" name="check_boxes" class="button-primary" onClick="wms7_check_boxes(id)" style="position:relative;left:225px;top:-60px;" />Check</button>
-    <button type="button" id="textbox0" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box0','tbl_folders_box0','text_folders_box0','text_folders_box0_alt')" style="position:relative;left:165px;top:-30px;" />Insert</button>
+    <button type="button" id="textbox0" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box0','tbl_folders_box0','text_folders_box0','text_folders_box0_alt')" style="position:relative;left:165px;top:-30px;" />Select</button>
     <input id="pwd_box0" name="wms7_main_settings[box0][pwd_box]" type="checkbox" style="position:relative;left:70px;top:-32px;" value="1" <?php checked( $val6_box0 ) ?> onClick="wms7_check_pwd(id)"/>
 
-    <input id="smtp_server_box0" style="position:relative;width: 200px;top:-180px;left:505px;" name="wms7_main_settings[box0][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box0 ) ?>" />
-    <label for="smtp_server_box0" style="position:relative;top:-155px;left:300px;"><?php _e('SMTP Server name','wms7') ?></label>
+    <button type="button" id="box0_smtp" name="check_smtp" class="button-primary" onClick="wms7_check_smtp(id)" style="position:relative;left:510px;top:-60px;" />Check</button>
+    <input id="box0_msg_smtp" type="text" name="msg_smtp" style="position:relative;left:445px;top:-25px;width:200px;"  value="<?php echo sanitize_text_field( $message_smtp ) ?>" />
 
-    <select id="smtp_encryption_box0" name="wms7_main_settings[box0][smtp_box_encryption]" style="position:relative;left:180px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
-    <label for="smtp_encryption_box0" style="position:relative;left:115px;top:-95px;"><?php _e('SMTP Encrypt','wms7') ?></label>
+    <input id="smtp_server_box0" style="position:relative;width: 200px;top:-180px;left:240px;" name="wms7_main_settings[box0][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box0 ) ?>" />
+    <label for="smtp_server_box0" style="position:relative;top:-155px;left:35px;"><?php _e('SMTP Server name','wms7') ?></label>
 
-    <input id="smtp_box_port_box0" style="position:relative;left:165px;top:-123px;width:60px;" name="wms7_main_settings[box0][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box0 ) ?>" />
-    <label for="smtp_box_port_box0" style="position:relative;left:100px;top:-95px;"><?php _e('SMTP Port','wms7') ?></label><br/>
+    <select id="smtp_encryption_box0" name="wms7_main_settings[box0][smtp_box_encryption]" style="position:relative;left:-85px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
+    <label for="smtp_encryption_box0" style="position:relative;left:650px;top:-125px;"><?php _e('SMTP Encrypt','wms7') ?></label>
 
-    <div id="tbl_folders_box0" style="position:relative;left:290px;top:-212px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders0 ?></div>
+    <input id="smtp_box_port_box0" style="position:relative;left:700px;top:-155px;width:60px;" name="wms7_main_settings[box0][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box0 ) ?>" />
+    <label for="smtp_box_port_box0" style="position:relative;left:635px;top:-125px;"><?php _e('SMTP Port','wms7') ?></label><br/>
 
-    <textarea readonly id="text_folders_box0" name="wms7_main_settings[box0][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px;"><?php echo sanitize_text_field( $val7_box0 ) ?></textarea>
+    <div id="tbl_folders_box0" style="position:relative;left:290px;top:-245px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders0 ?></div>
 
-    <textarea readonly id="text_folders_box0_alt" name="wms7_main_settings[box0][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px; display:none;"><?php echo sanitize_text_field( $val7_box0_alt ) ?></textarea> 
+    <textarea readonly id="text_folders_box0" name="wms7_main_settings[box0][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-240px;width:350px;height:180px;visibility:<?php echo $visible ?>"><?php echo sanitize_text_field( $val7_box0 ) ?></textarea>
+
+    <textarea readonly id="text_folders_box0_alt" name="wms7_main_settings[box0][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-240px;width:350px;height:180px; visibility:hidden;"><?php echo sanitize_text_field( $val7_box0_alt ) ?></textarea> 
 
   	</fieldset>
   	</div>
@@ -2655,21 +2720,21 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
   //mail.ru--------------------------------------------------------------------
 
     $val = get_option('wms7_main_settings');
-    $val1_box1 = $val['box1']['imap_server'];
-    $val2_box1 = $val['box1']['mail_box_name'];
-    $val3_box1 = $val['box1']['mail_box_pwd'];
-    $val4_box1 = $val['box1']['mail_box_encryption'];  
-    $val5_box1 = $val['box1']['mail_box_port'];
-    $val6_box1 = $val['box1']['pwd_box'];
+    $val1_box1 = isset($val['box1']['imap_server']) ? $val['box1']['imap_server'] : '';
+    $val2_box1 = isset($val['box1']['mail_box_name']) ? $val['box1']['mail_box_name'] : '';
+    $val3_box1 = isset($val['box1']['mail_box_pwd']) ? $val['box1']['mail_box_pwd'] : '';
+    $val4_box1 = isset($val['box1']['mail_box_encryption']) ? $val['box1']['mail_box_encryption'] : '';  
+    $val5_box1 = isset($val['box1']['mail_box_port']) ? $val['box1']['mail_box_port'] : '';
+    $val6_box1 = isset($val['box1']['pwd_box']) ? $val['box1']['pwd_box'] : '';
 
-    $val7_box1 = $val['box1']['mail_folders'];
+    $val7_box1 = isset($val['box1']['mail_folders']) ? $val['box1']['mail_folders'] : '';
 		$val7_box1 = str_replace(';', ';&#010', $val7_box1);
-    $val7_box1_alt = $val['box1']['mail_folders_alt'];
+    $val7_box1_alt = isset($val['box1']['mail_folders_alt']) ? $val['box1']['mail_folders_alt'] : '';
 		$val7_box1_alt = str_replace(';', ';&#010', $val7_box1_alt);			
 
-    $val8_box1 = $val['box1']['smtp_server'];
-		$val9_box1 = $val['box1']['smtp_box_encryption'];
-		$val10_box1 = $val['box1']['smtp_box_port'];
+    $val8_box1 = isset($val['box1']['smtp_server']) ? $val['box1']['smtp_server'] : '';
+		$val9_box1 = isset($val['box1']['smtp_box_encryption']) ? $val['box1']['smtp_box_encryption'] : '';
+		$val10_box1 = isset($val['box1']['smtp_box_port']) ? $val['box1']['smtp_box_port'] : '';
     $sel1 = $sel2 = $sel3 = $sel4 = '';
     switch ($val4_box1) {
 	    case 'Auto':
@@ -2702,9 +2767,16 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     }    
     if ( isset($_GET['checkbox']) && $_GET['checkbox'] == 'box1' ) {
       	$tbl_folders1 = $this->wms7_imap_list($_GET['checkbox']);
+        $visible = 'hidden;';
     	}else{
     		$tbl_folders1 = '';
+        $visible = 'visible;';
     }
+    if ( isset($_GET['smtp']) && $_GET['smtp'] == 'box1_smtp' ) {
+        $message_smtp = $this->wms7_msg_smtp('box1');
+      }else{
+        $message_smtp = '';
+    }    
   ?>
   	<div id="param_mail_box_mail_ru" style="width:370px;">
     <fieldset style="width:860px;height:200px;border: 2px groove;margin:0;padding:0;">
@@ -2726,23 +2798,26 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     <label for="mail_box_port_box1" style="position:relative;left:-90px;top:-60px;"><?php _e('Port','wms7') ?></label><br/>
 
     <button type="button" id="box1" name="check_boxes" class="button-primary" onClick="wms7_check_boxes(id)" style="position:relative;left:225px;top:-60px;" />Check</button>
-    <button type="button" id="textbox1" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box1','tbl_folders_box1','text_folders_box1','text_folders_box1_alt')" style="position:relative;left:165px;top:-30px;" />Insert</button>
+    <button type="button" id="textbox1" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box1','tbl_folders_box1','text_folders_box1','text_folders_box1_alt')" style="position:relative;left:165px;top:-30px;" />Select</button>
     <input id="pwd_box1" name="wms7_main_settings[box1][pwd_box]" type="checkbox" style="position:relative;left:70px;top:-32px;" value="1" <?php checked( $val6_box1 ) ?> onClick="wms7_check_pwd(id)"/>
 
-    <input id="smtp_server_box1" style="position:relative;width: 200px;top:-180px;left:505px;" name="wms7_main_settings[box1][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box1 ) ?>" />
-    <label for="smtp_server_box1" style="position:relative;top:-155px;left:300px;"><?php _e('SMTP Server name','wms7') ?></label>
+    <button type="button" id="box1_smtp" name="check_smtp" class="button-primary" onClick="wms7_check_smtp(id)" style="position:relative;left:510px;top:-60px;" />Check</button>
+    <input id="box1_msg_smtp" type="text" name="msg_smtp" style="position:relative;left:445px;top:-25px;width:200px;"  value="<?php echo sanitize_text_field( $message_smtp ) ?>" />
 
-    <select id="smtp_encryption_box1" name="wms7_main_settings[box1][smtp_box_encryption]" style="position:relative;left:180px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
-    <label for="smtp_encryption_box1" style="position:relative;left:115px;top:-95px;"><?php _e('SMTP Encrypt','wms7') ?></label>
+    <input id="smtp_server_box1" style="position:relative;width: 200px;top:-180px;left:240px;" name="wms7_main_settings[box1][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box1 ) ?>" />
+    <label for="smtp_server_box1" style="position:relative;top:-155px;left:35px;"><?php _e('SMTP Server name','wms7') ?></label>
 
-    <input id="smtp_box_port_box1" style="position:relative;left:165px;top:-123px;width:60px;" name="wms7_main_settings[box1][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box1 ) ?>" />
-    <label for="smtp_box_port_box1" style="position:relative;left:100px;top:-95px;"><?php _e('SMTP Port','wms7') ?></label><br/>
+    <select id="smtp_encryption_box1" name="wms7_main_settings[box1][smtp_box_encryption]" style="position:relative;left:-85px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
+    <label for="smtp_encryption_box1" style="position:relative;left:650px;top:-125px;"><?php _e('SMTP Encrypt','wms7') ?></label>
 
-    <div id="tbl_folders_box1" style="position:relative;left:290px;top:-212px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders1 ?></div>
+    <input id="smtp_box_port_box1" style="position:relative;left:700px;top:-155px;width:60px;" name="wms7_main_settings[box1][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box1 ) ?>" />
+    <label for="smtp_box_port_box1" style="position:relative;left:635px;top:-125px;"><?php _e('SMTP Port','wms7') ?></label><br/>
 
-    <textarea readonly id="text_folders_box1" name="wms7_main_settings[box1][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px;"><?php echo sanitize_text_field( $val7_box1 ) ?></textarea>
+    <div id="tbl_folders_box1" style="position:relative;left:290px;top:-245px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders1 ?></div>
 
-    <textarea readonly id="text_folders_box1_alt" name="wms7_main_settings[box1][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px; display:none;"><?php echo sanitize_text_field( $val7_box1_alt ) ?></textarea> 
+    <textarea readonly id="text_folders_box1" name="wms7_main_settings[box1][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-240px;width:350px;height:180px;visibility:<?php echo $visible ?>"><?php echo sanitize_text_field( $val7_box1 ) ?></textarea>
+
+    <textarea readonly id="text_folders_box1_alt" name="wms7_main_settings[box1][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-240px;width:350px;height:180px; visibility:hidden;"><?php echo sanitize_text_field( $val7_box1_alt ) ?></textarea> 
 
   	</fieldset>
   	</div>
@@ -2750,21 +2825,21 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
   <?php
   //yandex.ru--------------------------------------------------------------------
     $val = get_option('wms7_main_settings');
-    $val1_box2 = $val['box2']['imap_server'];
-    $val2_box2 = $val['box2']['mail_box_name'];
-    $val3_box2 = $val['box2']['mail_box_pwd'];
-    $val4_box2 = $val['box2']['mail_box_encryption'];  
-    $val5_box2 = $val['box2']['mail_box_port'];
-    $val6_box2 = $val['box2']['pwd_box'];
+    $val1_box2 = isset($val['box2']['imap_server']) ? $val['box2']['imap_server'] : '';
+    $val2_box2 = isset($val['box2']['mail_box_name']) ? $val['box2']['mail_box_name'] : '';
+    $val3_box2 = isset($val['box2']['mail_box_pwd']) ? $val['box2']['mail_box_pwd'] : '';
+    $val4_box2 = isset($val['box2']['mail_box_encryption']) ? $val['box2']['mail_box_encryption'] : '';  
+    $val5_box2 = isset($val['box2']['mail_box_port']) ? $val['box2']['mail_box_port'] : '';
+    $val6_box2 = isset($val['box2']['pwd_box']) ? $val['box2']['pwd_box'] : '';
 
-    $val7_box2 = $val['box2']['mail_folders'];
+    $val7_box2 = isset($val['box2']['mail_folders']) ? $val['box2']['mail_folders'] : '';
 		$val7_box2 = str_replace(';', ';&#010', $val7_box2);
-    $val7_box2_alt = $val['box2']['mail_folders_alt'];
-		$val7_box2_alt = str_replace(';', ';&#010', $val7_box2_alt);			
+    $val7_box2_alt = isset($val['box2']['mail_folders_alt']) ? $val['box2']['mail_folders_alt'] : '';
+		$val7_box2_alt = str_replace(';', ';&#010', $val7_box2_alt);
 
-    $val8_box2 = $val['box2']['smtp_server'];
-		$val9_box2 = $val['box2']['smtp_box_encryption'];
-		$val10_box2 = $val['box2']['smtp_box_port'];
+    $val8_box2 = isset($val['box2']['smtp_server']) ? $val['box2']['smtp_server'] : '';
+		$val9_box2 = isset($val['box2']['smtp_box_encryption']) ? $val['box2']['smtp_box_encryption'] : '';
+		$val10_box2 = isset($val['box2']['smtp_box_port']) ? $val['box2']['smtp_box_port'] : '';
     $sel1 = $sel2 = $sel3 = $sel4 = '';
     switch ($val4_box2) {
 	    case 'Auto':
@@ -2797,9 +2872,16 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     }    
     if ( isset($_GET['checkbox']) && $_GET['checkbox'] == 'box2' ) {
       	$tbl_folders2 = $this->wms7_imap_list($_GET['checkbox']);
+        $visible = 'hidden;';
     	}else{
     		$tbl_folders2 = '';
+        $visible = 'visible;';
     }
+    if ( isset($_GET['smtp']) && $_GET['smtp'] == 'box2_smtp' ) {
+        $message_smtp = $this->wms7_msg_smtp('box2');
+      }else{
+        $message_smtp = '';
+    }     
   ?>
   	<div id="param_mail_box_yandex_ru" style="width:370px;">
     <fieldset style="width:860px;height:200px;border: 2px groove;margin:0;padding:0;">
@@ -2821,44 +2903,47 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     <label for="mail_box_port_box2" style="position:relative;left:-90px;top:-60px;"><?php _e('Port','wms7') ?></label><br/>
 
     <button type="button" id="box2" name="check_boxes" class="button-primary" onClick="wms7_check_boxes(id)" style="position:relative;left:225px;top:-60px;" />Check</button>
-    <button type="button" id="textbox2" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box2','tbl_folders_box2','text_folders_box2','text_folders_box2_alt')" style="position:relative;left:165px;top:-30px;" />Insert</button>
+    <button type="button" id="textbox2" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box2','tbl_folders_box2','text_folders_box2','text_folders_box2_alt')" style="position:relative;left:165px;top:-30px;" />Select</button>
     <input id="pwd_box2" name="wms7_main_settings[box2][pwd_box]" type="checkbox" style="position:relative;left:70px;top:-32px;" value="1" <?php checked( $val6_box2 ) ?> onClick="wms7_check_pwd(id)"/>
 
-    <input id="smtp_server_box2" style="position:relative;width: 200px;top:-180px;left:505px;" name="wms7_main_settings[box2][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box2 ) ?>" />
-    <label for="smtp_server_box2" style="position:relative;top:-155px;left:300px;"><?php _e('SMTP Server name','wms7') ?></label>
+    <button type="button" id="box2_smtp" name="check_smtp" class="button-primary" onClick="wms7_check_smtp(id)" style="position:relative;left:510px;top:-60px;" />Check</button>
+    <input id="box2_msg_smtp" type="text" name="msg_smtp" style="position:relative;left:445px;top:-25px;width:200px;"  value="<?php echo sanitize_text_field( $message_smtp ) ?>" />
 
-    <select id="smtp_encryption_box2" name="wms7_main_settings[box2][smtp_box_encryption]" style="position:relative;left:180px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
-    <label for="smtp_encryption_box2" style="position:relative;left:115px;top:-95px;"><?php _e('SMTP Encrypt','wms7') ?></label>
+    <input id="smtp_server_box2" style="position:relative;width: 200px;top:-180px;left:240px;" name="wms7_main_settings[box2][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box2 ) ?>" />
+    <label for="smtp_server_box2" style="position:relative;top:-155px;left:35px;"><?php _e('SMTP Server name','wms7') ?></label>
 
-    <input id="smtp_box_port_box2" style="position:relative;left:165px;top:-123px;width:60px;" name="wms7_main_settings[box2][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box2 ) ?>" />
-    <label for="smtp_box_port_box2" style="position:relative;left:100px;top:-95px;"><?php _e('SMTP Port','wms7') ?></label><br/>
+    <select id="smtp_encryption_box2" name="wms7_main_settings[box2][smtp_box_encryption]" style="position:relative;left:-85px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
+    <label for="smtp_encryption_box2" style="position:relative;left:650px;top:-125px;"><?php _e('SMTP Encrypt','wms7') ?></label>
 
-    <div id="tbl_folders_box2" style="position:relative;left:290px;top:-212px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders2 ?></div>
+    <input id="smtp_box_port_box2" style="position:relative;left:700px;top:-155px;width:60px;" name="wms7_main_settings[box2][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box2 ) ?>" />
+    <label for="smtp_box_port_box2" style="position:relative;left:635px;top:-125px;"><?php _e('SMTP Port','wms7') ?></label><br/>
 
-    <textarea readonly id="text_folders_box2" name="wms7_main_settings[box2][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px;"><?php echo sanitize_text_field( $val7_box2 ) ?></textarea>
+    <div id="tbl_folders_box2" style="position:relative;left:290px;top:-245px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders2 ?></div>
 
-    <textarea readonly id="text_folders_box2_alt" name="wms7_main_settings[box2][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px; display:none;"><?php echo sanitize_text_field( $val7_box2_alt ) ?></textarea> 
+    <textarea readonly id="text_folders_box2" name="wms7_main_settings[box2][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-240px;width:350px;height:180px;visibility:<?php echo $visible ?>"><?php echo sanitize_text_field( $val7_box2 ) ?></textarea>
+
+    <textarea readonly id="text_folders_box2_alt" name="wms7_main_settings[box2][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-240px;width:350px;height:180px; visibility:hidden;"><?php echo sanitize_text_field( $val7_box2_alt ) ?></textarea> 
 
   	</fieldset>
   	</div>
   <?php
   //yahoo.com--------------------------------------------------------------------
     $val = get_option('wms7_main_settings');
-    $val1_box3 = $val['box3']['imap_server'];
-    $val2_box3 = $val['box3']['mail_box_name'];
-    $val3_box3 = $val['box3']['mail_box_pwd'];
-    $val4_box3 = $val['box3']['mail_box_encryption'];  
-    $val5_box3 = $val['box3']['mail_box_port'];
-    $val6_box3 = $val['box3']['pwd_box'];
+    $val1_box3 = isset($val['box3']['imap_server']) ? $val['box3']['imap_server'] : '';
+    $val2_box3 = isset($val['box3']['mail_box_name']) ? $val['box3']['mail_box_name'] : '';
+    $val3_box3 = isset($val['box3']['mail_box_pwd']) ? $val['box3']['mail_box_pwd'] : '';
+    $val4_box3 = isset($val['box3']['mail_box_encryption']) ? $val['box3']['mail_box_encryption'] : '';  
+    $val5_box3 = isset($val['box3']['mail_box_port']) ? $val['box3']['mail_box_port'] : '';
+    $val6_box3 = isset($val['box3']['pwd_box']) ? $val['box3']['pwd_box'] : '';
 
-    $val7_box3 = $val['box3']['mail_folders'];
+    $val7_box3 = isset($val['box3']['mail_folders']) ? $val['box3']['mail_folders'] : '';
 		$val7_box3 = str_replace(';', ';&#010', $val7_box3);
-    $val7_box3_alt = $val['box3']['mail_folders_alt'];
+    $val7_box3_alt = isset($val['box3']['mail_folders_alt']) ? $val['box3']['mail_folders_alt'] : '';
 		$val7_box3_alt = str_replace(';', ';&#010', $val7_box3_alt);			
 
-    $val8_box3 = $val['box3']['smtp_server'];
-		$val9_box3 = $val['box3']['smtp_box_encryption'];
-		$val10_box3 = $val['box3']['smtp_box_port'];
+    $val8_box3 = isset($val['box3']['smtp_server']) ? $val['box3']['smtp_server'] : '';
+		$val9_box3 = isset($val['box3']['smtp_box_encryption']) ? $val['box3']['smtp_box_encryption'] : '';
+		$val10_box3 = isset($val['box3']['smtp_box_port']) ? $val['box3']['smtp_box_port'] : '';
     $sel1 = $sel2 = $sel3 = $sel4 = '';
     switch ($val4_box3) {
 	    case 'Auto':
@@ -2891,9 +2976,16 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     }    
     if ( isset($_GET['checkbox']) && $_GET['checkbox'] == 'box3' ) {
       	$tbl_folders3 = $this->wms7_imap_list($_GET['checkbox']);
+        $visible = 'hidden;';
     	}else{
     		$tbl_folders3 = '';
+        $visible = 'visible;';
     }
+    if ( isset($_GET['smtp']) && $_GET['smtp'] == 'box3_smtp' ) {
+        $message_smtp = $this->wms7_msg_smtp('box3');
+      }else{
+        $message_smtp = '';
+    }      
   ?>
   	<div id="param_mail_box_yahoo_com" style="width:370px;">
     <fieldset style="width:860px;height:200px;border: 2px groove;margin:0;padding:0;">
@@ -2915,44 +3007,47 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     <label for="mail_box_port_box3" style="position:relative;left:-90px;top:-60px;"><?php _e('Port','wms7') ?></label><br/>
 
     <button type="button" id="box3" name="check_boxes" class="button-primary" onClick="wms7_check_boxes(id)" style="position:relative;left:225px;top:-60px;" />Check</button>
-    <button type="button" id="textbox3" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box3','tbl_folders_box3','text_folders_box3','text_folders_box3_alt')" style="position:relative;left:165px;top:-30px;" />Insert</button>
+    <button type="button" id="textbox3" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box3','tbl_folders_box3','text_folders_box3','text_folders_box3_alt')" style="position:relative;left:165px;top:-30px;" />Select</button>
     <input id="pwd_box3" name="wms7_main_settings[box3][pwd_box]" type="checkbox" style="position:relative;left:70px;top:-32px;" value="1" <?php checked( $val6_box3 ) ?> onClick="wms7_check_pwd(id)"/>
 
-    <input id="smtp_server_box3" style="position:relative;width: 200px;top:-180px;left:505px;" name="wms7_main_settings[box3][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box3 ) ?>" />
-    <label for="smtp_server_box3" style="position:relative;top:-155px;left:300px;"><?php _e('SMTP Server name','wms7') ?></label>
+    <button type="button" id="box3_smtp" name="check_smtp" class="button-primary" onClick="wms7_check_smtp(id)" style="position:relative;left:510px;top:-60px;" />Check</button>
+    <input id="box3_msg_smtp" type="text" name="msg_smtp" style="position:relative;left:445px;top:-25px;width:200px;"  value="<?php echo sanitize_text_field( $message_smtp ) ?>" />
 
-    <select id="smtp_encryption_box3" name="wms7_main_settings[box3][smtp_box_encryption]" style="position:relative;left:180px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
-    <label for="smtp_encryption_box3" style="position:relative;left:115px;top:-95px;"><?php _e('SMTP Encrypt','wms7') ?></label>
+    <input id="smtp_server_box3" style="position:relative;width: 200px;top:-180px;left:240px;" name="wms7_main_settings[box3][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box3 ) ?>" />
+    <label for="smtp_server_box3" style="position:relative;top:-155px;left:35px;"><?php _e('SMTP Server name','wms7') ?></label>
 
-    <input id="smtp_box_port_box3" style="position:relative;left:165px;top:-123px;width:60px;" name="wms7_main_settings[box3][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box3 ) ?>" />
-    <label for="smtp_box_port_box3" style="position:relative;left:100px;top:-95px;"><?php _e('SMTP Port','wms7') ?></label><br/>
+    <select id="smtp_encryption_box3" name="wms7_main_settings[box3][smtp_box_encryption]" style="position:relative;left:-85px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
+    <label for="smtp_encryption_box3" style="position:relative;left:650px;top:-125px;"><?php _e('SMTP Encrypt','wms7') ?></label>
 
-    <div id="tbl_folders_box3" style="position:relative;left:290px;top:-212px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders3 ?></div>
+    <input id="smtp_box_port_box3" style="position:relative;left:700px;top:-155px;width:60px;" name="wms7_main_settings[box3][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box3 ) ?>" />
+    <label for="smtp_box_port_box3" style="position:relative;left:635px;top:-125px;"><?php _e('SMTP Port','wms7') ?></label><br/>
 
-    <textarea readonly id="text_folders_box3" name="wms7_main_settings[box3][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px;"><?php echo sanitize_text_field( $val7_box3 ) ?></textarea>
+    <div id="tbl_folders_box3" style="position:relative;left:290px;top:-245px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders3 ?></div>
 
-    <textarea readonly id="text_folders_box3_alt" name="wms7_main_settings[box3][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px; display:none;"><?php echo sanitize_text_field( $val7_box3_alt ) ?></textarea> 
+    <textarea readonly id="text_folders_box3" name="wms7_main_settings[box3][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-240px;width:350px;height:180px;visibility:<?php echo $visible ?>"><?php echo sanitize_text_field( $val7_box3 ) ?></textarea>
+
+    <textarea readonly id="text_folders_box3_alt" name="wms7_main_settings[box3][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-240px;width:350px;height:180px; visibility:hidden;"><?php echo sanitize_text_field( $val7_box3_alt ) ?></textarea> 
 
   	</fieldset>
   	</div>
   <?php
   //gmail.com--------------------------------------------------------------------
     $val = get_option('wms7_main_settings');
-    $val1_box4 = $val['box4']['imap_server'];
-    $val2_box4 = $val['box4']['mail_box_name'];
-    $val3_box4 = $val['box4']['mail_box_pwd'];
-    $val4_box4 = $val['box4']['mail_box_encryption'];  
-    $val5_box4 = $val['box4']['mail_box_port'];
-    $val6_box4 = $val['box4']['pwd_box'];
+    $val1_box4 = isset($val['box4']['imap_server']) ? $val['box4']['imap_server'] : '';
+    $val2_box4 = isset($val['box4']['mail_box_name']) ? $val['box4']['mail_box_name'] : '';
+    $val3_box4 = isset($val['box4']['mail_box_pwd']) ? $val['box4']['mail_box_pwd'] : '';
+    $val4_box4 = isset($val['box4']['mail_box_encryption']) ? $val['box4']['mail_box_encryption'] : '';  
+    $val5_box4 = isset($val['box4']['mail_box_port']) ? $val['box4']['mail_box_port'] : '';
+    $val6_box4 = isset($val['box4']['pwd_box']) ? $val['box4']['pwd_box'] : '';
 
-    $val7_box4 = $val['box4']['mail_folders'];
+    $val7_box4 = isset($val['box4']['mail_folders']) ? $val['box4']['mail_folders'] : '';
 		$val7_box4 = str_replace(';', ';&#010', $val7_box4);
-    $val7_box4_alt = $val['box4']['mail_folders_alt'];
+    $val7_box4_alt = isset($val['box4']['mail_folders_alt']) ? $val['box4']['mail_folders_alt'] : '';
 		$val7_box4_alt = str_replace(';', ';&#010', $val7_box4_alt);		
 
-    $val8_box4 = $val['box4']['smtp_server'];
-		$val9_box4 = $val['box4']['smtp_box_encryption'];
-		$val10_box4 = $val['box4']['smtp_box_port'];
+    $val8_box4 = isset($val['box4']['smtp_server']) ? $val['box4']['smtp_server'] : '';
+		$val9_box4 = isset($val['box4']['smtp_box_encryption']) ? $val['box4']['smtp_box_encryption'] : '';
+		$val10_box4 = isset($val['box4']['smtp_box_port']) ? $val['box4']['smtp_box_port'] : '';
     $sel1 = $sel2 = $sel3 = $sel4 = '';
     switch ($val4_box4) {
 	    case 'Auto':
@@ -2985,9 +3080,16 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     }    
     if ( isset($_GET['checkbox']) && $_GET['checkbox'] == 'box4' ) {
       	$tbl_folders4 = $this->wms7_imap_list($_GET['checkbox']);
+        $visible = 'hidden;';
     	}else{
     		$tbl_folders4 = '';
+        $visible = 'visible;';
     }
+    if ( isset($_GET['smtp']) && $_GET['smtp'] == 'box4_smtp' ) {
+        $message_smtp = $this->wms7_msg_smtp('box4');
+      }else{
+        $message_smtp = '';
+    }     
   ?>
   	<div id="param_mail_box_gmail_com" style="width:370px;">
     <fieldset style="width:860px;height:200px;border: 2px groove;margin:0;padding:0;">
@@ -3009,23 +3111,26 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
     <label for="mail_box_port_box4" style="position:relative;left:-90px;top:-60px;"><?php _e('Port','wms7') ?></label><br/>
 
     <button type="button" id="box4" name="check_boxes" class="button-primary" onClick="wms7_check_boxes(id)" style="position:relative;left:225px;top:-60px;" />Check</button>
-    <button type="button" id="textbox4" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box4','tbl_folders_box4','text_folders_box4', 'text_folders_box4_alt')" style="position:relative;left:165px;top:-30px;" />Insert</button>
+    <button type="button" id="textbox4" name="check_boxes" class="button-primary" onClick="wms7_mail_folders('box4','tbl_folders_box4','text_folders_box4', 'text_folders_box4_alt')" style="position:relative;left:165px;top:-30px;" />Select</button>
     <input id="pwd_box4" name="wms7_main_settings[box4][pwd_box]" type="checkbox" style="position:relative;left:70px;top:-32px;" value="1" <?php checked( $val6_box4 ) ?> onClick="wms7_check_pwd(id)"/>
 
-    <input id="smtp_server_box4" style="position:relative;width: 200px;top:-180px;left:505px;" name="wms7_main_settings[box4][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box4 ) ?>" />
-    <label for="smtp_server_box4" style="position:relative;top:-155px;left:300px;"><?php _e('SMTP Server name','wms7') ?></label>
+    <button type="button" id="box4_smtp" name="check_smtp" class="button-primary" onClick="wms7_check_smtp(id)" style="position:relative;left:510px;top:-60px;" />Check</button>
+    <input id="box4_msg_smtp" type="text" name="msg_smtp" style="position:relative;left:445px;top:-25px;width:200px;"  value="<?php echo sanitize_text_field( $message_smtp ) ?>" />
 
-    <select id="smtp_encryption_box4" name="wms7_main_settings[box4][smtp_box_encryption]" style="position:relative;left:180px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
-    <label for="smtp_encryption_box4" style="position:relative;left:115px;top:-95px;"><?php _e('SMTP Encrypt','wms7') ?></label>
+    <input id="smtp_server_box4" style="position:relative;width: 200px;top:-180px;left:240px;" name="wms7_main_settings[box4][smtp_server]" type="text" placeholder="smtp server" value="<?php echo sanitize_text_field( $val8_box4 ) ?>" />
+    <label for="smtp_server_box4" style="position:relative;top:-155px;left:35px;"><?php _e('SMTP Server name','wms7') ?></label>
 
-    <input id="smtp_box_port_box4" style="position:relative;left:165px;top:-123px;width:60px;" name="wms7_main_settings[box4][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box4 ) ?>" />
-    <label for="smtp_box_port_box4" style="position:relative;left:100px;top:-95px;"><?php _e('SMTP Port','wms7') ?></label><br/>
+    <select id="smtp_encryption_box4" name="wms7_main_settings[box4][smtp_box_encryption]" style="position:relative;left:-85px;top:-125px;"><option <?php echo $sel1_smtp ?> value="Auto">Auto</option><option <?php echo $sel2_smtp ?> value="No">No</option><option <?php echo $sel3_smtp ?> value="SSL">SSL</option><option <?php echo $sel4_smtp ?> value="TLS">TLS</option></select>
+    <label for="smtp_encryption_box4" style="position:relative;left:650px;top:-125px;"><?php _e('SMTP Encrypt','wms7') ?></label>
 
-    <div id="tbl_folders_box4" style="position:relative;left:290px;top:-212px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders4 ?></div>
+    <input id="smtp_box_port_box4" style="position:relative;left:700px;top:-155px;width:60px;" name="wms7_main_settings[box4][smtp_box_port]" type=text placeholder="465" value="<?php echo sanitize_text_field( $val10_box4 ) ?>" />
+    <label for="smtp_box_port_box4" style="position:relative;left:635px;top:-125px;"><?php _e('SMTP Port','wms7') ?></label><br/>
 
-    <textarea readonly id="text_folders_box4" name="wms7_main_settings[box4][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px;"><?php echo sanitize_text_field( $val7_box4 ) ?></textarea>
+    <div id="tbl_folders_box4" style="position:relative;left:290px;top:-245px;margin:0;padding:0;width:350px;"><?php echo $tbl_folders4 ?></div>
 
-    <textarea readonly id="text_folders_box4_alt" name="wms7_main_settings[box4][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-212px;width:350px;height:180px; display:none;"><?php echo sanitize_text_field( $val7_box4_alt ) ?></textarea>    
+    <textarea readonly id="text_folders_box4" name="wms7_main_settings[box4][mail_folders]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-240px;width:350px;height:180px;visibility:<?php echo $visible ?>"><?php echo sanitize_text_field( $val7_box4 ) ?></textarea>
+
+    <textarea readonly id="text_folders_box4_alt" name="wms7_main_settings[box4][mail_folders_alt]" placeholder="Name folder1;&#010;Name folder2;&#010;Name folder3;"  style="position:relative;left:290px;top:-240px;width:350px;height:180px; visibility:hidden;"><?php echo sanitize_text_field( $val7_box4_alt ) ?></textarea>    
 
   	</fieldset>
   	</div>
@@ -3134,40 +3239,42 @@ $format = array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
  
 		if($box['imap_server']){
       $server = '{'.$box["imap_server"].':'.$box["mail_box_port"].'/imap/'.$box["mail_box_encryption"].'/novalidate-cert}INBOX';
-			$imap = @imap_open($server, $box["mail_box_name"], $box["mail_box_pwd"])or die(
+			$imap = @imap_open($server, $box["mail_box_name"], $box["mail_box_pwd"]) or 
+      $imap = 
 				imap_last_error().
 				"<br>server: ".$server.
 				"<br>username: ".$box["mail_box_name"].
-				"<br>password: ".$box["mail_box_pwd"]);
+				"<br>password: ".$box["mail_box_pwd"];
+      if (is_resource($imap)) {
+    	    $list = imap_list($imap, "{".$box['imap_server']."}", "*");
 
-	    $list = imap_list($imap, "{".$box['imap_server']."}", "*");
+    	    $tbl_head = '<table class="table_box" style="background-color: #5B5B59;"><thead class="thead_box"><tr class="tr_box">'.
+    	                "<td class='td_box' width='16%' style='cursor: pointer;'>id</td>".
+    	                "<td class='td_box' width='84%' style='cursor: pointer;'>mail box</td>".
+    	                '</tr></thead>';
+    	    $tbl_foot = '<tfoot class="tfoot_box"><tr class="tr_box">'.
+    	                "<td class='td_box' width='16%' style='cursor: pointer;'>id</td>".
+    	                "<td class='td_box' width='84%' style='cursor: pointer;'>mail box</td>".
+    	                '</tr></tfoot></table>';
 
-	    $tbl_head = '<table class="table_box" style="background-color: #5B5B59;"><thead class="thead_box"><tr class="tr_box">'.
-	                "<td class='td_box' width='16%' style='cursor: pointer;'>id</td>".
-	                "<td class='td_box' width='84%' style='cursor: pointer;'>mail box</td>".
-	                '</tr></thead>';
-	    $tbl_foot = '<tfoot class="tfoot_box"><tr class="tr_box">'.
-	                "<td class='td_box' width='16%' style='cursor: pointer;'>id</td>".
-	                "<td class='td_box' width='84%' style='cursor: pointer;'>mail box</td>".
-	                '</tr></tfoot></table>';
-
-	    $tbl_body = '<tbody class="tbody_box">';
-	    if (is_array($list)) {
-	    		$list = wms7_imap_list_decode($list);
-	        $i = 0;
-	        foreach ($list as $value) {
-	        	$str = explode('|', $value);
-	          $tbl_body = $tbl_body."<tr class='tr_box'><td class='td_box' width='16%'><input name=$prm"."_chk id=$prm"."_chk$i type='checkbox'>$i</td>";
-	          $tbl_body = $tbl_body."<td class='td_box' data='".$str[1]."' width='84%'>$str[0]</td></tr>";
-	          $i++;
-	        }
-	      }else{
-	        $tbl_body = "imap_list failed: " . imap_last_error();
-	    }
-
-	    $tbl_body = $tbl_body.'</tbody>';
-	    $tbl = $tbl_head.$tbl_body.$tbl_foot;
-
+    	    $tbl_body = '<tbody class="tbody_box">';
+    	    if (is_array($list)) {
+    	    		$list = wms7_imap_list_decode($list);
+    	        $i = 0;
+    	        foreach ($list as $value) {
+    	        	$str = explode('|', $value);
+    	          $tbl_body = $tbl_body."<tr class='tr_box'><td class='td_box' width='16%'><input name=$prm"."_chk id=$prm"."_chk$i type='checkbox'>$i</td>";
+    	          $tbl_body = $tbl_body."<td class='td_box' data='".$str[1]."' width='84%'>$str[0]</td></tr>";
+    	          $i++;
+    	        }
+    	      }else{
+    	        $tbl_body = "imap_list failed: " . imap_last_error();
+    	    }
+    	    $tbl_body = $tbl_body.'</tbody>';
+    	    $tbl = $tbl_head.$tbl_body.$tbl_foot;
+        }else{
+          $tbl = $imap;
+        }
 	    return $tbl;
   	}
   }  
