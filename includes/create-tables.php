@@ -11,6 +11,14 @@ Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
 require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 
 function wms7_create_tables(){
+	//create new role for manage this plugin no administrator
+	$result = add_role( 'analyst_wms7', 'Analyst wms7',
+		array(
+			'read'         				=> true,
+			'activate_plugins'		=> true,
+		)
+	);
+	//create tables
   global $wpdb;
 
 	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}watchman_site "."
@@ -49,11 +57,16 @@ function wms7_create_tables(){
 	);";
 	$wpdb->query($sql);
 
-	$table = $wpdb->prefix.'watchman_site_countries';
-	$sql='INSERT INTO '.$table.' (`cid`, `code`, `name`, `latitude`, `longitude`) VALUES ';
-	$sql = $sql.wms7_sql_countries();
+  $table_name = $wpdb->prefix . 'watchman_site_countries';
+  $sql = "SELECT count(*) FROM $table_name ";
+  $count_rows = $wpdb->get_var($sql);
+	//count rows
+	if($count_rows !== '249'){
+		$sql='INSERT INTO '.$table_name.' (`cid`, `code`, `name`, `latitude`, `longitude`) VALUES ';
+		$sql = $sql.wms7_sql_countries();
 
-	$wpdb->query($sql);
+		$wpdb->query($sql);
+	}
 
 	return TRUE;
 }
