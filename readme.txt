@@ -1,73 +1,99 @@
 === WatchMan-Site7 ===
 
 Contributors: adminkov
-Plugin Name:  WatchMan-Site7
-Plugin URI:   https://wordpress.org/plugins/watchman-site7/
-Tags:         login, blacklist, cron, ip, mail
-Author:       Oleg Klenitskiy
-Author URI: 	https://www.adminkov.bcr.by/category/wordpress/
-Donate link:  https://www.adminkov.bcr.by/donate/
+Plugin Name: WatchMan-Site7
+Plugin URI: https://wordpress.org/plugins/watchman-site7/
+Tags: login, blacklist, cron, statistic, mail
+Author: Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
+Author URI: https://www.adminkov.bcr.by/category/wordpress/
+Donate link: https://www.adminkov.bcr.by/contact/
 Requires at least: 4.5.1
-Tested up to: 4.9.5
-Stable tag:   2.2.7
-Version:      2.2.7
-License:      GPL3
-Initiation		is dedicated to Inna Voronich
+Tested up to: 5.0
+Requires PHP: 5.2.4
+Stable tag: 3.0.1
+Version: 3.0.1
+License: GPLv2 or later
+Initiation:	is dedicated to Inna Voronich
 
 == Description ==
 
-The plugin keeps a log of site visits, monitors system files and site events. The main functions of the plugin are: 
+The plugin keeps a log of site visits, monitors system files and cron events of site. The main functions of the plugin are: 
 1. Record the date and time of visit to the site by people, robots
-2. The entry registration site visit: successful, unsuccessful, no registration
-3. Country, city  of visitor site
-4. Record information about the browser, OS of the visitor
-5. Recording site visits for various categories of visitors 
+2. The entry registration site visit: successful, unsuccessful, no registration, robots, members of black list
+3. Country, city  of visitors site
+4. Record information about the browser (User Agent) of the visitor
+5. Recording site visits for various roles of visitors 
 6. The deletion of unnecessary records on the visit in automatic and manual modes
 7. Export records of visits to the site in an external file for later analysis
 8. Automatic screen refresh mode using SSE technology (Server-Sent Events)
 9. SMA - Simple Mail Agent, managing the mailboxes of your site, as well as mail.ru, yandex.ru, yahoo.com, gmail.com
+10. The role: Analyst wms7 is introduced. Users with this role are given the opportunity to manage the main page of the WatchMan-Site7 plug-in via the administrative panel. For security reasons, users with this role can not use the system files editing buttons on the site
+11. Analyzes attacks targeting a website.
+12. Compatible with MULTISITE mode
+
+<a href="https://www.adminkov.bcr.by/" target="_blank">Plugin home page</a>
 
 <a href="https://www.youtube.com/watch?v=iB-7anPcUxU&list=PLe_4Q0gv64g3WgA1Mo_S3arSrK3htZ1Nt" target="_blank">Demo video - [RU]</a>
 
+<a href="https://www.adminkov.bcr.by/wp-admin/admin.php?page=wms7_visitors" target="_blank">Training course<br>Login: user1<br>Pwd: user1</a>
+
+<a href="http://www.adminkov.bcr.by/doc/watchman-site7/api_doc/index.html" target="_blank">API Documentation</a>
+
+<a href="http://www.adminkov.bcr.by/doc/watchman-site7/user_doc/index.htm" target="_blank">User Documentation</a>
+
 ==Features include:==
 
-1. filters I level: by date, by country, by visitor's roles
-2. filters II level: by logged, by unlogged, by login errors, by visits of robots, by visitors from the black list
-3. export into CSV file
-4. log auto-truncation
-5. manage cron tasks
-6. file editor: index.php
-7. file editor: robots.txt
-8. file editor: .htaccess
-9. file editor: wp-config.php
-10. manage cron - events
-11. statistics of visits to the site
-12. widget: Counter of visits to the site
-13. geolocation of visitors to the site (only by the HTTPS protocol)
-14. information about the IP of the visitor
-15. black list of visitors and blocking the IP for the selected period of time
-16. blocking intrusive robots
+1. Filters I level: by date, by country, by visitor's roles
+2. Filters II level: by logged, by unlogged, by login errors, by visits of robots, by visitors from the black list
+3. Export into custom CSV file
+4. Log auto-truncation
+5. Manage cron tasks
+6. File editor: index.php
+7. File editor: robots.txt
+8. File editor: .htaccess
+9. File editor: wp-config.php
+10. Manage cron - events of site
+11. Statistics of visits to the site
+12. Widget: Counter of visits to the site
+13. Geolocation of visitors to the site (only by the HTTPS protocol)
+14. Information about the IP of the visitor
+15. Black list of visitors and blocking the IP or user name for the selected period of time
+16. Blocking intrusive robots
 17. Automatic updating of the list of site visits using SSE technology
 18. SMA - Simple Mail Agent, managing the mailboxes of your site, as well as mail.ru, yandex.ru, yahoo.com, gmail.com
-
+19. Google reCAPTCHA.
+20. Built-in console for managing WordPress environment.
 
 ==Translations:==
 
 - English [en_EN]
-- French  [fr_FR]
-- German  [de_DE]
-- Italian [it_IT]
 - Russian [ru_RU]
 
 == Installation ==
 
+In the mode of one site:
 1. Install and activate like any other basic plugin
 2. Define basic plugin settings menu: Visitors/settings
 3. Click on the Screen Options tab to expand the options section. You'll be able to change the number of results per page as well as hide/display table columns
 
-== Upgrade Notice ==
-
-Missing.
+In the mode of multisite:
+1. Go to the admin panel:
+My Sites/ Network Admin/ Plugins
+2. Choose the command:
+Plugins / Add New (WatchMan-Site7)
+3. Not use Network Activate
+4. We go to the administrative panel of the main site:
+Network Admin/ MainSite/ Dashboard/ Plugins
+5. Activate the plugin WatchMan-Site7
+6. Make the settings of the plugin:
+WatchMan-Site7/ Settings
+WatchMan-Site7/ Screen Options
+7. We go to the administrative panel of the subordinate site (sub domain):
+My Sub Domain/ Dashboard/ Plugins
+8. Activate the plugin WatchMan-Site7
+9. Make the settings of the plugin:
+WatchMan-Site7/ Settings
+WatchMan-Site7/ Screen Options
 
 == Screenshots ==
 
@@ -86,29 +112,31 @@ Missing.
 13. Managing the mailbox from this plugin
 
 == Changelog ==
-= 2.1.0 =
-Expanded the functionality of the widget
 
-= 2.2.1 =
-Automatic screen refresh mode using SSE technology (Server-Sent Events)
+= 3.0.0 =
+* Introduced a new role Analyst wms7.
+* Users with this role have access to the admin panel for limited control of the WatchMan-Site7 plugin.
+* Protect your site from spam comments and gross attacks using Google reCAPTCHA.
+* Built-in console for managing WordPress environment.
 
-= 2.2.2 =
-The code is optimized. The work of modal windows has been improved
+= 2.2.9 =
+* Managing banners on the main page of the plugin (hide / show).
 
-= 2.2.3 =
-Managing the mailboxes of your site, as well as mail.ru, yandex.ru, yahoo.com, gmail.com
+= 2.2.8 =
+* The code is optimized according to the WordPress coding standard.
 
-= 2.2.4 =
-SSE technology is used in the control of new, unread emails
+== Upgrade Notice ==
 
-= 2.2.5 =
-Improved and extended HELP, added pictures, optimized code
+= 3.0.0 =
+Stable version for users.
+Users with this role have access to the admin panel for limited control of the WatchMan-Site7 plugin.
+Protect your site from spam comments and gross attacks using Google reCAPTCHA.
 
-= 2.2.6 =
-Sending an email message to a registered website visitor
+= 2.2.9 =
+Stable version for users. Banner Management.
 
-= 2.2.7 =
-Website visitor blocking by his login
+= 2.2.8 =
+Stable version for users.
 
 == Frequently Asked Questions ==
 
