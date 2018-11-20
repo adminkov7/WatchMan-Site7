@@ -1,73 +1,94 @@
+/**
+ * Description: Used to retrieve and transfer geolocation data to the server.
+ *
+ * @category    Wms7_navigator.js
+ * @package     WatchMan-Site7
+ * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
+ * @version     3.0.1
+ * @license     GPLv2 or later
+ */
+
 if (navigator.geolocation) {
-  /* Geolocation enabled */
- 	navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
-	}else{
-  /* Geolocation not enabled */
-  //alert('GPS not supported');
+	/* Geolocation enabled */
+	navigator.geolocation.getCurrentPosition( successCallback, errorCallback );
+} else {
+	/* Geolocation not enabled */
+	alert( 'GPS not supported' );
 }
 
+/**
+ * Receiving data about the geolocation of a site visitor.
+ *
+ * @param object position Position of visitor of site.
+ */
 function successCallback(position) {
-var lat = position.coords.latitude;
-var lon = position.coords.longitude;
-var acc = position.coords.accuracy;
-var xmlhttp = getXmlHttp();
+	var lat     = position.coords.latitude;
+	var lon     = position.coords.longitude;
+	var acc     = position.coords.accuracy;
+	var xmlhttp = getXmlHttp();
 
-pos = wms7_url.indexOf('//');
-url = wms7_url.substr(pos+2);
-// variable wms7_url from module watchman-site7.php
-// Open an asynchronous connection
-xmlhttp.open('POST', url+'watchman-site7.php', true); 
-// Sent encoding
-xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-// Send a POST request
-xmlhttp.send('Lat_wifi_js=' + encodeURIComponent(lat) + '&Lon_wifi_js=' + encodeURIComponent(lon) + '&Acc_wifi_js=' + encodeURIComponent(acc)); 
-//alert(encodeURIComponent(lat)+\n'+encodeURIComponent(lon)+'\n'+encodeURIComponent(acc)+'\n'+wms7_url);
-    xmlhttp.onreadystatechange = function() { // Waiting for a response from the server
-      if (xmlhttp.readyState == 4) { // The response is received
-        if(xmlhttp.status == 200) { // The server returned code 200 (which is good)
-        	//alert('successCallback'+'\n'+xmlhttp.responseText+'\n'+'readyState='+xmlhttp.readyState+'\n'+'status='+xmlhttp.status);
-        }
-      }
-      //alert('successCallback'+'\n'+xmlhttp.responseText+'\n'+'readyState='+xmlhttp.readyState+'\n'+'status='+xmlhttp.status);
-    };
+	var pos = wms7_url.indexOf( '//' );
+	var url = wms7_url.substr( pos + 2 ) + 'class-wms7-core.php';
+
+	// variable wms7_url from module watchman-site7.php
+	// Open an asynchronous connection.
+	xmlhttp.open( 'POST', url, true );
+	// Sent encoding.
+	xmlhttp.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' );
+	// Send a POST request.
+	xmlhttp.send( 'lat_wifi_js=' + encodeURIComponent( lat ) + '&lon_wifi_js=' + encodeURIComponent( lon ) + '&acc_wifi_js=' + encodeURIComponent( acc ) );
+	xmlhttp.onreadystatechange = function() { // Waiting for a response from the server.
+		if (xmlhttp.readyState == 4) { // The response is received.
+			if (xmlhttp.status == 200) { // The server returned code 200 (which is good).
+			}
+		}
+	};
 }
 
+/**
+ * Returns the error of visiting the site.
+ *
+ * @param object error Error visiting the site.
+ */
 function errorCallback(error) {
-var xmlhttp = getXmlHttp();
 
-pos = wms7_url.indexOf('//');
-url = wms7_url.substr(pos+2);
-// variable wms7_url from module watchman-site7.php
-// Open an asynchronous connection
-xmlhttp.open('POST',  url+'watchman-site7.php', true);
-// Sent encoding
-xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-// Send a POST request
-xmlhttp.send('Err_code_js=' + encodeURIComponent(error.code) + '&Err_msg_js=' + encodeURIComponent(error.message)); 
-//alert(error.message);
-    xmlhttp.onreadystatechange = function() { // Waiting for a response from the server
-      if (xmlhttp.readyState == 4) { // The response is received
-        if(xmlhttp.status == 200) { // The server returned code 200 (which is good)
-        	//alert('errorCallback'+'\n'+xmlhttp.responseText+'\n'+'readyState='+xmlhttp.readyState+'\n'+'status='+xmlhttp.status);
-        }
-      }
-    //alert('successCallback'+'\n'+xmlhttp.responseText+'\n'+'readyState='+xmlhttp.readyState+'\n'+'status='+xmlhttp.status);
-    };
+	var xmlhttp = getXmlHttp();
+
+	var pos = wms7_url.indexOf( '//' );
+	var url = wms7_url.substr( pos + 2 );
+
+	// variable wms7_url from module watchman-site7.php
+	// Open an asynchronous connection.
+	xmlhttp.open( 'POST', url + 'class-wms7-core.php', true );
+	// Sent encoding.
+	xmlhttp.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' );
+	// Send a POST request.
+	xmlhttp.send( 'err_code_js=' + encodeURIComponent( error.code ) + '&err_msg_js=' + encodeURIComponent( error.message ) );
+	xmlhttp.onreadystatechange = function() { // Waiting for a response from the server.
+		if (xmlhttp.readyState == 4) { // The response is received.
+			if (xmlhttp.status == 200) { // The server returned code 200 (which is good).
+			}
+		}
+	};
 }
 
-/* This function creates a cross-browser object XMLHTTP */
+/**
+ * Creates a cross-browser object XMLHTTP.
+ *
+ * @param object XMLHTTP.
+ */
 function getXmlHttp() {
 	var xmlhttp;
 	try {
-		xmlhttp = new ActiveXObject('Msxml2.XMLHTTP');
+		xmlhttp = new ActiveXObject( 'Msxml2.XMLHTTP' );
 	} catch (e) {
 		try {
-			xmlhttp = new ActiveXObject('Microsoft.XMLHTTP');
+			xmlhttp = new ActiveXObject( 'Microsoft.XMLHTTP' );
 		} catch (E) {
 			xmlhttp = false;
 		}
 	}
-	if (!xmlhttp && typeof XMLHttpRequest!='undefined') {
+	if ( ! xmlhttp && typeof XMLHttpRequest != 'undefined') {
 		xmlhttp = new XMLHttpRequest();
 	}
 	return xmlhttp;
