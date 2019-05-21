@@ -5,18 +5,18 @@
  * @category    wms7-complete.php
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
 /**
  * Parse the line-buffer backwards to see if we have a constant or function or variable.
  */
-require_once __DIR__ . '/wms7-common.php';
+require_once 'wms7-common.php';
 
 $_partial = filter_input( INPUT_POST, 'partial', FILTER_SANITIZE_STRING );
 if ( isset( $_partial ) ) {
-	$secret = get_option( 'wms7-console-secret' );
+	$secret = $_SESSION['wms7-console-secret'];
 	if ( ! $secret ) {
 		return;
 	}
@@ -33,7 +33,7 @@ if ( isset( $_partial ) ) {
 	}
 	$candidates = preg_grep( "/^{$m[1]}/", complete( $m[1] ) );
 	sort( $candidates );
-	die( wp_json_encode( (array) $candidates ) );
+	die( json_encode( (array) $candidates ) );
 } else {
 	error( 'Error initializing session.' );
 }

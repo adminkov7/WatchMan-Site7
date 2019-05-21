@@ -5,7 +5,7 @@
  * @category    wms7-ip-info.php
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
@@ -53,9 +53,10 @@ function wms7_ip_api( $user_ip ) {
 	// get user country code.
 	$country_code = isset( $country_info['countryCode'] ) ? $country_info['countryCode'] : 'AA';
 	// get user country flag.
-	$path_img = WP_PLUGIN_URL . '/watchman-site7/images/flags/' . $country_code . '.gif';
-	if ( ( isset( $_https ) && 'on' === strtolower( $_https ) ) || ( isset( $_server_port ) && '443' === $_server_port ) ) {
-		$path_img = str_replace( 'http:', 'https:', $path_img );
+	if ( is_ssl() ) {
+		$path_img = set_url_scheme( WP_PLUGIN_URL, 'https' ) . '/watchman-site7/images/flags/' . $country_code . '.gif';
+	} else {
+		$path_img = WP_PLUGIN_URL . '/watchman-site7/images/flags/' . $country_code . '.gif';
 	}
 	$flag = '<img src=' . $path_img . '>';
 	// get user country region.
@@ -102,9 +103,10 @@ function wms7_geobytes( $user_ip ) {
 		$country_code = 'AA';
 	}
 	// get user country flag.
-	$path_img = WP_PLUGIN_URL . '/watchman-site7/images/flags/' . $country_code . '.gif';
-	if ( ( isset( $_https ) && 'on' === strtolower( $_https ) ) || ( isset( $_server_port ) && '443' === $_server_port ) ) {
-		$path_img = str_replace( 'http:', 'https:', $path_img );
+	if ( is_ssl() ) {
+		$path_img = set_url_scheme( WP_PLUGIN_URL, 'https' ) . '/watchman-site7/images/flags/' . $country_code . '.gif';
+	} else {
+		$path_img = WP_PLUGIN_URL . '/watchman-site7/images/flags/' . $country_code . '.gif';
 	}
 	$flag = '<img src=' . $path_img . '>';
 	// get user country region.
@@ -148,9 +150,10 @@ function wms7_ip_info( $user_ip ) {
 	// get user country code.
 	$country_code = isset( $country_info->country ) ? $country_info->country : 'AA';
 	// get user country flag.
-	$path_img = WP_PLUGIN_URL . '/watchman-site7/images/flags/' . $country_code . '.gif';
-	if ( ( isset( $_https ) && 'on' === strtolower( $_https ) ) || ( isset( $_server_port ) && '443' === $_server_port ) ) {
-		$path_img = str_replace( 'http:', 'https:', $path_img );
+	if ( is_ssl() ) {
+		$path_img = set_url_scheme( WP_PLUGIN_URL, 'https' ) . '/watchman-site7/images/flags/' . $country_code . '.gif';
+	} else {
+		$path_img = WP_PLUGIN_URL . '/watchman-site7/images/flags/' . $country_code . '.gif';
 	}
 	$flag = '<img src=' . $path_img . '>';
 	// get user country region.
@@ -205,9 +208,10 @@ function wms7_sx_geo( $user_ip ) {
 	// get user country city.
 	$city = isset( $country_info['city']['name_en'] ) ? $country_info['city']['name_en'] : '';
 	// get user country flag.
-	$path_img = WP_PLUGIN_URL . '/watchman-site7/images/flags/' . $country_code . '.gif';
-	if ( ( isset( $_https ) && 'on' === strtolower( $_https ) ) || ( isset( $_server_port ) && '443' === $_server_port ) ) {
-		$path_img = str_replace( 'http:', 'https:', $path_img );
+	if ( is_ssl() ) {
+		$path_img = set_url_scheme( WP_PLUGIN_URL, 'https' ) . '/watchman-site7/images/flags/' . $country_code . '.gif';
+	} else {
+		$path_img = WP_PLUGIN_URL . '/watchman-site7/images/flags/' . $country_code . '.gif';
 	}
 	$flag = '<img src=' . $path_img . '>';
 	// info.

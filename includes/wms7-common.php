@@ -5,18 +5,16 @@
  * @category    wms7-common.php
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
-/**
- * Helper Console Build Feature
- */
-require_once dirname( __FILE__ ) . '/../../../../wp-load.php';
-/**
- * Used to create plugin console ???
- */
-require_once ABSPATH . 'wp-admin/includes/admin.php';
+// loadable environment WordPress.
+$_request_uri   = filter_input( INPUT_SERVER, 'REQUEST_URI', FILTER_SANITIZE_STRING );
+$_document_root = filter_input( INPUT_SERVER, 'DOCUMENT_ROOT', FILTER_SANITIZE_STRING );
+$params         = explode( 'wp-content', $_request_uri );
+$path_to        = $_document_root . $params[0];
+require_once $path_to . 'wp-load.php';
 
 if ( ! session_id() ) {
 	session_start();
@@ -24,7 +22,6 @@ if ( ! session_id() ) {
 if ( ob_get_length() > 0 ) {
 	ob_end_clean();
 }
-error_reporting( E_ALL ^ E_PARSE );
 set_time_limit( 0 );
 /**
  * Console error handler.
@@ -41,7 +38,7 @@ function console_error_handler( $errno, $errorstr ) {
  * @param string $error Message of error.
  */
 function error( $error ) {
-	exit( wp_json_encode( array( 'error' => $error ) ) );
+	exit( json_encode( array( 'error' => $error ) ) );
 }
 /**
  * Saves newly defined variables to session.

@@ -5,7 +5,7 @@
  * @category    wms7-create-table.php
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
@@ -19,20 +19,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 /**
- * Used for create tables: watchman_site, watchman_site_countries, add new role - Analyst wms7.
+ * Used for create tables: watchman_site, watchman_site_countries.
  *
  * @return boolean.
  */
 function wms7_create_tables() {
-	// create new role for manage this plugin no administrator.
-	$result = add_role(
-		'analyst_wms7',
-		'Analyst wms7',
-		array(
-			'read'             => true,
-			'activate_plugins' => true,
-		)
-	);
 	// create tables.
 	global $wpdb;
 
@@ -81,5 +72,6 @@ function wms7_create_tables() {
 
 		$wpdb->query( $sql );// unprepared sql ok;db call ok;no-cache ok.
 	}
+
 	return true;
 }

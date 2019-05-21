@@ -5,18 +5,18 @@
  * @category    wms7-query.php
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
 /**
- * Used to create plugin console ???
+ * Used to create plugin console.
  */
-require_once __DIR__ . '/wms7-common.php';
+require_once 'wms7-common.php';
 
 set_error_handler( 'console_error_handler' );
 
-$secret = get_option( 'wms7-console-secret' );
+$secret = $_SESSION['wms7-console-secret'];
 if ( ! $secret ) {
 	return;
 }
@@ -66,9 +66,9 @@ try {
 		$_SESSION['code']    = '';
 		$_SESSION['partial'] = '';
 
-		print wp_json_encode( $response );
+		print json_encode( $response );
 	} else {
-		print wp_json_encode( array( 'output' => 'partial' ) );
+		print json_encode( array( 'output' => 'partial' ) );
 	}
 } catch ( Exception $exception ) {
 	error( $exception->getMessage() );

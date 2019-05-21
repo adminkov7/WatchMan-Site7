@@ -5,14 +5,42 @@
  * @category    wms7-io-interface.php
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit();
 }
+if ( ! defined( 'FS_CHMOD_FILE' ) ) {
+	define( 'FS_CHMOD_FILE', ( 0644 & ~ umask() ) );
+}
 
+/**
+ * Used for current data storage: total number of visits to different categories of visitors and different time.
+ *
+ * @param string $counter_list New count rows.
+ */
+function wms7_save_frontend( $counter_list ) {
+	WP_Filesystem();
+	global $wp_filesystem;
+
+	$filename = __DIR__ . '/frontend.txt';
+	$wp_filesystem->put_contents( $filename, $counter_list, FS_CHMOD_FILE );
+}
+/**
+ * Used for current data storage: total number of visits and unread emails.
+ *
+ * @param string $new_count_rows New count rows.
+ * @param string $mail_unseen New count mail unseen.
+ */
+function wms7_save_backend( $new_count_rows, $mail_unseen ) {
+	WP_Filesystem();
+	global $wp_filesystem;
+
+	$filename = __DIR__ . '/backend.txt';
+	$wp_filesystem->put_contents( $filename, $new_count_rows . '|' . $mail_unseen, FS_CHMOD_FILE );
+}
 /**
  * Used for save index.php.
  *
@@ -22,17 +50,18 @@ function wms7_save_index_php( $file_content ) {
 	WP_Filesystem();
 	global $wp_filesystem;
 
-	$_document_root = filter_input( INPUT_SERVER, 'DOCUMENT_ROOT', FILTER_SANITIZE_STRING );
-	// file name.
-	$filename = $_document_root . '/index.php';
-	// save current version file.
-	$current      = $wp_filesystem->get_contents( $filename );
-	$filename_old = $_document_root . '/index_old.php';
-	$wp_filesystem->put_contents( $filename_old, $current, FS_CHMOD_FILE );
-	// remove the shielding.
-	$file_content = stripslashes( $file_content );
-	// Write content to a file.
-	$wp_filesystem->put_contents( $filename, $file_content, FS_CHMOD_FILE );
+	if ( current_user_can( 'manage_options' ) ) {
+		// file name.
+		$filename = ABSPATH . 'index.php';
+		// save current version file.
+		$current      = $wp_filesystem->get_contents( $filename );
+		$filename_old = ABSPATH . 'index_old.php';
+		$wp_filesystem->put_contents( $filename_old, $current, FS_CHMOD_FILE );
+		// remove the shielding.
+		$file_content = stripslashes( $file_content );
+		// Write content to a file.
+		$wp_filesystem->put_contents( $filename, $file_content, FS_CHMOD_FILE );
+	}
 }
 /**
  * Used for save robots.txt.
@@ -43,17 +72,18 @@ function wms7_save_robots_txt( $file_content ) {
 	WP_Filesystem();
 	global $wp_filesystem;
 
-	$_document_root = filter_input( INPUT_SERVER, 'DOCUMENT_ROOT', FILTER_SANITIZE_STRING );
-	// file name.
-	$filename = $_document_root . '/robots.txt';
-	// save current version file.
-	$current      = $wp_filesystem->get_contents( $filename );
-	$filename_old = $_document_root . '/robots_old.txt';
-	$wp_filesystem->put_contents( $filename_old, $current, FS_CHMOD_FILE );
-	// remove the shielding.
-	$file_content = stripslashes( $file_content );
-	// Write content to a file.
-	$wp_filesystem->put_contents( $filename, $file_content, FS_CHMOD_FILE );
+	if ( current_user_can( 'manage_options' ) ) {
+		// file name.
+		$filename = ABSPATH . 'robots.txt';
+		// save current version file.
+		$current      = $wp_filesystem->get_contents( $filename );
+		$filename_old = ABSPATH . 'robots_old.txt';
+		$wp_filesystem->put_contents( $filename_old, $current, FS_CHMOD_FILE );
+		// remove the shielding.
+		$file_content = stripslashes( $file_content );
+		// Write content to a file.
+		$wp_filesystem->put_contents( $filename, $file_content, FS_CHMOD_FILE );
+	}
 }
 /**
  * Used for save htaccess.
@@ -64,17 +94,18 @@ function wms7_save_htaccess( $file_content ) {
 	WP_Filesystem();
 	global $wp_filesystem;
 
-	$_document_root = filter_input( INPUT_SERVER, 'DOCUMENT_ROOT', FILTER_SANITIZE_STRING );
-	// file name.
-	$filename = $_document_root . '/.htaccess';
-	// save current version file.
-	$current      = $wp_filesystem->get_contents( $filename );
-	$filename_old = $_document_root . '/.htaccess_old';
-	$wp_filesystem->put_contents( $filename_old, $current, FS_CHMOD_FILE );
-	// remove the shielding.
-	$file_content = stripslashes( $file_content );
-	// Write content to a file.
-	$wp_filesystem->put_contents( $filename, $file_content, FS_CHMOD_FILE );
+	if ( current_user_can( 'manage_options' ) ) {
+		// file name.
+		$filename = ABSPATH . '.htaccess';
+		// save current version file.
+		$current      = $wp_filesystem->get_contents( $filename );
+		$filename_old = ABSPATH . '.htaccess_old';
+		$wp_filesystem->put_contents( $filename_old, $current, FS_CHMOD_FILE );
+		// remove the shielding.
+		$file_content = stripslashes( $file_content );
+		// Write content to a file.
+		$wp_filesystem->put_contents( $filename, $file_content, FS_CHMOD_FILE );
+	}
 }
 /**
  * Used for save wp_config.php.
@@ -85,17 +116,18 @@ function wms7_save_wp_config( $file_content ) {
 	WP_Filesystem();
 	global $wp_filesystem;
 
-	$_document_root = filter_input( INPUT_SERVER, 'DOCUMENT_ROOT', FILTER_SANITIZE_STRING );
-	// file name.
-	$filename = $_document_root . '/wp-config.php';
-	// save current version file.
-	$current      = $wp_filesystem->get_contents( $filename );
-	$filename_old = $_document_root . '/wp-config_old.php';
-	$wp_filesystem->put_contents( $filename_old, $current, FS_CHMOD_FILE );
-	// remove the shielding.
-	$file_content = stripslashes( $file_content );
-	// Write content to a file.
-	$wp_filesystem->put_contents( $filename, $file_content, FS_CHMOD_FILE );
+	if ( current_user_can( 'manage_options' ) ) {
+		// file name.
+		$filename = ABSPATH . 'wp-config.php';
+		// save current version file.
+		$current      = $wp_filesystem->get_contents( $filename );
+		$filename_old = ABSPATH . 'wp-config_old.php';
+		$wp_filesystem->put_contents( $filename_old, $current, FS_CHMOD_FILE );
+		// remove the shielding.
+		$file_content = stripslashes( $file_content );
+		// Write content to a file.
+		$wp_filesystem->put_contents( $filename, $file_content, FS_CHMOD_FILE );
+	}
 }
 /**
  * Used for ip delete from htaccess.
@@ -106,23 +138,24 @@ function wms7_ip_delete_from_file( $user_ip ) {
 	WP_Filesystem();
 	global $wp_filesystem;
 
-	$_document_root = filter_input( INPUT_SERVER, 'DOCUMENT_ROOT', FILTER_SANITIZE_STRING );
 	// file name.
-	$filename = $_document_root . '/.htaccess';
-	$file     = $wp_filesystem->get_contents_array( $filename );
+	$filename = ABSPATH . '.htaccess';
 
-	if ( ! $file ) {
-		return;
-	}
-	$size = count( $file );
-	for ( $i = 0; $i < $size; $i++ ) {
-		$pos = stristr( $file[ $i ], 'Deny from ' . $user_ip );
+	// Open the file to get existing content.
+	$current = $wp_filesystem->get_contents_array( $filename );
 
-		if ( $pos ) {
-			unset( $file[ $i ] );
+	foreach ( $current as $key => $value ) {
+		if ( ! empty( $value ) ) {
+			if ( strpos( $value, $user_ip ) ) {
+				unset( $current[ $key ] );
+			}
+		} else {
+			unset( $current[ $key ] );
 		}
 	}
-	$wp_filesystem->put_contents( $filename, implode( '', $file ) );
+	$current = array_filter( $current );
+	// Write contents back to file.
+	$wp_filesystem->put_contents( $filename, implode( '', $current ), FS_CHMOD_FILE );
 }
 /**
  * Used for ip insert into htaccess.
@@ -133,9 +166,8 @@ function wms7_ip_insert_to_file( $user_ip ) {
 	WP_Filesystem();
 	global $wp_filesystem;
 
-	$_document_root = filter_input( INPUT_SERVER, 'DOCUMENT_ROOT', FILTER_SANITIZE_STRING );
 	// file name.
-	$filename = $_document_root . '/.htaccess';
+	$filename = ABSPATH . '.htaccess';
 
 	// Open the file to get existing content.
 	$current = $wp_filesystem->get_contents( $filename );
@@ -151,17 +183,16 @@ function wms7_ip_insert_to_file( $user_ip ) {
 	$wp_filesystem->put_contents( $filename, $current, FS_CHMOD_FILE );
 }
 /**
- * Used for rewritecond insert into htaccess.
+ * Used for rewritecond user_agent insert into htaccess.
  *
- * @param string $robot_banned Robot name.
+ * @param string $user_agent Robot name.
  */
-function wms7_rewritecond_insert( $robot_banned ) {
+function wms7_rewritecond_insert( $user_agent ) {
 	WP_Filesystem();
 	global $wp_filesystem;
 
-	$_document_root = filter_input( INPUT_SERVER, 'DOCUMENT_ROOT', FILTER_SANITIZE_STRING );
 	// file name.
-	$filename = $_document_root . '/.htaccess';
+	$filename = ABSPATH . '.htaccess';
 
 	// Open the file to get existing content.
 	$current = $wp_filesystem->get_contents( $filename );
@@ -172,13 +203,17 @@ function wms7_rewritecond_insert( $robot_banned ) {
 		// Write contents back to file.
 		$wp_filesystem->put_contents( $filename, $current, FS_CHMOD_FILE );
 	}
+	$user_agent = str_replace(array( '(', ')' ), '.', $user_agent);
 	// search string in file.
-	if ( strpos( $current, $robot_banned ) ) {
+	if ( '' !== trim( $user_agent ) && strpos( $current, $user_agent ) ) {
 		return;
+	}
+	if ( '' === trim( $user_agent ) ) {
+		$user_agent = '^$';
 	}
 	// Add a new line to the file.
 	$current = 'SetEnvIfNoCase User-Agent "'
-		. $robot_banned
+		. $user_agent
 		. '" wms7_bad_bot'
 		. "\n"
 		. $current;
@@ -186,21 +221,31 @@ function wms7_rewritecond_insert( $robot_banned ) {
 	$wp_filesystem->put_contents( $filename, $current, FS_CHMOD_FILE );
 }
 /**
- * Used for rewritecond delete in htaccess.
+ * Used for rewritecond user_agent delete in htaccess.
+ *
+ * @param string $user_agent Robot name.
  */
-function wms7_rewritecond_delete() {
+function wms7_rewritecond_delete( $user_agent ) {
 	WP_Filesystem();
 	global $wp_filesystem;
 
-	$_document_root = filter_input( INPUT_SERVER, 'DOCUMENT_ROOT', FILTER_SANITIZE_STRING );
 	// file name.
-	$filename = $_document_root . '/.htaccess';
+	$filename = ABSPATH . '.htaccess';
 
 	// Open the file to get existing content.
-	$current = $wp_filesystem->get_contents_array( $filename );
+	$current    = $wp_filesystem->get_contents_array( $filename );
+	if ( ! empty( $user_agent ) ) {
+		$user_agent = str_replace(array( '(', ')' ), '.', $user_agent);
+	} else {
+		$user_agent = '^$';
+	}
 
 	foreach ( $current as $key => $value ) {
-		if ( strpos( $value, 'wms7_bad_bot' ) ) {
+		if ( ! empty( $value ) ) {
+			if ( strpos( $value, $user_agent ) ) {
+				unset( $current[ $key ] );
+			}
+		} else {
 			unset( $current[ $key ] );
 		}
 	}
@@ -249,62 +294,65 @@ function wms7_output_csv() {
 	global $wp_filesystem;
 	global $wpdb;
 
-	$_id = filter_input( INPUT_GET, 'id', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY );
+	$_id     = filter_input( INPUT_POST, 'id', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY );
+	$_action = filter_input( INPUT_POST, 'action', FILTER_SANITIZE_STRING );
 
-	if ( ! $_id ) {
-		return;
-	}
-	$flds = wms7_flds_csv();
-	if ( ! $flds ) {
-		return;
-	}
-	if ( is_array( $_id ) ) {
-		$_id = implode( ',', $_id );
-	}
-	if ( ! empty( $_id ) ) {
-		$result = $wpdb->get_results(
-			str_replace(
-				"'",
-				'',
+	if ( 'export' === $_action ) {
+
+		$flds = wms7_flds_csv();
+		if ( ! $flds || ! $_id ) {
+			exit();
+		}
+		if ( is_array( $_id ) ) {
+			$_id = implode( ',', $_id );
+		}
+		if ( ! empty( $_id ) ) {
+			$result = $wpdb->get_results(
 				str_replace(
-					"\'",
-					'"',
-					$wpdb->prepare(
-						"
-		        SELECT %s
-		        FROM {$wpdb->prefix}watchman_site
-		        WHERE `id` IN(%s)
-		        ",
-						$flds,
-						$_id
+					"'",
+					'',
+					str_replace(
+						"\'",
+						'"',
+						$wpdb->prepare(
+							"
+			        SELECT %s
+			        FROM {$wpdb->prefix}watchman_site
+			        WHERE `id` IN(%s)
+			        ",
+							$flds,
+							$_id
+						)
 					)
-				)
-			),
-			'ARRAY_A'
-		);// unprepared sql ok;db call ok;no-cache ok.
-	}
-	$filename = 'wms7_export_' . date( 'Y-m-d' ) . '.csv';
+				),
+				'ARRAY_A'
+			);// prepared sql ok;db call ok;no-cache ok.
+		}
+		$filename = 'wms7_export_' . date( 'Y-m-d' ) . '.csv';
 
-	// reset the PHP output buffer.
-	if ( ob_get_level() ) {
-		ob_end_clean();
-	}
-	$content = '';
-	foreach ( $result[0] as $key => $value ) {
-		$content = $content . $key . ';';
-	}
-	$content = $content . Chr( 10 );
-	foreach ( $result as $values ) {
-		foreach ( $values as $key => $value ) {
-			$content = $content . $value . ';';
+		// reset the PHP output buffer.
+		if ( ob_get_level() ) {
+			ob_end_clean();
+		}
+		$content = '';
+		foreach ( $result[0] as $key => $value ) {
+			$content = $content . $key . ';';
 		}
 		$content = $content . Chr( 10 );
+		foreach ( $result as $values ) {
+			foreach ( $values as $key => $value ) {
+				$content = $content . $value . ';';
+			}
+			$content = $content . Chr( 10 );
+		}
+		$wp_filesystem->put_contents( $filename, $content, FS_CHMOD_FILE );
+
+		if ( ! headers_sent() ) {
+			header( 'Content-type: application/x-msdownload', true, 200 );
+			header( 'Content-Disposition: attachment;filename=' . $filename );
+
+			echo esc_html( $wp_filesystem->get_contents( $filename ) );
+			exit;
+		}
 	}
-	$wp_filesystem->put_contents( $filename, $content, FS_CHMOD_FILE );
-	header( 'Content-Type: text/csv' );
-	header( 'Content-Disposition: attachment;filename=' . $filename );
-
-	echo esc_html( $wp_filesystem->get_contents( $filename ) );
-	exit;
-
 }

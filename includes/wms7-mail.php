@@ -5,7 +5,7 @@
  * @category    wms7-mail.php
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
@@ -167,6 +167,18 @@ function wms7_mail_body( $msgno ) {
 	imap_close( $imap );
 
 	return $arr;
+}
+/**
+ * Return Name of mail folder.
+ *
+ * @param string $folder_num Number of folder mail box.
+ */
+function wms7_mail_folder_name( $folder_num ) {
+	$folders     = wms7_mailbox_selector();
+	$folder_num  = substr( $folder_num, -1 ) - 1;
+	$name_folder = $folders[ $folder_num ]['name'];
+
+	return $name_folder;
 }
 /**
  * Used for get the mailbox selector.
@@ -422,31 +434,34 @@ function wms7_mail_send() {
 	// move to temporary directory /tmp.
 	$item     = get_option( 'wms7_main_settings' );
 	$path_tmp = $item['mail_box_tmp'] . '/';
-
-	if ( '' !== $_files_attach['name'] ) {
-		$file = $_document_root . $path_tmp . $_files_attach['name'];
-		move_uploaded_file( $_files_attach['tmp_name'], $file );
-		$mailer->AddAttachment( $file );
-	}
+	// for send draft or replay.
 	if ( $_msgno ) {
 		$arr        = wms7_mail_body( $_msgno );
 		$arr_attach = $arr[1];
-		if ( $arr_attach ) {
+		if ( '' !== $arr_attach[0]['filename'] && 'zip' === substr( $_files_attach[0]['filename'], -3 ) ) {
 			$file = $_document_root . $path_tmp . $arr_attach[0]['filename'];
 			$mailer->AddAttachment( $file );
 		}
+	} else {
+		// for new mail.
+		if ( '' !== $_files_attach['name'] && 'zip' === substr( $_files_attach['name'], -3 ) ) {
+			$file = $_document_root . $path_tmp . $_files_attach['name'];
+			move_uploaded_file( $_files_attach['tmp_name'], $file );
+			$mailer->AddAttachment( $file );
+		}
 	}
+	// $mailer->SMTPDebug = 2;.
 	// send the message, check for errors.
 	if ( $mailer->send() ) {
-		// move mail to folder Sent.
-			$folder = explode( ';', $box['mail_folders'], -1 );
-			$i      = 0;
-			$sent   = false;
+		// array folders email-box.
+		$folder = explode( ';', $box['mail_folders'], -1 );
+		$i      = 0;
+		$sent   = false;
 		foreach ( $folder as $key => $value ) {
 			$pos = strpos( $value, 'Sent' );
 			if ( $pos ) {
-					$sent = true;
-					break;
+				$sent = true;
+				break;
 			} else {
 				$pos = strpos( $value, 'Отправлен' );
 				if ( $pos ) {
@@ -454,22 +469,15 @@ function wms7_mail_send() {
 					break;
 				}
 			}
-				$i++;
+			$i++;
 		}
-		if ( ! $sent ) {
-			exit;
-		}
-			// mailbox folder array.
-			$folder = substr( $folder[ $i ], strpos( $folder[ $i ], '}' ) + 1 );
-
-			$imap = wms7_mail_connection();
-		if ( $_msgno ) {
-			$uid = imap_uid( $imap, $_msgno );
-			$box = $_move_box;
-			$msg = imap_mail_move( $imap, $uid, $folder, CP_UID );
-			imap_expunge( $imap );
-			imap_close( $imap );
-		}
+		$folder_alt = $box['mail_folders_alt'];
+		$folder_alt = explode( ';', $folder_alt, -1 );
+		$folder_alt = substr( $folder_alt[ $i ], strpos( $folder_alt[ $i ], '}' ) + 1 );
+		$path       = '{' . $box['imap_server'] . ':' . $box['mail_box_port'] . '/imap/' . $box['mail_box_encryption'] . '/novalidate-cert}' . $folder_alt;
+		$imap       = imap_open( $path, $mailer->Username, $mailer->Password );
+		$result     = imap_append( $imap, $path, $mailer->getSentMIMEMessage() );
+		imap_close( $imap );
 	} else {
 		echo 'Mailer Error: ' . esc_html( $mailer->ErrorInfo );
 	}
@@ -578,7 +586,7 @@ function wms7_mail_search() {
 	return $list;
 }
 /**
- * Used for mail inbox connection. Function with the same name is in the file wms7-sse.php plugin.
+ * Used for mail inbox connection.
  *
  * @return object.
  */
@@ -613,7 +621,7 @@ function wms7_mail_inbox_connection() {
 	}
 }
 /**
- * Used for mail inbox unseen. Function with the same name is in the file wms7-mail.php plugin.
+ * Used for mail inbox unseen.
  *
  * @return number.
  */
@@ -687,4 +695,172 @@ function wms7_msg_smtp( $msg ) {
 		$smtp_server = $e->getMessage();
 	}
 	return $smtp_server;
+}
+/**
+ * Used for mail save to folder Draft.
+ */
+function wms7_mail_save_to_draft() {
+	WP_Filesystem();
+	global $wp_filesystem;
+
+	$_mail_new_subject = filter_input( INPUT_POST, 'mail_new_subject', FILTER_SANITIZE_STRING );
+	$_mail_new_to      = filter_input( INPUT_POST, 'mail_new_to', FILTER_SANITIZE_STRING );
+	$_mail_new_content = filter_input( INPUT_POST, 'mail_new_content', FILTER_SANITIZE_STRING );
+	$val               = get_option( 'wms7_main_settings' );
+	$select_box        = $val['mail_select'];
+	$box               = $val[ $select_box ];
+
+	// array folders email-box.
+	$folder = explode( ';', $box['mail_folders'], -1 );
+	$i      = 0;
+	$draft  = false;
+	foreach ( $folder as $key => $value ) {
+		$pos = strpos( $value, 'Draft' );
+		if ( $pos ) {
+			$draft = true;
+			break;
+		} else {
+			$pos = strpos( $value, 'Черновик' );
+			if ( $pos ) {
+				$draft = true;
+				break;
+			}
+		}
+		$i++;
+	}
+	if ( ! $draft ) {
+		exit;
+	}
+	// array folders email-box.
+	$folder = explode( ';', $box['mail_folders_alt'], -1 );
+	$folder = substr( $folder[ $i ], strpos( $folder[ $i ], '{' ) );
+
+	$date                = date( 'D, d M Y h:i:s', time() );
+	$envelope['date']    = $date;
+	$envelope['subject'] = '=?utf-8?B?' . base64_encode( $_mail_new_subject ) . '?=';
+	$envelope['from']    = $box['mail_box_name'];
+	$envelope['to']      = $_mail_new_to;
+
+	$_files_attach = filter_var_array( $_FILES );// WPCS: input var ok.
+	$_files_attach = $_files_attach['mail_new_attach'];
+
+	if ( '' === $_files_attach['name'] ) {
+		$part1['type']          = TYPETEXT;
+		$part1['subtype']       = 'PLAIN';
+		$part1['charset']       = 'UTF-8';
+		$part1['contents.data'] = $_mail_new_content;
+		$body[1]                = $part1;
+	} elseif ( 'zip' === substr( $_files_attach['name'], -3 ) ) {
+		$part1['type']    = TYPEMULTIPART;
+		$part1['subtype'] = 'mixed';
+
+		$part2['type']          = TYPETEXT;
+		$part2['subtype']       = 'PLAIN';
+		$part2['charset']       = 'UTF-8';
+		$part2['contents.data'] = $_mail_new_content;
+
+		$filename = $_files_attach['tmp_name'];
+		$contents = $wp_filesystem->get_contents( $filename );
+
+		$part3['type']             = TYPEAPPLICATION;
+		$part3['encoding']         = ENCBINARY;
+		$part3['subtype']          = 'octet-stream';
+		$part3['description']      = $_files_attach['name'];
+		$part3['disposition.type'] = 'attachment';
+		$part3['disposition']      = array( 'filename' => $_files_attach['name'] );
+		$part3['type.parameters']  = array( 'name' => $_files_attach['name'] );
+		$part3['contents.data']    = $contents;
+
+		$body[1] = $part1;
+		$body[2] = $part2;
+		$body[3] = $part3;
+	}
+
+	$msg = imap_mail_compose( $envelope, $body );
+
+	$imap = wms7_mail_connection();
+
+	if ( ! imap_append( $imap, $folder, $msg ) ) {
+		die( 'could not append message: ' . esc_html( imap_last_error() ) );
+	}
+}
+/**
+ * Go to the sent folder of mailbox.
+ *
+ * @param string $_mail_new_nonce Mail new nonce.
+ */
+function wms7_goto_sent( $_mail_new_nonce ) {
+	$val        = get_option( 'wms7_main_settings' );
+	$select_box = $val['mail_select'];
+	$box        = $val[ $select_box ];
+
+	// array folders email-box.
+	$folder = explode( ';', $box['mail_folders'], -1 );
+	$i      = 0;
+	$draft  = false;
+	foreach ( $folder as $key => $value ) {
+		$pos = strpos( $value, 'Sent' );
+		if ( $pos ) {
+			$draft = true;
+			break;
+		} else {
+			$pos = strpos( $value, 'Отправлен' );
+			if ( $pos ) {
+				$draft = true;
+				break;
+			}
+		}
+		$i++;
+	}
+	if ( ! $draft ) {
+		exit;
+	}
+	$i++;
+
+	$folder = 'folder' . $i;
+	?>
+	<div class='loader' id='win-loader' style='top:350px;'></div>
+	<script>wms7_popup_loader();</script>
+	<script>mailbox_selector('<?php echo esc_html( $folder ); ?>',"",'<?php echo esc_html( $_mail_new_nonce ); ?>');</script>
+	<?php
+}
+/**
+ * Go to the draft folder of mailbox.
+ *
+ * @param string $_mail_new_nonce Mail new nonce.
+ */
+function wms7_goto_draft( $_mail_new_nonce ) {
+	$val        = get_option( 'wms7_main_settings' );
+	$select_box = $val['mail_select'];
+	$box        = $val[ $select_box ];
+
+	// array folders email-box.
+	$folder = explode( ';', $box['mail_folders'], -1 );
+	$i      = 0;
+	$draft  = false;
+	foreach ( $folder as $key => $value ) {
+		$pos = strpos( $value, 'Draft' );
+		if ( $pos ) {
+			$draft = true;
+			break;
+		} else {
+			$pos = strpos( $value, 'Черновик' );
+			if ( $pos ) {
+				$draft = true;
+				break;
+			}
+		}
+		$i++;
+	}
+	if ( ! $draft ) {
+		exit;
+	}
+	$i++;
+
+	$folder = 'folder' . $i;
+	?>
+	<div class='loader' id='win-loader' style='top:350px;'></div>
+	<script>wms7_popup_loader();</script>
+	<script>mailbox_selector('<?php echo esc_html( $folder ); ?>',"",'<?php echo esc_html( $_mail_new_nonce ); ?>');</script>
+	<?php
 }
