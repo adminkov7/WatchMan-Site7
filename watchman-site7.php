@@ -1,22 +1,22 @@
 <?php
 /**
- * Description: Designed for site administrators and is used to control the visits of site.
+ * Description:  Designed for site administrators and is used to control the visits of site. The developer of the plugin prohibits installing this plugin on the state sites of any country. The plugin is allowed for installation and use only on private and personal sites or blogs.
  *
  * @category    WatchMan-Site7
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
 /**
  * Plugin Name:  WatchMan-Site7
  * Plugin URI:   https://wordpress.org/plugins/watchman-site7/
- * Description:  Designed for site administrators and is used to control the visits of site.
+ * Description:  Designed for site administrators and is used to control the visits of site. The developer of the plugin prohibits installing this plugin on the state sites of any country. The plugin is allowed for installation and use only on private and personal sites or blogs.
  * Author:       Oleg Klenitskiy
- * Author URI:   https://www.adminkov.bcr.by/category/wordpress/
+ * Author URI:   https://www.adminkov.bcr.by/
  * Contributors: adminkov
- * Version:      3.0.1
+ * Version:      3.1.1
  * License:      GPLv2 or later
  * License URI:  https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:  watchman-site7
@@ -59,7 +59,21 @@ require_once __DIR__ . '/includes/wms7-ip-info.php';
  * Used to work with external files.
  */
 require_once __DIR__ . '/includes/wms7-io-interface.php';
-
+/**
+ * Defined global paths
+ */
+if ( ! defined( 'WMS7_PLUGIN_NAME' ) ) {
+	define( 'WMS7_PLUGIN_NAME', trim( dirname( plugin_basename( __FILE__ ) ), '/' ) );
+}
+if ( ! defined( 'WMS7_PLUGIN_DIR' ) ) {
+	define( 'WMS7_PLUGIN_DIR', WP_PLUGIN_DIR . '/' . WMS7_PLUGIN_NAME );
+}
+if ( ! defined( 'WMS7_PLUGIN_URL' ) ) {
+	define( 'WMS7_PLUGIN_URL', WP_PLUGIN_URL . '/' . WMS7_PLUGIN_NAME );
+}
+if ( ! session_id() ) {
+	session_start();
+}
 if ( ! class_exists( 'WP_List_Table' ) ) {
 	/**
 	 * Used standart class WP_List_Table.
@@ -82,6 +96,7 @@ function wms7_load_script_css() {
 		$pos = strpos( $_request_uri, 'wp-admin' );
 		if ( ! $pos ) {
 			wp_enqueue_script( 'wms7-navigator', plugins_url( '/js/wms7-navigator.js', __FILE__ ), array(), 'v.3.0.0', false );
+			wp_enqueue_script( 'wms7-frontend', plugins_url( '/js/wms7-frontend.js', __FILE__ ), array(), 'v.3.0.0', false );
 		}
 		// for use module wms7-navigator.js.
 		$wms7_url = plugin_dir_url( __FILE__ );
@@ -106,7 +121,7 @@ function wms7_load_css_js() {
 
 			wp_enqueue_script( 'google-graph', 'https://www.gstatic.com/charts/loader.js', array(), 'v.3.0.0', false );
 			wp_enqueue_script( 'google-maps', "//maps.googleapis.com/maps/api/js?key=$val", array(), 'v.3.0.0', false );
-			wp_enqueue_script( 'wms7-script', plugins_url( '/js/wms7-script.js', __FILE__ ), array(), 'v.3.0.0', false );
+			wp_enqueue_script( 'wms7-backend', plugins_url( '/js/wms7-backend.js', __FILE__ ), array(), 'v.3.0.0', false );
 			wp_enqueue_script( 'wms7-sha1', plugins_url( '/js/wms7-sha1.js', __FILE__ ), array(), 'v.3.0.0', false );
 			wp_enqueue_script( 'wms7-console', plugins_url( '/js/wms7-console.js', __FILE__ ), array(), 'v.3.0.0', false );
 			wp_enqueue_style( 'wms7', plugins_url( '/css/wms7-style.css', __FILE__ ), false, 'v.3.0.0', 'all' );
@@ -116,11 +131,9 @@ function wms7_load_css_js() {
 		// for use module wms7-console.js.
 		$plugine_info = get_plugin_data( __DIR__ . '/watchman-site7.php' );
 		$wms7_ver     = $plugine_info['Version'];
-		$wms7_sec     = get_option( 'wms7-console-secret' );
-		if ( ! $wms7_sec ) {
-			$wms7_sec = md5( time() * time() );
-			update_option( 'wms7-console-secret', $wms7_sec );
-		}
+		$wms7_sec     = md5( time() * time() );
+
+		$_SESSION['wms7-console-secret'] = $wms7_sec;
 		?>
 		<script>
 			var wms7_url  = '<?php echo esc_html( $wms7_url ); ?>';
@@ -145,20 +158,36 @@ if ( ! class_exists( 'Wms7_Core' ) ) {
 	require_once __DIR__ . '/class-wms7-core.php';
 
 	if ( class_exists( 'Wms7_Core' ) ) {
-		$wms7 = new Wms7_core();
+		$wms7    = new Wms7_core();
 		// Activation hook.
-		register_activation_hook( __FILE__, 'wms7_create_tables' );
+		register_activation_hook( __FILE__, 'wms7_activation' );
+		/**
+		 * Performed when the plugin is activation.
+		 */
+		function wms7_activation( $content ) {
+			WP_Filesystem();
+			global $wp_filesystem;
+
+			// For client (frontend).
+			wms7_save_frontend( $content );
+
+			// Create custom tables for plugin.
+			wms7_create_tables();
+		}
 		// Deactivation hook.
 		register_deactivation_hook( __FILE__, 'wms7_deactivation' );
 		/**
 		 * Performed when the plugin is deactivation.
 		 */
 		function wms7_deactivation() {
+			WP_Filesystem();
+			global $wp_filesystem;
+
+			$filename = __DIR__ . '/includes/frontend.txt';
+			$wp_filesystem->put_contents( $filename, 'WatchMan-site7 deactivated', FS_CHMOD_FILE );
 			// clean up old cron jobs that no longer exist.
 			wp_clear_scheduled_hook( 'wms7_truncate' );
 			wp_clear_scheduled_hook( 'wms7_htaccess' );
-			// remove role Analyst_wms7.
-			remove_role( 'analyst_wms7' );
 		}
 	}
 }

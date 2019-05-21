@@ -5,7 +5,7 @@
  * @category    Wms7_Browser
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru> (modified the code for standard WordPress)
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 

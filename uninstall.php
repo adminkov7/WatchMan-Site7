@@ -5,7 +5,7 @@
  * @category    uninstall.php
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
@@ -19,17 +19,24 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 global $wpdb;
 
 // Delete options.
-$option_name = 'wms7_screen_settings';
-delete_option( $option_name );
+delete_option( 'wms7_screen_settings' );
+delete_option( 'wms7_visitors_per_page' );
+delete_option( 'wms7_main_settings' );
+delete_option( 'wms7_current_url' );
 
-$option_name = 'wms7_visitors_per_page';
-delete_option( $option_name );
+delete_option( 'wms7_login_compromising' );
+delete_option( 'wms7_ip_compromising' );
+delete_option( 'wms7_user_agent_compromising' );
 
-$option_name = 'wms7_main_settings';
-delete_option( $option_name );
+delete_option( 'wms7_role_time_country_filter_part1' );
+delete_option( 'wms7_role_time_country_filter_part2' );
+delete_option( 'wms7_role_time_country_filter_part3' );
 
-$option_name = 'wms7_current_url';
-delete_option( $option_name );
+delete_option( 'wms7_black_list_info' );
+delete_option( 'wms7_robot_visit_info' );
+delete_option( 'wms7_history_list_info' );
+delete_option( 'wms7_black_list_visitor' );
+
 
 // Delete table watchman_site.
 $sql = "DROP TABLE IF EXISTS {$wpdb->prefix}watchman_site";

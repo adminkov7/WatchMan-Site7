@@ -5,7 +5,7 @@
  * @category    Wms7_Widget
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @category    Class
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.0
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 class Wms7_Widget extends WP_Widget {
@@ -43,171 +43,18 @@ class Wms7_Widget extends WP_Widget {
 	 * @param array $instance Instance.
 	 */
 	public function widget( $args, $instance ) {
-		global $wpdb;
 		$title = apply_filters( 'widget_title', $instance['title'] );
 
-		echo( $args['before_widget'] );
+		echo ( $args['before_widget'] );
 		if ( ! empty( $title ) ) {
 			echo( $args['before_title'] . $title . $args['after_title'] );
 		}
-
-		$cache_key         = 'wms7_data_month_visits';
-		$data_month_visits = wp_cache_get( $cache_key );
-		if ( ! $data_month_visits ) {
-			$data_month_visits = $wpdb->get_results(
-				$wpdb->prepare(
-					"
-					SELECT count(id) as %s
-					FROM {$wpdb->prefix}watchman_site
-					WHERE MONTH(time_visit) = MONTH(now()) and YEAR(time_visit) = YEAR(now())
-					",
-					'fld0'
-				),
-				'ARRAY_A'
-			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $data_month_visits );
-		}
-
-		$cache_key           = 'wms7_data_month_visitors';
-		$data_month_visitors = wp_cache_get( $cache_key );
-		if ( ! $data_month_visitors ) {
-			$data_month_visitors = $wpdb->get_results(
-				$wpdb->prepare(
-					"
-					SELECT count(DISTINCT user_ip) as %s
-					FROM {$wpdb->prefix}watchman_site
-					WHERE login_result <> %d AND MONTH(time_visit) = MONTH(now()) and YEAR(time_visit) = YEAR(now())
-					",
-					'fld1',
-					3
-				),
-				'ARRAY_A'
-			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $data_month_visitors );
-		}
-		$cache_key         = 'wms7_data_month_robots';
-		$data_month_robots = wp_cache_get( $cache_key );
-		if ( ! $data_month_robots ) {
-			$data_month_robots = $wpdb->get_results(
-				$wpdb->prepare(
-					"
-					SELECT count(DISTINCT robot) as %s
-					FROM {$wpdb->prefix}watchman_site
-					WHERE login_result = %d AND MONTH(time_visit) = MONTH(now()) and YEAR(time_visit) = YEAR(now())
-					",
-					'fld1',
-					3
-				),
-				'ARRAY_A'
-			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $data_month_robots );
-		}
-		$cache_key        = 'wms7_data_week_visits';
-		$data_week_visits = wp_cache_get( $cache_key );
-		if ( ! $data_week_visits ) {
-			$data_week_visits = $wpdb->get_results(
-				$wpdb->prepare(
-					"
-					SELECT count(id) as %s
-					FROM {$wpdb->prefix}watchman_site
-					WHERE WEEK(time_visit) = WEEK(now()) and YEAR(time_visit) = YEAR(now())
-					",
-					'fld0'
-				),
-				'ARRAY_A'
-			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $data_week_visits );
-		}
-		$cache_key          = 'wms7_data_week_visitors';
-		$data_week_visitors = wp_cache_get( $cache_key );
-		if ( ! $data_week_visitors ) {
-			$data_week_visitors = $wpdb->get_results(
-				$wpdb->prepare(
-					"
-					SELECT count(DISTINCT user_ip) as %s
-					FROM {$wpdb->prefix}watchman_site
-					WHERE login_result <> %d AND WEEK(time_visit) = WEEK(now()) and YEAR(time_visit) = YEAR(now())
-					",
-					'fld1',
-					3
-				),
-				'ARRAY_A'
-			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $data_week_visitors );
-		}
-		$cache_key        = 'wms7_data_week_robots';
-		$data_week_robots = wp_cache_get( $cache_key );
-		if ( ! $data_week_robots ) {
-			$data_week_robots = $wpdb->get_results(
-				$wpdb->prepare(
-					"
-					SELECT count(DISTINCT robot) as %s
-					FROM {$wpdb->prefix}watchman_site
-					WHERE login_result = %d AND WEEK(time_visit) = WEEK(now()) and YEAR(time_visit) = YEAR(now())
-					",
-					'fld1',
-					3
-				),
-				'ARRAY_A'
-			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $data_week_robots );
-		}
-		$cache_key         = 'wms7_data_today_visits';
-		$data_today_visits = wp_cache_get( $cache_key );
-		if ( ! $data_today_visits ) {
-			$data_today_visits = $wpdb->get_results(
-				$wpdb->prepare(
-					"
-					SELECT count(id) as %s
-					FROM {$wpdb->prefix}watchman_site
-					WHERE time_visit >= CURDATE()
-					",
-					'fld0'
-				),
-				'ARRAY_A'
-			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $data_today_visits );
-		}
-		$cache_key           = 'wms7_data_today_visitors';
-		$data_today_visitors = wp_cache_get( $cache_key );
-		if ( ! $data_today_visitors ) {
-			$data_today_visitors = $wpdb->get_results(
-				$wpdb->prepare(
-					"
-					SELECT count(DISTINCT user_ip) as %s
-					FROM {$wpdb->prefix}watchman_site
-					WHERE login_result <> %d AND time_visit >= CURDATE()
-					",
-					'fld1',
-					3
-				),
-				'ARRAY_A'
-			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $data_today_visitors );
-		}
-		$cache_key         = 'wms7_data_today_robots';
-		$data_today_robots = wp_cache_get( $cache_key );
-		if ( ! $data_today_robots ) {
-			$data_today_robots = $wpdb->get_results(
-				$wpdb->prepare(
-					"
-					SELECT count(DISTINCT robot) as %s
-					FROM {$wpdb->prefix}watchman_site
-					WHERE login_result = %d AND time_visit >= CURDATE()
-					",
-					'fld1',
-					3
-				),
-				'ARRAY_A'
-			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $data_today_robots );
-		}
 		?>
-		<table class="counter" name="counter" style="font-size: 8pt; background: <?php echo( esc_html( $instance['grnd'] ) ); ?>;">
+		<table class="counter" id="counter" style="font-size: 8pt; background: <?php echo( esc_html( $instance['grnd'] ) ); ?>;">
 			<tr><th><?php esc_html_e( 'Interval', 'wms7' ); ?></th><th><?php esc_html_e( 'Visits', 'wms7' ); ?></th><th><?php esc_html_e( 'Visitors', 'wms7' ); ?></th><th><?php esc_html_e( 'Robots', 'wms7' ); ?></th></tr>
-			<tr style="color: blue;"><th><?php esc_html_e( 'month', 'wms7' ); ?></th><th><?php echo( esc_html( $data_month_visits[0]['fld0'] ) ); ?></th><th><?php echo( esc_html( $data_month_visitors[0]['fld1'] ) ); ?></th><th><?php echo( esc_html( $data_month_robots[0]['fld1'] ) ); ?></th></tr>
-			<tr style="color: green;"><th><?php esc_html_e( 'week', 'wms7' ); ?></th><th><?php echo( esc_html( $data_week_visits[0]['fld0'] ) ); ?></th><th><?php echo( esc_html( $data_week_visitors[0]['fld1'] ) ); ?></th><th><?php echo( esc_html( $data_week_robots[0]['fld1'] ) ); ?></th></tr>
-			<tr style="color: brown;"><th><?php esc_html_e( 'today', 'wms7' ); ?></th><th><?php echo( esc_html( $data_today_visits[0]['fld0'] ) ); ?></th><th><?php echo( esc_html( $data_today_visitors[0]['fld1'] ) ); ?></th><th><?php echo( esc_html( $data_today_robots[0]['fld1'] ) ); ?></th></tr>
+			<tr style="color: blue;"><th><?php esc_html_e( 'month', 'wms7' ); ?></th><th id=counter_month_visits></th><th id=counter_month_visitors></th><th id=counter_month_robots></th></tr>
+			<tr style="color: green;"><th><?php esc_html_e( 'week', 'wms7' ); ?></th><th id=counter_week_visits></th><th id=counter_week_visitors></th><th id=counter_week_robots></th></tr>
+			<tr style="color: brown;"><th><?php esc_html_e( 'today', 'wms7' ); ?></th><th id=counter_today_visits></th><th id=counter_today_visitors></th><th id=counter_today_robots></th></tr>
 		</table>
 		<?php
 

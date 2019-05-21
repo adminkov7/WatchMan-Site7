@@ -5,7 +5,7 @@
  * @category    Wms7_List_Table
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @category    Class
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.0
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 class Wms7_List_Table extends WP_List_Table {
@@ -75,38 +75,37 @@ class Wms7_List_Table extends WP_List_Table {
 		$query = wp_parse_url( $_request_uri );
 		$args  = wp_parse_args( $query['query'] );
 
-		if ( isset( $args['filter_country'] ) ) {
+		if ( isset( $args['filter_country'] ) && '' !== $args['filter_country'] ) {
 			$param['filter_country'] = sanitize_text_field( $args['filter_country'] );
 		}
 
-		if ( isset( $args['filter_role'] ) ) {
+		if ( isset( $args['filter_role'] ) && '' !== $args['filter_role'] ) {
 			$param['filter_role'] = sanitize_text_field( $args['filter_role'] );
 		}
 
-		if ( isset( $args['filter_time'] ) ) {
+		if ( isset( $args['filter_time'] ) && '' !== $args['filter_time'] ) {
 			$param['filter_time'] = sanitize_text_field( $args['filter_time'] );
 		}
 
-		if ( isset( $args['filter'] ) ) {
+		if ( isset( $args['filter'] ) && '' !== $args['filter'] ) {
 			$param['filter'] = sanitize_text_field( $args['filter'] );
 		}
 
-		if ( isset( $args['result'] ) ) {
+		if ( isset( $args['result'] ) && '' !== $args['result'] ) {
 			$param['result'] = sanitize_text_field( $args['result'] );
 		}
 
-		if ( isset( $args['orderby'] ) ) {
+		if ( isset( $args['orderby'] ) && '' !== $args['orderby'] ) {
 			$param['orderby'] = sanitize_text_field( $args['orderby'] );
 		}
 
-		if ( isset( $args['order'] ) ) {
+		if ( isset( $args['order'] ) && '' !== $args['order'] ) {
 			$param['order'] = sanitize_text_field( $args['order'] );
 		}
 
-		if ( isset( $args['paged'] ) ) {
+		if ( isset( $args['paged'] ) && '' !== $args['paged'] ) {
 			$param['paged'] = sanitize_text_field( $args['paged'] );
 		}
-
 		$menu_page_url                                     = menu_page_url( 'wms7_visitors', false );
 		( is_array( $param ) && ! empty( $param ) ) ? $url = add_query_arg( $param, $menu_page_url ) : $url = $menu_page_url;
 		// save the current url of the plugin in wp_options.
@@ -140,22 +139,22 @@ class Wms7_List_Table extends WP_List_Table {
 			?>
 			<a class='visit_result' title='<?php echo esc_html( 'Filter 2 level', 'watchman-site7' ); ?>'><?php echo esc_html( 'Visits', 'watchman-site7' ); ?> : </a>
 
-			<input onclick=visit(id) class='radio' id='radio-1' name='result5' type='radio' value='1' <?php echo esc_html( $hidden_all_link ); ?> >
+			<input onclick=wms7_visit(id) class='radio' id='radio-1' name='result' type='radio' value='1' <?php echo esc_html( $hidden_all_link ); ?> >
 			<label for='radio-1' <?php echo esc_html( $hidden_all_link ); ?> ><?php echo esc_html( 'All', 'watchman-site7' ); ?>(<?php echo esc_html( $this->wms7_get( 'allTotal' ) ); ?>)</label>
 
-			<input onclick=visit(id) class='radio' id='radio-2' name='result2' type='radio' value='1' <?php echo esc_html( $hidden_unlogged_link ); ?> >
+			<input onclick=wms7_visit(id) class='radio' id='radio-2' name='result' type='radio' value='1' <?php echo esc_html( $hidden_unlogged_link ); ?> >
 			<label for='radio-2' <?php echo esc_html( $hidden_unlogged_link ); ?> ><?php echo esc_html( 'Unlogged', 'watchman-site7' ); ?>(<?php echo esc_html( $this->wms7_get( 'visitsTotal' ) ); ?>)</label>
 
-			<input onclick=visit(id) class='radio' id='radio-3' name='result1' type='radio' value='1' <?php echo esc_html( $hidden_successful_link ); ?> >
+			<input onclick=wms7_visit(id) class='radio' id='radio-3' name='result' type='radio' value='1' <?php echo esc_html( $hidden_successful_link ); ?> >
 			<label for='radio-3' <?php echo esc_html( $hidden_successful_link ); ?> ><?php echo esc_html( 'Success', 'watchman-site7' ); ?>(<?php echo esc_html( $this->wms7_get( 'successTotal' ) ); ?>)</label>
 
-			<input onclick=visit(id) class='radio' id='radio-4' name='result0' type='radio' value='1' <?php echo esc_html( $hidden_failed_link ); ?> >
+			<input onclick=wms7_visit(id) class='radio' id='radio-4' name='result' type='radio' value='1' <?php echo esc_html( $hidden_failed_link ); ?> >
 			<label for='radio-4' <?php echo esc_html( $hidden_failed_link ); ?> ><?php echo esc_html( 'Failed', 'watchman-site7' ); ?>(<?php echo esc_html( $this->wms7_get( 'failedTotal' ) ); ?>)</label>
 
-			<input onclick=visit(id) class='radio' id='radio-5' name='result3' type='radio' value='1' <?php echo esc_html( $hidden_robots_link ); ?> >
+			<input onclick=wms7_visit(id) class='radio' id='radio-5' name='result' type='radio' value='1' <?php echo esc_html( $hidden_robots_link ); ?> >
 			<label for='radio-5' <?php echo esc_html( $hidden_robots_link ); ?> ><?php echo esc_html( 'Robots', 'watchman-site7' ); ?>(<?php echo esc_html( $this->wms7_get( 'robotsTotal' ) ); ?>)</label>
 
-			<input onclick=visit(id) class='radio' id='radio-6' name='result4' type='radio' value='1' <?php echo esc_html( $hidden_blacklist_link ); ?> >
+			<input onclick=wms7_visit(id) class='radio' id='radio-6' name='result' type='radio' value='1' <?php echo esc_html( $hidden_blacklist_link ); ?> >
 			<label for='radio-6' <?php echo esc_html( $hidden_blacklist_link ); ?> ><?php echo esc_html( 'Black list', 'watchman-site7' ); ?>(<?php echo esc_html( $this->wms7_get( 'blacklistTotal' ) ); ?>)</label>
 
 			<?php
@@ -189,10 +188,10 @@ class Wms7_List_Table extends WP_List_Table {
 			$current_user = wp_get_current_user();
 			$roles        = $current_user->roles;
 			$role         = array_shift( $roles );
-			if ( 'analyst_wms7' === $role ) {
-				$disabled = 'disabled';
-			} else {
+			if ( 'administrator' === $role ) {
 				$disabled = '';
+			} else {
+				$disabled = 'disabled';
 			}
 			// The code adds the buttons after the table.
 			?>
@@ -201,34 +200,42 @@ class Wms7_List_Table extends WP_List_Table {
 
 			<form id='win1' method='POST'>
 				<input type='submit' value='index' id='btn_bottom1' class='button' <?php echo esc_html( $disabled ); ?> name='footer' title='<?php echo esc_html( 'index.php of site', 'watchman-site7' ); ?>'  style='width:80px;<?php echo esc_html( $hidden_index_php ); ?>' >
+				<input type='hidden' name='footer_nonce' value='<?php echo esc_html( wp_create_nonce( 'footer' ) ); ?>'>
 			</form>
 
 			<form id='win2' method='POST'>
 				<input type='submit' value='robots' id='btn_bottom2' class='button' <?php echo esc_html( $disabled ); ?> name='footer' title='<?php echo esc_html( 'robots.txt of site', 'watchman-site7' ); ?>' style='width:80px;<?php echo esc_html( $hidden_robots_txt ); ?>' >
+				<input type='hidden' name='footer_nonce' value='<?php echo esc_html( wp_create_nonce( 'footer' ) ); ?>'>
 			</form>
 
 			<form id='win3' method='POST'>
 				<input type='submit' value='htaccess' id='btn_bottom3' class='button' <?php echo esc_html( $disabled ); ?> name='footer' title='<?php echo esc_html( '.htaccess of site', 'watchman-site7' ); ?>' style='width:80px;<?php echo esc_html( $hidden_htaccess ); ?>' >
+				<input type='hidden' name='footer_nonce' value='<?php echo esc_html( wp_create_nonce( 'footer' ) ); ?>'>
 			</form>
 
 			<form id='win4' method='POST'>
 				<input type='submit' value='wp_config' id='btn_bottom4' class='button' <?php echo esc_html( $disabled ); ?> name='footer' title='<?php echo esc_html( 'wp-config.php of site', 'watchman-site7' ); ?>' style='width:80px;<?php echo esc_html( $hidden_wp_config_php ); ?>' >
+				<input type='hidden' name='footer_nonce' value='<?php echo esc_html( wp_create_nonce( 'footer' ) ); ?>'>
 			</form>
 
 			<form id='win5' method='POST'>
 				<input type='submit' value='wp_cron' id='btn_bottom5' class='button' <?php echo esc_html( $disabled ); ?> name='footer' title=' <?php echo esc_html( 'wp-cron events of site', 'watchman-site7' ); ?>' style='width:80px;<?php echo esc_html( $hidden_wp_cron ); ?>' >
+				<input type='hidden' name='footer_nonce' value='<?php echo esc_html( wp_create_nonce( 'footer' ) ); ?>'>
 			</form>
 
 			<form id='win6' method='POST'>
 				<input type='submit' value='statistic' id='btn_bottom6' class='button' <?php echo esc_html( $disabled ); ?> name='footer' title='<?php echo esc_html( 'statistic of visits to site', 'watchman-site7' ); ?>' style='width:80px;<?php echo esc_html( $hidden_statistic ); ?>' >
+				<input type='hidden' name='footer_nonce' value='<?php echo esc_html( wp_create_nonce( 'footer' ) ); ?>'>
 			</form>
 
 			<form id='win7' method='POST'>
 				<input type='submit' value='sma' id='btn_bottom7' class='button' <?php echo esc_html( $disabled ); ?> name='footer' title='<?php echo esc_html( 'simple mail agent', 'watchman-site7' ); ?>' style='width:80px;<?php echo esc_html( $hidden_mail ); ?>' >
+				<input type='hidden' name='footer_nonce' value='<?php echo esc_html( wp_create_nonce( 'footer' ) ); ?>'>
 			</form>
 
 			<form id='win8' method='POST'>
 				<input type='submit' value='console' id='btn_bottom8' class='button' <?php echo esc_html( $disabled ); ?> name='footer' title='<?php echo esc_html( 'console', 'watchman-site7' ); ?>' style='width:80px;<?php echo esc_html( $hidden_console ); ?>' >
+				<input type='hidden' name='footer_nonce' value='<?php echo esc_html( wp_create_nonce( 'footer' ) ); ?>'>
 			</form>
 			<?php
 		}
@@ -242,28 +249,33 @@ class Wms7_List_Table extends WP_List_Table {
 	public function wms7_login_compromising( $uid ) {
 		global $wpdb;
 
-		$cache_key = 'wms7_login_compromising' . $uid;
-		$results   = wp_cache_get( $cache_key );
+		$cache_key = 'wms7_login_compromising';
+		if ( wp_using_ext_object_cache() ) {
+			$results = wp_cache_get( $cache_key );
+		} else {
+			$results = get_option( $cache_key );
+		}
 		if ( ! $results ) {
 			$results = $wpdb->get_results(
 				$wpdb->prepare(
 					"
-					SELECT DISTINCT `black_list`
+					SELECT DISTINCT `uid`
 					FROM {$wpdb->prefix}watchman_site
-					WHERE `uid` = %d AND `black_list` <> %s
+					WHERE `black_list` LIKE %s
 					",
-					$uid,
-					''
+					'%ban_login":"1"%'
 				),
 				'ARRAY_A'
-			);// unprepared sql ok;db call ok;cache ok.
-			wp_cache_set( $cache_key, $results );
+			);// db call ok;cache ok.
+			if ( wp_using_ext_object_cache() ) {
+				wp_cache_set( $cache_key, $results );
+			} else {
+				update_option( $cache_key, $results );
+			}
 		}
 		$compromising = false;
 		foreach ( $results as $item ) {
-			$str = array_shift( $item );
-			$arr = json_decode( $str, true );
-			if ( isset( $arr['ban_login'] ) && ( '1' === $arr['ban_login'] ) ) {
+			if ( intval( $item['uid'] ) === intval( $uid ) ) {
 				$compromising = true;
 				break;
 			}
@@ -279,28 +291,84 @@ class Wms7_List_Table extends WP_List_Table {
 	public function wms7_ip_compromising( $user_ip ) {
 		global $wpdb;
 
-		$cache_key = 'wms7_ip_compromising' . $user_ip;
-		$results   = wp_cache_get( $cache_key );
+		$cache_key = 'wms7_ip_compromising';
+		if ( wp_using_ext_object_cache() ) {
+			$results = wp_cache_get( $cache_key );
+		} else {
+			$results = get_option( $cache_key );
+		}
 		if ( ! $results ) {
 			$results = $wpdb->get_results(
 				$wpdb->prepare(
 					"
 					SELECT DISTINCT `user_ip`
 					FROM {$wpdb->prefix}watchman_site
-					WHERE `user_ip` = %s AND `black_list` <> %s
+					WHERE TRIM(`black_list`) <> %s
 					",
-					$user_ip,
 					''
 				),
 				'ARRAY_A'
-			);// unprepared sql ok;db call ok;cache ok.
-			wp_cache_set( $cache_key, $results );
+			);// db call ok;cache ok.
+			if ( wp_using_ext_object_cache() ) {
+				wp_cache_set( $cache_key, $results );
+			} else {
+				update_option( $cache_key, $results );
+			}
 		}
-		if ( 0 === count( $results ) ) {
-			return false;
+		$compromising = false;
+		foreach ( $results as $item ) {
+			$item = array_shift( $item );
+			if ( $item === $user_ip ) {
+				$compromising = true;
+				break;
+			}
+		}
+		return $compromising;
+	}
+	/**
+	 * Custom function: WP_List_Table.
+	 *
+	 * @param string $user_agent User agent.
+	 * @return boolean.
+	 */
+	public function wms7_user_agent_compromising( $user_agent ) {
+		global $wpdb;
+
+		$cache_key = 'wms7_user_agent_compromising';
+		if ( wp_using_ext_object_cache() ) {
+			$results = wp_cache_get( $cache_key );
 		} else {
-			return true;
+			$results = get_option( $cache_key );
 		}
+		if ( ! $results || empty( $result ) ) {
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"
+					SELECT DISTINCT `info`
+					FROM {$wpdb->prefix}watchman_site
+					WHERE `black_list` LIKE %s or `black_list` LIKE %s
+					",
+					'%ban_user_agent":true%',
+					'%ban_user_agent":"1"%'
+				),
+				'ARRAY_A'
+			);// db call ok;cache ok.
+			if ( wp_using_ext_object_cache() ) {
+				wp_cache_set( $cache_key, $results );
+			} else {
+				update_option( $cache_key, $results );
+			}
+		}
+		$compromising = false;
+		foreach ( $results as $item ) {
+			$item = array_shift( $item );
+			$arr  = json_decode( $item, true );
+			if ( $arr['User Agent'] === $user_agent ) {
+				$compromising = true;
+				break;
+			}
+		}
+		return $compromising;
 	}
 	/**
 	 * Standart function: WP_List_Table.
@@ -332,10 +400,19 @@ class Wms7_List_Table extends WP_List_Table {
 				if ( is_array( $data ) ) {
 					$output = '';
 					foreach ( $data as $k => $v ) {
-						$output .= $k . ': ' . $v . '<br />';
+						if ( 'User Agent' === $k ) {
+							$agent_compromising = $this->wms7_user_agent_compromising( $v );
+							if ( $agent_compromising ) {
+								$output .= '<span class="failed">' . $k . '</span>: ' . $v . '<br>';
+							} else {
+								$output .= $k . ': ' . $v . '<br />';
+							}
+						} else {
+							$output .= $k . ': ' . $v . '<br />';
+						}
 					}
-					unset( $k );
 					$output = ( isset( $_mode ) && 'excerpt' === $_mode ) ? $output : substr( $output, 0, 130 ) . '...';
+
 					return $output;
 				}
 				break;
@@ -359,8 +436,9 @@ class Wms7_List_Table extends WP_List_Table {
 				$user_login = $item['user_login'];
 			}
 			$url     = $this->wms7_get_current_url();
+			$url     = esc_html( wp_nonce_url( $url, 'msg_nonce', 'msg_nonce' ) );
 			$actions = array(
-				'message' => sprintf( '<a href="' . $url . '&uid=%s">%s</a>', $item['uid'], esc_html( 'Message', 'watchman-site7' ) ),
+				'message' => sprintf( "<a href='%s&uid=%s'>%s</a>", $url, $item['uid'], esc_html( 'Message', 'watchman-site7' ) ),
 			);
 			if ( $this->wms7_login_compromising( $item['uid'] ) ) {
 				$user_login = '<span class="failed">' . $user_login . '</span>';
@@ -386,8 +464,9 @@ class Wms7_List_Table extends WP_List_Table {
 			$item['user_ip'] = '<span class="failed">' . $item['user_ip'] . '</span>';
 		}
 		$url     = $this->wms7_get_current_url();
+		$url     = esc_html( wp_nonce_url( $url, 'map_nonce', 'map_nonce' ) );
 		$actions = array(
-			'map' => sprintf( '<a href="' . $url . '&action=map&id=%s">%s</a>', $item['id'], __( 'Map', 'watchman-site7' ) ),
+			'map' => sprintf( "<a href='%s&action=map&id=%s'>%s</a>", $url, $item['id'], __( 'Map', 'watchman-site7' ) ),
 		);
 		return sprintf(
 			'%s %s',
@@ -403,8 +482,9 @@ class Wms7_List_Table extends WP_List_Table {
 	 */
 	public function column_black_list( $item ) {
 
-		$url    = $this->wms7_get_current_url();
-		$output = '';
+		$url        = $this->wms7_get_current_url();
+		$edit_nonce = esc_html( wp_create_nonce( 'edit_nonce' ) );
+		$output     = '';
 
 		$data = json_decode( $item['black_list'], true );
 		if ( is_array( $data ) ) {
@@ -415,8 +495,7 @@ class Wms7_List_Table extends WP_List_Table {
 			unset( $k );
 		}
 		$actions = array(
-			'edit'  => sprintf( '<a href="?page=wms7_black_list&id=%s">%s</a>', $item['id'], __( 'Edit', 'watchman-site7' ) ),
-			'clear' => sprintf( '<a href="' . $url . '&action=clear&id=%s">%s</a>', $item['id'], __( 'Clear', 'watchman-site7' ) ),
+			'edit'  => sprintf( '<a href="?page=wms7_black_list&edit_nonce=%s&id=%s">%s</a>', $edit_nonce, $item['id'], __( 'Edit', 'watchman-site7' ) ),
 		);
 		return sprintf(
 			'%s %s',
@@ -482,6 +561,7 @@ class Wms7_List_Table extends WP_List_Table {
 	 */
 	public function get_bulk_actions() {
 		$actions = array(
+			'clear'  => __( 'Clear', 'watchman-site7' ),
 			'delete' => __( 'Delete', 'watchman-site7' ),
 			'export' => __( 'Export', 'watchman-site7' ),
 		);
@@ -496,64 +576,94 @@ class Wms7_List_Table extends WP_List_Table {
 		$this->wms7_set( 'wms7_action', $this->current_action() );
 
 		if ( 'export' === $this->current_action() ) {
-			$_id = filter_input( INPUT_GET, 'id', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY );
+			$_id = filter_input( INPUT_POST, 'id', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY );
 			$this->wms7_set( 'wms7_id', $_id );
 			wms7_output_csv();
 		}
 		if ( 'delete' === $this->current_action() ) {
-			$_id = filter_input( INPUT_GET, 'id', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY );
+			$_id = filter_input( INPUT_POST, 'id', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY );
 			if ( ! $_id ) {
 				return;
 			}
 			$this->wms7_set( 'wms7_id', $_id );
 			$ids = implode( ',', $_id );
 			if ( $ids ) {
-				$cache_key = 'process_bulk_action_part1';
-				$results   = wp_cache_get( $cache_key );
-				if ( ! $results ) {
-					$results = $wpdb->query(
+				$results = $wpdb->query(
+					str_replace(
+						"'",
+						'',
 						$wpdb->prepare(
 							"
 							DELETE
 							FROM {$wpdb->prefix}watchman_site
-							WHERE `id` IN ($ids)  AND `black_list` = %s
+							WHERE `id` IN (%s)  AND LENGTH(`black_list`) = 0
 							",
-							''
+							$ids
 						)
-					);// unprepared sql ok;db call ok;cache ok.
-					wp_cache_set( $cache_key, $results );
-				}
+					)
+				);// db call ok;no cache ok.
 				$this->wms7_set( 'wms7_id_del', $results );
 			}
 		}
 		if ( 'clear' === $this->current_action() ) {
-			$_id = filter_input( INPUT_GET, 'id', FILTER_SANITIZE_STRING );
-			$this->wms7_set( 'wms7_id', $_id );
-			$wpdb->update(
-				$wpdb->prefix . 'watchman_site',
-				array( 'black_list' => '' ),
-				array( 'ID' => $_id )
-			);// unprepared sql ok;db call ok.
-			// delete ip from .htaccess.
-			$cache_key = 'process_bulk_action_part2';
-			$results   = wp_cache_get( $cache_key );
-			if ( ! $results ) {
-				$results = $wpdb->get_results(
-					$wpdb->prepare(
-						"
-				        SELECT `user_ip`
-				        FROM {$wpdb->prefix}watchman_site
-				        WHERE `id` = %s
-				        ",
-						$_id
-					),
-					'ARRAY_A'
-				);// unprepared sql ok;db call ok;cache ok.
-				wp_cache_set( $cache_key, $results );
+			$_id = filter_input( INPUT_POST, 'id', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY );
+			if ( ! $_id ) {
+				return;
 			}
-			$user_ip = array_shift( $results[0] );
-
-			wms7_ip_delete_from_file( $user_ip );
+			$this->wms7_set( 'wms7_id', $_id );
+			$ids = implode( ',', $_id );
+			if ( $ids ) {
+				$count_clear = $wpdb->query(
+					str_replace(
+						"'",
+						'',
+						$wpdb->prepare(
+							"
+							UPDATE 
+							{$wpdb->prefix}watchman_site
+							SET `black_list` = NULL
+							WHERE `id` IN (%s)
+							",
+							$ids
+						)
+					)
+				);// db call ok;no cache ok.
+				if ( $count_clear ) {
+					$results = $wpdb->get_results(
+						str_replace(
+							"'",
+							'',
+							$wpdb->prepare(
+								"
+						        SELECT `user_ip`, `info`
+						        FROM {$wpdb->prefix}watchman_site
+						        WHERE `id` IN (%s)
+						        ",
+								$ids
+							)
+						),
+						'ARRAY_A'
+					);// db call ok; no cache ok.
+					foreach ( $results as $result ) {
+						// Delete user_ip into .htaccess.
+						wms7_ip_delete_from_file( $result['user_ip'] );
+						// Delete user_agent into .htaccess.
+						$info = json_decode( $result['info'], true );
+						$user_agent = $info['User Agent'];
+						wms7_rewritecond_delete( $user_agent );
+					}
+					// Delete item from options.
+					delete_option( 'wms7_login_compromising' );
+					delete_option( 'wms7_ip_compromising' );
+					delete_option( 'wms7_user_agent_compromising' );
+					delete_option( 'wms7_black_list_info' );
+					// Clear variables into $_SESSION.
+					unset( $_SESSION['wms7_black_list_tbl'] );
+					if ( function_exists( 'session_unregister' ) ) {
+						session_unregister( 'wms7_black_list_tbl' );
+					}
+				}
+			}
 		}
 	}
 	/**
@@ -561,7 +671,12 @@ class Wms7_List_Table extends WP_List_Table {
 	 */
 	public function prepare_items() {
 		global $wpdb, $wms7;
-
+		$_filter_left_nonce  = filter_input( INPUT_GET, 'filter_left_nonce', FILTER_SANITIZE_STRING );
+		$_filter_right_nonce = filter_input( INPUT_GET, 'filter_right_nonce', FILTER_SANITIZE_STRING );
+		if ( isset( $_filter_left_nonce ) && ! wp_verify_nonce( $_filter_left_nonce, 'filter_left' ) ||
+			isset( $_filter_right_nonce ) && ! wp_verify_nonce( $_filter_right_nonce, 'filter_right' ) ) {
+			exit;
+		}
 		$this->process_bulk_action();
 
 		$where  = $wms7->wms7_make_where_query();
@@ -617,73 +732,55 @@ class Wms7_List_Table extends WP_List_Table {
 
 		$_result = filter_input( INPUT_GET, 'result', FILTER_SANITIZE_STRING );
 
-		$cache_key = 'all_total';
-		$all_total = wp_cache_get( $cache_key );
-		if ( ! $all_total ) {
+		if ( ! $this->wms7_get( 'all_total' ) ) {
 			$all_total = $wpdb->get_var(
 				"SELECT COUNT(*) FROM {$wpdb->prefix}watchman_site {$where1}"
 			);// unprepared sql ok;db call ok;cache ok.
-			wp_cache_set( $cache_key, $all_total );
 		}
 		if ( '5' === $_result || null === $_result ) {
 			$total_items = $all_total;
 		}
 
-		$cache_key     = 'success_total';
-		$success_total = wp_cache_get( $cache_key );
-		if ( ! $success_total ) {
+		if ( ! $this->wms7_get( 'success_total' ) ) {
 			$success_total = $wpdb->get_var(
 				"SELECT COUNT(*) FROM {$wpdb->prefix}watchman_site {$where2}"
 			);// unprepared sql ok;db call ok;cache ok.
-			wp_cache_set( $cache_key, $success_total );
 		}
 		if ( '1' === $_result ) {
 			$total_items = $success_total;
 		}
 
-		$cache_key    = 'failed_total';
-		$failed_total = wp_cache_get( $cache_key );
-		if ( ! $failed_total ) {
+		if ( ! $this->wms7_get( 'failed_total' ) ) {
 			$failed_total = $wpdb->get_var(
 				"SELECT COUNT(*) FROM {$wpdb->prefix}watchman_site {$where3}"
 			);// unprepared sql ok;db call ok;cache ok.
-			wp_cache_set( $cache_key, $failed_total );
 		}
 		if ( '0' === $_result ) {
 			$total_items = $failed_total;
 		}
 
-		$cache_key    = 'visits_total';
-		$visits_total = wp_cache_get( $cache_key );
-		if ( ! $visits_total ) {
+		if ( ! $this->wms7_get( 'visits_total' ) ) {
 			$visits_total = $wpdb->get_var(
 				"SELECT COUNT(*) FROM {$wpdb->prefix}watchman_site {$where4}"
 			);// unprepared sql ok;db call ok;cache ok.
-			wp_cache_set( $cache_key, $visits_total );
 		}
 		if ( '2' === $_result ) {
 			$total_items = $visits_total;
 		}
 
-		$cache_key    = 'robots_total';
-		$robots_total = wp_cache_get( $cache_key );
-		if ( ! $robots_total ) {
+		if ( ! $this->wms7_get( 'robots_total' ) ) {
 			$robots_total = $wpdb->get_var(
 				"SELECT COUNT(*) FROM {$wpdb->prefix}watchman_site {$where5}"
 			);// unprepared sql ok;db call ok;cache ok.
-			wp_cache_set( $cache_key, $robots_total );
 		}
 		if ( '3' === $_result ) {
 			$total_items = $robots_total;
 		}
 
-		$cache_key       = 'blacklist_total';
-		$blacklist_total = wp_cache_get( $cache_key );
-		if ( ! $blacklist_total ) {
+		if ( ! $this->wms7_get( 'blacklist_total' ) ) {
 			$blacklist_total = $wpdb->get_var(
 				"SELECT COUNT(*) FROM {$wpdb->prefix}watchman_site {$where6}"
 			);// unprepared sql ok;db call ok;cache ok.
-			wp_cache_set( $cache_key, $blacklist_total );
 		}
 		if ( '4' === $_result ) {
 			$total_items = $blacklist_total;

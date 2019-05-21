@@ -3,15 +3,15 @@
 Contributors: adminkov
 Plugin Name: WatchMan-Site7
 Plugin URI: https://wordpress.org/plugins/watchman-site7/
-Tags: login, blacklist, cron, statistic, mail
+Tags: login, blacklist, cron, statistic, security
 Author: Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
-Author URI: https://www.adminkov.bcr.by/category/wordpress/
-Donate link: https://www.adminkov.bcr.by/contact/
+Author URI: https://adminkov.bcr.by/
+Donate link: https://adminkov.bcr.by/contact/
 Requires at least: 4.5.1
-Tested up to: 5.0
-Requires PHP: 5.2.4
-Stable tag: 3.0.1
-Version: 3.0.1
+Tested up to: 5.2
+Requires PHP: 5.2.4 or higher
+Stable tag: 3.1.1
+Version: 3.1.1
 License: GPLv2 or later
 Initiation:	is dedicated to Inna Voronich
 
@@ -27,19 +27,16 @@ The plugin keeps a log of site visits, monitors system files and cron events of 
 7. Export records of visits to the site in an external file for later analysis
 8. Automatic screen refresh mode using SSE technology (Server-Sent Events)
 9. SMA - Simple Mail Agent, managing the mailboxes of your site, as well as mail.ru, yandex.ru, yahoo.com, gmail.com
-10. The role: Analyst wms7 is introduced. Users with this role are given the opportunity to manage the main page of the WatchMan-Site7 plug-in via the administrative panel. For security reasons, users with this role can not use the system files editing buttons on the site
-11. Analyzes attacks targeting a website.
-12. Compatible with MULTISITE mode
+10. Analyzes attacks targeting a website. Brute-force attack protection
+11. Compatible with MULTISITE mode
 
-<a href="https://www.adminkov.bcr.by/" target="_blank">Plugin home page</a>
+<a href="https://adminkov.bcr.by/" target="_blank">Plugin home page</a>
 
 <a href="https://www.youtube.com/watch?v=iB-7anPcUxU&list=PLe_4Q0gv64g3WgA1Mo_S3arSrK3htZ1Nt" target="_blank">Demo video - [RU]</a>
 
-<a href="https://www.adminkov.bcr.by/wp-admin/admin.php?page=wms7_visitors" target="_blank">Training course<br>Login: user1<br>Pwd: user1</a>
+<a href="https://adminkov.bcr.by/doc/watchman-site7/api_doc/index.html" target="_blank">API Documentation</a>
 
-<a href="http://www.adminkov.bcr.by/doc/watchman-site7/api_doc/index.html" target="_blank">API Documentation</a>
-
-<a href="http://www.adminkov.bcr.by/doc/watchman-site7/user_doc/index.htm" target="_blank">User Documentation</a>
+<a href="https://adminkov.bcr.by/doc/watchman-site7/user_doc/index.htm" target="_blank">User Documentation</a>
 
 ==Features include:==
 
@@ -47,22 +44,20 @@ The plugin keeps a log of site visits, monitors system files and cron events of 
 2. Filters II level: by logged, by unlogged, by login errors, by visits of robots, by visitors from the black list
 3. Export into custom CSV file
 4. Log auto-truncation
-5. Manage cron tasks
-6. File editor: index.php
-7. File editor: robots.txt
-8. File editor: .htaccess
-9. File editor: wp-config.php
-10. Manage cron - events of site
-11. Statistics of visits to the site
-12. Widget: Counter of visits to the site
+5. File editor: index.php
+6. File editor: robots.txt
+7. File editor: .htaccess
+8. File editor: wp-config.php
+9. Manage cron - events of site
+10. Statistics of visits to the site
+11. Built-in console for managing WordPress environment.
+12. Widget: site visits count with automatic update of visits data
 13. Geolocation of visitors to the site (only by the HTTPS protocol)
 14. Information about the IP of the visitor
-15. Black list of visitors and blocking the IP or user name for the selected period of time
-16. Blocking intrusive robots
-17. Automatic updating of the list of site visits using SSE technology
-18. SMA - Simple Mail Agent, managing the mailboxes of your site, as well as mail.ru, yandex.ru, yahoo.com, gmail.com
-19. Google reCAPTCHA.
-20. Built-in console for managing WordPress environment.
+15. Black list of visitors and blocking the IP, or user name, or user agent for the selected period of time
+16. Automatic updating of the list of site visits using SSE technology
+17. SMA - Simple Mail Agent, managing the mailboxes of your site, as well as mail.ru, yandex.ru, yahoo.com, gmail.com
+18. Google reCAPTCHA.
 
 ==Translations:==
 
@@ -113,30 +108,17 @@ WatchMan-Site7/ Screen Options
 
 == Changelog ==
 
-= 3.0.0 =
-* Introduced a new role Analyst wms7.
-* Users with this role have access to the admin panel for limited control of the WatchMan-Site7 plugin.
-* Protect your site from spam comments and gross attacks using Google reCAPTCHA.
-* Built-in console for managing WordPress environment.
+= 3.1.1 =
+* Added to profile: country, city of registered user.
 
-= 2.2.9 =
-* Managing banners on the main page of the plugin (hide / show).
+= 3.1 =
+* Stable version of the plugin. Tested with WordPress 5.1
 
-= 2.2.8 =
-* The code is optimized according to the WordPress coding standard.
+= 3.0.4 =
+* Improved plugin control interface. Added sound notification.
 
-== Upgrade Notice ==
-
-= 3.0.0 =
-Stable version for users.
-Users with this role have access to the admin panel for limited control of the WatchMan-Site7 plugin.
-Protect your site from spam comments and gross attacks using Google reCAPTCHA.
-
-= 2.2.9 =
-Stable version for users. Banner Management.
-
-= 2.2.8 =
-Stable version for users.
+= 3.0.3 =
+* Eliminated plugin vulnerability discovered by WordPress developers. Previous versions of the plugin have been removed from the repository by the plugin developer
 
 == Frequently Asked Questions ==
 

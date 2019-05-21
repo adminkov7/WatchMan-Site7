@@ -5,7 +5,7 @@
  * @category    Wms7_Core
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @category    Class
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 class Wms7_Core {
@@ -30,11 +30,11 @@ class Wms7_Core {
 	 */
 	private $login_result;
 	/**
-	 * Country of visitor.
+	 * User IP of visitor.
 	 *
 	 * @var string
 	 */
-	private $country;
+	private $user_ip;
 	/**
 	 * Constructor.
 	 */
@@ -42,15 +42,19 @@ class Wms7_Core {
 		global $wpdb;
 
 		add_action( 'plugins_loaded', array( $this, 'wms7_load_locale' ) );
+		add_action( 'init', array( $this, 'wms7_session' ) );
 		add_action( 'init', array( $this, 'wms7_init_visit_actions' ) );
 		add_action( 'init', array( $this, 'wms7_lat_lon_save' ) );
 		add_action( 'admin_init', array( $this, 'wms7_main_settings' ) );
+		add_action( 'admin_init', 'wms7_output_csv' );
 		add_action( 'admin_menu', array( $this, 'wms7_admin_menu' ) );
 		add_action( 'admin_head', array( $this, 'wms7_screen_options' ) );
 
 		add_action( 'login_head', array( $this, 'wms7_login_logo' ) );
 
 		add_filter( 'wp_authenticate_user', array( $this, 'wms7_authenticate_user' ) );
+		add_filter( 'user_contactmethods', array( $this, 'wms7_user_contactmethods' ) );
+		add_action( 'user_register', array( $this, 'wms7_registered_user' ) );
 		add_filter( 'screen_settings', array( $this, 'wms7_screen_settings_add' ), 10, 2 );
 		add_filter( 'set-screen-option', array( $this, 'wms7_screen_settings_save' ), 11, 3 );
 
@@ -61,6 +65,14 @@ class Wms7_Core {
 		add_action( 'wms7_htaccess', array( $this, 'wms7_ctrl_htaccess' ) );
 		if ( ! wp_next_scheduled( 'wms7_htaccess' ) ) {
 			wp_schedule_event( time(), 'hourly', 'wms7_htaccess' );
+		}
+	}
+	/**
+	 * Start session.
+	 */
+	public function wms7_session() {
+		if ( ! session_id() ) {
+			session_start();
 		}
 	}
 	/**
@@ -75,6 +87,25 @@ class Wms7_Core {
 		<?php
 	}
 	/**
+	 * It works when registered of user.
+	 *
+	 * @param string $user_id Registered user.
+	 */
+	public function wms7_registered_user( $user_id ) {
+		// get whois_service.
+		$val           = get_option( 'wms7_main_settings' );
+		$whois_service = isset( $val['whois_service'] ) ? $val['whois_service'] : 'none';
+
+		$arr = wms7_who_is( $this->user_ip, $whois_service );
+
+		$country = isset( $arr['country'] ) ? ( $arr['country'] ) : 'none';
+
+		$arr = explode( '<br>', $country );
+
+		update_user_meta( $user_id, 'user_country', substr( $arr[0], 0, 4 ) );
+		update_user_meta( $user_id, 'user_city', substr( $arr[3], 6 ) );
+	}
+	/**
 	 * It works when authenticate user.
 	 *
 	 * @param string $user Authenticate user.
@@ -85,26 +116,48 @@ class Wms7_Core {
 		$wms_blocked = new wms7_List_Table();
 		$blocked     = $wms_blocked->wms7_login_compromising( $user->id );
 		if ( $blocked ) {
+			$this->login_result = 0;
 			return new WP_Error( 'broke', __( '<strong>ERROR</strong>: Access denied for: ', 'watchman-site7' ) . $user->user_login );
+		} else {
+			return $user;
 		}
-		return $user;
+	}
+	/**
+	 * It works when open profile of user.
+	 *
+	 * @param string $user_contact Registered user.
+	 * @return object $user_contact.
+	 */
+	public function wms7_user_contactmethods( $user_contact ) {
+		$user_contact['user_country'] = __( 'Country', 'watchman-site7' );
+		$user_contact['user_city']    = __( 'City', 'watchman-site7' );
+
+		return $user_contact;
 	}
 	/**
 	 * Insert/delete - Deny from IP.
 	 */
 	public function wms7_ctrl_htaccess() {
 		// insert/delete - Deny from IP.
-		$arr       = $this->wms7_black_list_info();
-		$output_id = explode( '&#010;', $arr[0] );
-		$output    = explode( '&#010;', $arr[1] );
-		$i         = 0;
+		$arr            = $this->wms7_black_list_info();
+		$output_id      = explode( '&#010;', $arr[0] );
+		$output         = explode( '&#010;', $arr[1] );
+		$output_agent   = explode( '&#010;', $arr[2] );
+		$ban_user_agent = explode( '&#010;', $arr[3] );
+		$i              = 0;
 		foreach ( $output as $step1 ) {
 			if ( ! empty( $step1 ) ) {
 				$step2 = explode( '&#009;', $step1 );
 				if ( date( 'Y-m-d' ) >= $step2[0] && date( 'Y-m-d' ) <= $step2[1] ) {
 					wms7_ip_insert_to_file( $step2[2] );
+					if ( 1 === $ban_user_agent[ $i ] && ! empty( $output_agent[ $i ] ) ) {
+						wms7_rewritecond_insert( $output_agent[ $i ] );
+					}
 				} else {
 					wms7_ip_delete_from_file( $step2[2] );
+					if ( 1 === $ban_user_agent[ $i ] && ! empty( $output_agent[ $i ] ) ) {
+						wms7_rewritecond_delete( $output_agent[ $i ] );
+					}
 					$this->wms7_login_unbaned( $output_id[ $i ] );
 				}
 			}
@@ -119,21 +172,16 @@ class Wms7_Core {
 	private function wms7_login_unbaned( $id ) {
 		global $wpdb;
 
-		$cache_key = 'wms7_login_unbaned';
-		$results   = wp_cache_get( $cache_key );
-		if ( ! $results ) {
-			$results = $wpdb->get_results(
-				$wpdb->prepare(
-					"
-					SELECT `black_list` 
-					FROM {$wpdb->prefix}watchman_site
-					WHERE `id` = %s
-					",
-					$id
-				)
-			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $results );
-		}
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				"
+				SELECT `black_list` 
+				FROM {$wpdb->prefix}watchman_site
+				WHERE `id` = %s
+				",
+				$id
+			)
+		);// db call ok; no cache ok.
 		$results = $results[0];
 		$results = json_decode( $results->black_list, true );
 		// unbaned user login.
@@ -143,28 +191,8 @@ class Wms7_Core {
 		$wpdb->update(
 			$wpdb->prefix . 'watchman_site',
 			array( 'black_list' => $results ),
-			array( 'ID' => $id ),
-			array( '%s' )
-		);// db call ok; no-cache ok.
-	}
-	/**
-	 * Insert/delete - RewriteCond %{HTTP_USER_AGENT} name robot.
-	 */
-	private function wms7_ctrl_htaccess_add() {
-		$val = get_option( 'wms7_main_settings' );
-		$val = $val['robots_banned'];
-
-		wms7_rewritecond_delete();
-
-		if ( ! empty( $val ) ) {
-			$result = explode( ';', $val );
-			foreach ( $result as $robot_banned ) {
-				$robot_banned = trim( $robot_banned );
-				if ( '' !== $robot_banned ) {
-					wms7_rewritecond_insert( $robot_banned );
-				}
-			}
-		}
+			array( 'ID' => $id )
+		);// unprepared sql ok;db call ok;no cache ok.
 	}
 	/**
 	 * It works when the deadline for deleting records is.
@@ -174,24 +202,18 @@ class Wms7_Core {
 
 		$opt          = get_option( 'wms7_main_settings' );
 		$log_duration = (int) $opt['log_duration'] - 1;
-
 		if ( 0 < $log_duration ) {
-			$cache_key = 'wms7_truncate_log';
-			$results   = wp_cache_get( $cache_key );
-			if ( ! $results ) {
-				$results = $wpdb->get_results(
-					$wpdb->prepare(
-						"
-				        DELETE 
-				        FROM {$wpdb->prefix}watchman_site
-				        WHERE `black_list` = ''
-				        AND `time_visit` < DATE_SUB(CURDATE(),INTERVAL %d DAY)
-				        ",
-						$log_duration
-					)
-				);// db call ok; cache ok.
-				wp_cache_set( $cache_key, $results );
-			}
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"
+			        DELETE 
+			        FROM {$wpdb->prefix}watchman_site
+			        WHERE `black_list` = ''
+			        AND `time_visit` < DATE_SUB(CURDATE(),INTERVAL %d DAY)
+			        ",
+					$log_duration
+				)
+			);// db call ok; no cache ok.
 		}
 	}
 	/**
@@ -252,7 +274,7 @@ class Wms7_Core {
 			array( 'geo_wifi' => $geo ),
 			array( 'ID' => $id ),
 			array( '%s' )
-		);// db call ok; no-cache ok.
+		);// unprepared sql ok;db call ok;no cache ok.
 	}
 	/**
 	 * It works at the beginning load locale.
@@ -383,7 +405,7 @@ class Wms7_Core {
 			$user_cookie = $user_cookie . $key . '=' . $value . '&#010;';
 		}
 		// get user IP.
-		$user_ip = ( $_forward_for ) ? $_forward_for : $_remote_addr;
+		$this->user_ip = ( $_forward_for ) ? $_forward_for : $_remote_addr;
 		// get user info.
 		$info_add     = $this->wms7_get_user_ip();
 		$user_ip_info = '---Visit page information-------------&#010;' .
@@ -403,7 +425,7 @@ class Wms7_Core {
 		$page_from = ( $_http_referer ) ? $_http_referer : '';
 
 		// Check $user_ip is excluded from the protocol visits.
-		if ( $this->wms7_ip_excluded( $user_ip ) ) {
+		if ( $this->wms7_ip_excluded( $this->user_ip ) ) {
 			return;
 		}
 		$userdata = wp_get_current_user();
@@ -461,9 +483,9 @@ class Wms7_Core {
 		$val           = get_option( 'wms7_main_settings' );
 		$whois_service = isset( $val['whois_service'] ) ? $val['whois_service'] : 'none';
 
-		$arr = wms7_who_is( $user_ip, $whois_service );
+		$arr = wms7_who_is( $this->user_ip, $whois_service );
 
-		$this->country = isset( $arr['country'] ) ? ( $arr['country'] ) : 'none';
+		$country       = isset( $arr['country'] ) ? ( $arr['country'] ) : 'none';
 		$geo_ip        = isset( $arr['geo_ip'] ) ? $arr['geo_ip'] : 'none';
 		$provider      = isset( $arr['provider'] ) ? $arr['provider'] : 'none';
 
@@ -483,7 +505,10 @@ class Wms7_Core {
 		$attack_analyzer = isset( $val['attack_analyzer'] ) ? $val['attack_analyzer'] : '';
 
 		if ( '' !== $attack_analyzer ) {
-			$black_list = wms7_attack_analyzer( $this->login_result, $_log, $user_role, $page_visit, $_http_user_agent, $user_ip );
+			$black_list = wms7_attack_analyzer( $_log, $page_visit, $_http_user_agent, $this->user_ip );
+			if ( '' !== $black_list ) {
+				delete_option( 'wms7_ip_compromising' );
+			}
 		}
 		$data['User Agent'] = $_http_user_agent;
 		$serialized_data    = wp_json_encode( $data );
@@ -493,11 +518,11 @@ class Wms7_Core {
 			'user_login'    => $user,
 			'user_role'     => $user_role,
 			'time_visit'    => current_time( 'mysql' ),
-			'user_ip'       => $user_ip,
+			'user_ip'       => $this->user_ip,
 			'user_ip_info'  => $user_ip_info,
 			'black_list'    => $black_list,
 			'whois_service' => $whois_service,
-			'country'       => $this->country,
+			'country'       => $country,
 			'provider'      => $provider,
 			'geo_ip'        => $geo_ip,
 			'login_result'  => $this->login_result,
@@ -512,6 +537,132 @@ class Wms7_Core {
 		$this->wms7_save_data( $values, $format );
 	}
 	/**
+	 * Used for to obtain the number of visits records.
+	 *
+	 * @return number.
+	 */
+	private function wms7_count_rows() {
+		global $wpdb;
+
+		$results = $wpdb->get_var(
+			$wpdb->prepare(
+				"
+	            SELECT count(%s) FROM {$wpdb->prefix}watchman_site
+	            ",
+				'*'
+			)
+		);// db call ok; no cache ok.
+
+		return $results;
+	}
+	/**
+	 * Used for create the number of visits to different categories of visitors and different time.
+	 *
+	 * @return number.
+	 */
+	public function wms7_widget_counter() {
+		global $wpdb;
+
+		$data_month_visits = $wpdb->get_var(
+			$wpdb->prepare(
+				"
+	            SELECT count(%s) FROM {$wpdb->prefix}watchman_site
+	            WHERE login_result <> %d AND MONTH(time_visit) = MONTH(now()) AND YEAR(time_visit) = YEAR(now())
+	            ",
+				'*',
+				3
+			)
+		);// db call ok; no cache ok.
+
+		$data_month_visitors = $wpdb->get_var(
+			$wpdb->prepare(
+				"
+				SELECT count(DISTINCT user_ip) FROM {$wpdb->prefix}watchman_site
+				WHERE login_result <> %d AND MONTH(time_visit) = MONTH(now()) AND YEAR(time_visit) = YEAR(now())
+				",
+				3
+			)
+		);// db call ok; no cache ok.
+
+		$data_month_robots = $wpdb->get_var(
+			$wpdb->prepare(
+				"
+				SELECT count(DISTINCT robot) FROM {$wpdb->prefix}watchman_site
+				WHERE login_result = %d AND MONTH(time_visit) = MONTH(now()) AND YEAR(time_visit) = YEAR(now())
+				",
+				3
+			)
+		);// db call ok; no cache ok.
+
+		$data_week_visits = $wpdb->get_var(
+			$wpdb->prepare(
+				"
+				SELECT count(%s) FROM {$wpdb->prefix}watchman_site
+				WHERE login_result <> %d AND WEEK(time_visit) = WEEK(now()) AND YEAR(time_visit) = YEAR(now())
+				",
+				'*',
+				3
+			)
+		);// db call ok; no cache ok.
+
+		$data_week_visitors = $wpdb->get_var(
+			$wpdb->prepare(
+				"
+				SELECT count(DISTINCT user_ip) FROM {$wpdb->prefix}watchman_site
+				WHERE login_result <> %d AND WEEK(time_visit) = WEEK(now()) AND YEAR(time_visit) = YEAR(now())
+				",
+				3
+			)
+		);// db call ok; no cache ok.
+
+		$data_week_robots = $wpdb->get_var(
+			$wpdb->prepare(
+				"
+				SELECT count(DISTINCT robot) FROM {$wpdb->prefix}watchman_site
+				WHERE login_result = %d AND WEEK(time_visit) = WEEK(now()) AND YEAR(time_visit) = YEAR(now())
+				",
+				3
+			)
+		);// db call ok; no cache ok.
+
+		$data_today_visits = $wpdb->get_var(
+			$wpdb->prepare(
+				"
+				SELECT count(%s) FROM {$wpdb->prefix}watchman_site
+				WHERE login_result <> %d AND time_visit >= CURDATE()
+				",
+				'*',
+				3
+			)
+		);// db call ok; cache ok.
+
+		$data_today_visitors = $wpdb->get_var(
+			$wpdb->prepare(
+				"
+				SELECT count(DISTINCT user_ip) FROM {$wpdb->prefix}watchman_site
+				WHERE login_result <> %d AND time_visit >= CURDATE()
+				",
+				3
+			)
+		);// db call ok; no cache ok.
+
+		$data_today_robots = $wpdb->get_var(
+			$wpdb->prepare(
+				"
+				SELECT count(DISTINCT robot) FROM {$wpdb->prefix}watchman_site
+				WHERE login_result = %d AND time_visit >= CURDATE()
+				",
+				3
+			)
+		);// db call ok; no cache ok.
+
+		$result = intval( $data_month_visits ) . '|' . intval( $data_month_visitors ) . '|' . intval( $data_month_robots ) . '|' .
+				intval( $data_week_visits ) . '|' . intval( $data_week_visitors ) . '|' . intval( $data_week_robots ) . '|' .
+				intval( $data_today_visits ) . '|' . intval( $data_today_visitors ) . '|' . intval( $data_today_robots );
+
+		return $result;
+	}
+	/**
 	 * Saves site visits.
 	 *
 	 * @param string $values   Data of visit.
@@ -521,6 +672,35 @@ class Wms7_Core {
 		global $wpdb;
 
 		$wpdb->insert( $wpdb->prefix . 'watchman_site', $values, $format );// db call ok; no-cache ok.
+		// Delete caches/options.
+		if ( wp_using_ext_object_cache() ) {
+			wp_cache_delete( 'wms7_role_time_country_filter_part1' );
+			wp_cache_delete( 'wms7_role_time_country_filter_part2' );
+			wp_cache_delete( 'wms7_role_time_country_filter_part3' );
+
+			wp_cache_delete( 'wms7_history_list_info' );
+			wp_cache_delete( 'wms7_robot_visit_info' );
+			wp_cache_delete( 'wms7_black_list_info' );
+		} else {
+			delete_option( 'wms7_role_time_country_filter_part1' );
+			delete_option( 'wms7_role_time_country_filter_part2' );
+			delete_option( 'wms7_role_time_country_filter_part3' );
+
+			delete_option( 'wms7_history_list_info' );
+			delete_option( 'wms7_robot_visit_info' );
+			delete_option( 'wms7_black_list_info' );
+		}
+		// for admin (backend).
+		$new_count_rows = $this->wms7_count_rows();
+		if ( ! extension_loaded('imap') ) {
+			$mail_unseen = 'undefined';
+		} else {
+			$mail_unseen = wms7_mail_unseen();
+		}
+		wms7_save_backend( $new_count_rows, $mail_unseen );
+		// for client (frontend).
+		$content = $this->wms7_widget_counter();
+		wms7_save_frontend( $content );
 	}
 	/**
 	 * Does not register a visit with this IP.
@@ -555,7 +735,7 @@ class Wms7_Core {
 		$val   = isset( $val['robots'] ) ? $val['robots'] : '';
 		$robot = '';
 		if ( ! empty( $val ) ) {
-			$result = explode( ';', $val );
+			$result = explode( '|', $val );
 			foreach ( $result as $item ) {
 				$robot = trim( $item );
 				if ( '' !== ( $robot ) ) {
@@ -576,22 +756,17 @@ class Wms7_Core {
 		$roles        = $current_user->roles;
 		$role         = array_shift( $roles );
 
-		if ( 'administrator' === $role || 'analyst_wms7' === $role ) {
+		if ( 'administrator' === $role ) {
 			add_menu_page( esc_html( 'Visitors', 'watchman-site7' ), esc_html( 'Visitors', 'watchman-site7' ), 'activate_plugins', 'wms7_visitors', array( $this, 'wms7_visit_manager' ), 'dashicons-shield', '71' );
 
-			add_submenu_page( 'wms7_visitors', esc_html( 'Visitors', 'watchman-site7' ), esc_html( 'Visitors', 'watchman-site7' ), 'activate_plugins', 'wms7_visitors', array( $this, 'wms7_visit_manager' ) );
+			add_submenu_page( 'wms7_visitors', esc_html( 'Settings', 'watchman-site7' ), esc_html( 'Settings', 'watchman-site7' ), 'activate_plugins', 'wms7_settings', array( $this, 'wms7_settings' ) );
 
 			add_submenu_page( 'NULL', esc_html( 'Black list', 'watchman-site7' ), esc_html( 'Black list', 'watchman-site7' ), 'activate_plugins', 'wms7_black_list', array( $this, 'wms7_black_list' ) );
 		}
-		if ( 'administrator' === $role ) {
-			add_submenu_page( 'wms7_visitors', esc_html( 'Settings', 'watchman-site7' ), esc_html( 'Settings', 'watchman-site7' ), 'activate_plugins', 'wms7_settings', array( $this, 'wms7_settings' ) );
-		}
-		if ( 'analyst_wms7' === $role ) {
-			remove_menu_page( 'plugins.php' );
-		}
 	}
 	/**
-	 * Get data in the prepare_items().
+	 * Get data in the prepare_items(). The question: whether to cache this data or not is controversial.
+	 * Data can be very large.
 	 *
 	 * @param string $orderby Order by.
 	 * @param string $order   Order.
@@ -614,37 +789,33 @@ class Wms7_Core {
 		} else {
 			$where = '';
 		}
-		$cache_key = 'wms7_visit_get_data';
-		$results   = wp_cache_get( $cache_key );
-		if ( ! $results ) {
-			$results = $wpdb->get_results(
+		$results = $wpdb->get_results(
+			str_replace(
+				"'",
+				'',
 				str_replace(
-					"'",
-					'',
-					str_replace(
-						"\'",
-						'"',
-						$wpdb->prepare(
-							"
-					SELECT *
-					FROM {$wpdb->prefix}watchman_site
-					%s
-					ORDER BY %s %s
-					LIMIT %d
-					OFFSET %d
-					",
-							$where,
-							$orderby,
-							$order,
-							$limit,
-							$offset
-						)
+					"\'",
+					'"',
+					$wpdb->prepare(
+						"
+				SELECT *
+				FROM {$wpdb->prefix}watchman_site
+				%s
+				ORDER BY %s %s
+				LIMIT %d
+				OFFSET %d
+				",
+						$where,
+						$orderby,
+						$order,
+						$limit,
+						$offset
 					)
-				),
-				'ARRAY_A'
-			);// unprepared sql ok;db call ok;cache ok.
-			wp_cache_set( $cache_key, $results );
-		}
+				)
+			),
+			'ARRAY_A'
+		);// db call ok;cache ok.
+
 		return $results;
 	}
 
@@ -879,7 +1050,7 @@ class Wms7_Core {
 			get_current_screen()->add_help_tab(
 				array(
 					'id'      => 'wms7-tab-9',
-					'title'   => esc_html( '10.field: E-mail boxes', 'watchman-site7' ),
+					'title'   => esc_html( '10.field: MailBoxes', 'watchman-site7' ),
 					'content' => esc_html( 'Examples of settings for a mailbox access the main providers of postal services.', 'watchman-site7' ) . '<br><br><img src=' . $img10 . ' style="float: left;"><img src=' . $img11 . ' style="float: right;"><img src=' . $img12 . ' style="float: left;"><img src=' . $img13 . ' style="float: right;">',
 				)
 			);
@@ -940,7 +1111,7 @@ class Wms7_Core {
 				'<p><a href="https://wordpress.org/plugins/watchman-site7/" target="_blank">' . esc_html( 'page the WordPress repository', 'watchman-site7' ) . '</a></p>' .
 				'<p><a href="' . $url_api_doc . '" target="_blank">' . esc_html( 'API Documentation', 'watchman-site7' ) . '</a></p>' .
 				'<p><a href="' . $url_user_doc . '" target="_blank">' . esc_html( 'User Documentation', 'watchman-site7' ) . '</a></p>' .
-				'<p><a href="https://www.adminkov.bcr.by/category/wordpress/" target="_blank">' . esc_html( 'home page support plugin', 'watchman-site7' ) . '</a></p>' .
+				'<p><a href="https://www.adminkov.bcr.by" target="_blank">' . esc_html( 'home page support plugin', 'watchman-site7' ) . '</a></p>' .
 				'<p><a href="https://www.youtube.com/watch?v=iB-7anPcUxU&list=PLe_4Q0gv64g3WgA1Mo_S3arSrK3htZ1Nt" target="_blank">' . esc_html( 'training video', 'watchman-site7' ) . '</a></p>'
 			);
 			return current_user_can( 'manage_options' );
@@ -1124,7 +1295,11 @@ class Wms7_Core {
 		$_filter_country = filter_input( INPUT_GET, 'filter_country', FILTER_SANITIZE_STRING );
 		// create $option_role.
 		$cache_key = 'wms7_role_time_country_filter_part1';
-		$results1  = wp_cache_get( $cache_key );
+		if ( wp_using_ext_object_cache() ) {
+			$results1 = wp_cache_get( $cache_key );
+		} else {
+			$results1 = get_option( $cache_key );
+		}
 		if ( ! $results1 ) {
 			$results1 = $wpdb->get_results(
 				$wpdb->prepare(
@@ -1137,14 +1312,22 @@ class Wms7_Core {
 					''
 				)
 			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $results1 );
+			if ( wp_using_ext_object_cache() ) {
+				wp_cache_set( $cache_key, $results1 );
+			} else {
+				update_option( $cache_key, $results1 );
+			}
 		}
 		$role_option = '';
 		$filter_role = isset( $_filter_role ) ? $_filter_role : false;
 
 		// create $option_date.
 		$cache_key = 'wms7_role_time_country_filter_part2';
-		$results2  = wp_cache_get( $cache_key );
+		if ( wp_using_ext_object_cache() ) {
+			$results2 = wp_cache_get( $cache_key );
+		} else {
+			$results2 = get_option( $cache_key );
+		}
 		if ( ! $results2 ) {
 			$results2 = $wpdb->get_results(
 				$wpdb->prepare(
@@ -1157,14 +1340,22 @@ class Wms7_Core {
 					'month'
 				)
 			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $results2 );
+			if ( wp_using_ext_object_cache() ) {
+				wp_cache_set( $cache_key, $results2 );
+			} else {
+				update_option( $cache_key, $results2 );
+			}
 		}
 		$time_option = '';
 		$filter_time = isset( $_filter_time ) ? $_filter_time : false;
 
 		// create $option_country.
 		$cache_key = 'wms7_role_time_country_filter_part3';
-		$results3  = wp_cache_get( $cache_key );
+		if ( wp_using_ext_object_cache() ) {
+			$results3 = wp_cache_get( $cache_key );
+		} else {
+			$results3 = get_option( $cache_key );
+		}
 		if ( ! $results3 ) {
 			$results3 = $wpdb->get_results(
 				$wpdb->prepare(
@@ -1176,7 +1367,11 @@ class Wms7_Core {
 					4
 				)
 			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $results3 );
+			if ( wp_using_ext_object_cache() ) {
+				wp_cache_set( $cache_key, $results3 );
+			} else {
+				update_option( $cache_key, $results3 );
+			}
 		}
 		$country_option = '';
 		$filter_country = isset( $_filter_country ) ? $_filter_country : false;
@@ -1232,6 +1427,7 @@ class Wms7_Core {
 				?>
 			</select>
 			<input class="button" id="doaction1" type="submit" title="<?php echo esc_html( $title4 ); ?>" value="Filter" onClick="wms7_cookie_doaction1()"/>
+			<input type='hidden' name='filter_left_nonce' value='<?php echo esc_html( wp_create_nonce( 'filter_left' ) ); ?>'>
 		</form>
 		<?php
 	}
@@ -1247,6 +1443,7 @@ class Wms7_Core {
 			<input type="hidden" name="page" value="wms7_visitors" />
 			<input type="text" id="filter_login_ip" title="<?php echo esc_html( $title1 ); ?>" placeholder = "Login or Visitor IP" name="filter" size="18" value="<?php echo esc_html( $_filter ); ?>" />
 			<input class="button" id="doaction3" type="submit" title="<?php echo esc_html( $title2 ); ?>" value="Filter" onClick="wms7_cookie_doaction3()"/>
+			<input type='hidden' name='filter_right_nonce' value='<?php echo esc_html( wp_create_nonce( 'filter_right' ) ); ?>'>
 		</form>
 		<?php
 	}
@@ -1276,7 +1473,11 @@ class Wms7_Core {
 		if ( 'map' === $table->current_action() ) {
 			// get login.
 			$cache_key = 'wms7_geo_wifi_part1';
-			$results   = wp_cache_get( $cache_key );
+			if ( wp_using_ext_object_cache() ) {
+				$results = wp_cache_get( $cache_key );
+			} else {
+				$results = get_option( $cache_key );
+			}
 			if ( ! $results ) {
 				$results = $wpdb->get_results(
 					$wpdb->prepare(
@@ -1289,12 +1490,20 @@ class Wms7_Core {
 					),
 					'ARRAY_A'
 				);// db call ok; cache ok.
-				wp_cache_set( $cache_key, $results );
+				if ( wp_using_ext_object_cache() ) {
+					wp_cache_set( $cache_key, $results );
+				} else {
+					update_option( $cache_key, $results );
+				}
 			}
 			$login = ( ( '' !== $results[0]['user_login'] ) ) ? array_shift( $results[0] ) : 'unlogged';
 			// get ip.
 			$cache_key = 'wms7_geo_wifi_part2';
-			$results   = wp_cache_get( $cache_key );
+			if ( wp_using_ext_object_cache() ) {
+				$results = wp_cache_get( $cache_key );
+			} else {
+				$results = get_option( $cache_key );
+			}
 			if ( ! $results ) {
 				$results = $wpdb->get_results(
 					$wpdb->prepare(
@@ -1307,12 +1516,20 @@ class Wms7_Core {
 					),
 					'ARRAY_A'
 				);// db call ok; cache ok.
-				wp_cache_set( $cache_key, $results );
+				if ( wp_using_ext_object_cache() ) {
+					wp_cache_set( $cache_key, $results );
+				} else {
+					update_option( $cache_key, $results );
+				}
 			}
 			$ip = array_shift( $results[0] );
 			// get coords.
 			$cache_key = 'wms7_geo_wifi_part3';
-			$results   = wp_cache_get( $cache_key );
+			if ( wp_using_ext_object_cache() ) {
+				$results = wp_cache_get( $cache_key );
+			} else {
+				$results = get_option( $cache_key );
+			}
 			if ( ! $results ) {
 				$results = $wpdb->get_results(
 					$wpdb->prepare(
@@ -1324,8 +1541,12 @@ class Wms7_Core {
 						$_id
 					),
 					'ARRAY_A'
-				);// db call ok; cache ok.
-				wp_cache_set( $cache_key, $results );
+				);// db call ok;no cache ok.
+				if ( wp_using_ext_object_cache() ) {
+					wp_cache_set( $cache_key, $results );
+				} else {
+					update_option( $cache_key, $results );
+				}
 			}
 			$results = array_shift( $results[0] );
 			$results = explode( '<br>', $results );
@@ -1387,60 +1608,45 @@ class Wms7_Core {
 		$_id   = filter_input( INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT );
 		if ( 'map' === $table->current_action() ) {
 			// provider.
-			$cache_key = 'wms7_geo_ip_part1';
-			$results   = wp_cache_get( $cache_key );
-			if ( ! $results ) {
-				$results = $wpdb->get_results(
-					$wpdb->prepare(
-						"
-				        SELECT `provider` 
-				        FROM {$wpdb->prefix}watchman_site
-				        WHERE `id` = %s
-				        ",
-						$_id
-					),
-					'ARRAY_A'
-				);// db call ok; cache ok.
-				wp_cache_set( $cache_key, $results );
-			}
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"
+			        SELECT `provider` 
+			        FROM {$wpdb->prefix}watchman_site
+			        WHERE `id` = %s
+			        ",
+					$_id
+				),
+				'ARRAY_A'
+			);// db call ok;no cache ok.
 			$provider = array_shift( $results[0] );
 			// get ip.
-			$cache_key = 'wms7_geo_ip_part2';
-			$results   = wp_cache_get( $cache_key );
-			if ( ! $results ) {
-				$results = $wpdb->get_results(
-					$wpdb->prepare(
-						"
-				        SELECT `user_ip` 
-				        FROM {$wpdb->prefix}watchman_site
-				        WHERE `id` = %s
-				        ",
-						$_id
-					),
-					'ARRAY_A'
-				);// db call ok; cache ok.
-				wp_cache_set( $cache_key, $results );
-			}
-			$ip = array_shift( $results[0] );
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"
+			        SELECT `user_ip` 
+			        FROM {$wpdb->prefix}watchman_site
+			        WHERE `id` = %s
+			        ",
+					$_id
+				),
+				'ARRAY_A'
+			);// db call ok;no cache ok.
+			$ip      = array_shift( $results[0] );
 			// get coords.
-			$lat       = '';
-			$lon       = '';
-			$cache_key = 'wms7_geo_ip_part3';
-			$results   = wp_cache_get( $cache_key );
-			if ( ! $results ) {
-				$results = $wpdb->get_results(
-					$wpdb->prepare(
-						"
-				        SELECT `geo_ip` 
-				        FROM {$wpdb->prefix}watchman_site
-				        WHERE `id` = %s
-				        ",
-						$_id
-					),
-					'ARRAY_A'
-				);// db call ok; cache ok.
-				wp_cache_set( $cache_key, $results );
-			}
+			$lat     = '';
+			$lon     = '';
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"
+			        SELECT `geo_ip` 
+			        FROM {$wpdb->prefix}watchman_site
+			        WHERE `id` = %s
+			        ",
+					$_id
+				),
+				'ARRAY_A'
+			);// db call ok; no cache ok.
 			$results = array_shift( $results[0] );
 			$results = explode( '<br>', $results );
 			foreach ( $results as $coord ) {
@@ -1473,65 +1679,41 @@ class Wms7_Core {
 		switch ( $_footer ) {
 			case 'index':
 				$str_head = 'index.php';
+				$this->wms7_file_editor( $str_head );
 				break;
 			case 'robots':
 				$str_head = 'robots.txt';
+				$this->wms7_file_editor( $str_head );
 				break;
 			case 'htaccess':
 				$str_head = '.htaccess';
+				$this->wms7_file_editor( $str_head );
 				break;
 			case 'wp_config':
 				$str_head = 'wp-config.php';
+				$this->wms7_file_editor( $str_head );
 				break;
 			case 'wp_cron':
 				$str_head = 'wp-cron tasks';
+				$this->wms7_wp_cron( $str_head );
 				break;
 			case 'statistic':
 				$str_head = 'statistic of visits';
+				$this->wms7_stat( $str_head );
 				break;
 			case 'sma':
-				$val        = get_option( 'wms7_main_settings' );
-				$select_box = $val['mail_select'];
-				$box        = $val[ $select_box ];
-				$str_head   = 'e-mail box: ' . $box['mail_box_name'];
+				if ( extension_loaded('imap') ) {
+					$val        = get_option( 'wms7_main_settings' );
+					$select_box = $val['mail_select'];
+					$box        = $val[ $select_box ];
+					$str_head   = 'MailBox: ' . $box['mail_box_name'];
+					$this->wms7_mail( $str_head );
+				}
 				break;
 			case 'console':
 				$str_head = 'WordPress console';
+				$this->wms7_console( $str_head );
 				break;
-		}
-		// if the role is an analyst or any other, but not an administrator, then stop.
-		$current_user = wp_get_current_user();
-		$roles        = $current_user->roles;
-		$role         = array_shift( $roles );
-		if ( 'administrator' !== $role ) {
-			exit;
-		}
-		if ( ( 'index' === $_footer ) || ( 'robots' === $_footer ) ||
-		( 'htaccess' === $_footer ) || ( 'wp_config' === $_footer ) ) {
-			$this->wms7_file_editor( $str_head );
-		}
-		if ( 'wp_cron' === $_footer ) {
-			$this->wms7_wp_cron( $str_head );
-		}
-		if ( 'statistic' === $_footer ) {
-			$this->wms7_stat( $str_head );
-		}
-		if ( 'sma' === $_footer ) {
-			$val        = get_option( 'wms7_main_settings' );
-			$select_box = $val['mail_select'];
-			$box        = $val[ $select_box ];
-			$folders    = explode( ';', $box['mail_folders'] );
-			foreach ( $folders as $key => $folder ) {
-				$pos = strpos( mb_strtolower( $folder ), 'inbox' );
-				if ( $pos ) {
-					break;
-				}
-			}
-			$folder = 'folder' . strval( $key + 1 );
-			$this->wms7_mail( $str_head );
-		}
-		if ( 'console' === $_footer ) {
-			$this->wms7_console( $str_head );
 		}
 	}
 	/**
@@ -1543,23 +1725,18 @@ class Wms7_Core {
 		global $wpdb;
 		$_id = filter_input( INPUT_GET, 'id', FILTER_SANITIZE_STRING );
 		if ( $_id ) {
-			$cache_key = 'wms7_ip_enabled';
-			$results   = wp_cache_get( $cache_key );
-			if ( ! $results ) {
-				$results = $wpdb->get_results(
-					$wpdb->prepare(
-						"
-				        SELECT `geo_ip`
-				        FROM {$wpdb->prefix}watchman_site
-				        WHERE `id` = %s AND `geo_ip` <> %s
-				        ",
-						$_id,
-						''
-					),
-					'ARRAY_A'
-				);// db call ok; cache ok.
-				wp_cache_set( $cache_key, $results );
-			}
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"
+			        SELECT `geo_ip`
+			        FROM {$wpdb->prefix}watchman_site
+			        WHERE `id` = %s AND `geo_ip` <> %s
+			        ",
+					$_id,
+					''
+				),
+				'ARRAY_A'
+			);// db call ok; no cache ok.
 			if ( ! $results ) {
 				return 'disabled';
 			}
@@ -1580,23 +1757,18 @@ class Wms7_Core {
 		global $wpdb;
 		$_id = filter_input( INPUT_GET, 'id', FILTER_SANITIZE_STRING );
 		if ( $_id ) {
-			$cache_key = 'wms7_wifi_enabled';
-			$results   = wp_cache_get( $cache_key );
-			if ( ! $results ) {
-				$results = $wpdb->get_results(
-					$wpdb->prepare(
-						"
-				        SELECT `geo_wifi`
-				        FROM {$wpdb->prefix}watchman_site
-				        WHERE `id` = %s AND `geo_wifi` <> %s
-				        ",
-						$_id,
-						''
-					),
-					'ARRAY_A'
-				);// db call ok; cache ok.
-				wp_cache_set( $cache_key, $results );
-			}
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"
+			        SELECT `geo_wifi`
+			        FROM {$wpdb->prefix}watchman_site
+			        WHERE `id` = %s AND `geo_wifi` <> %s
+			        ",
+					$_id,
+					''
+				),
+				'ARRAY_A'
+			);// db call ok; no cache ok.
 			if ( 0 === count( $results ) ) {
 				return 'disabled';
 			} else {
@@ -1608,10 +1780,11 @@ class Wms7_Core {
 	 * Create modal window for map of geolocation of visitor.
 	 */
 	private function wms7_map() {
+		$img1           = plugins_url( '/images/screw.png', __FILE__ );
 		$geo_ip         = $this->wms7_geo_ip();
 		$btn_ip_enabled = $this->wms7_ip_enabled();
 
-		$provider = '"' . $geo_ip['Provider'] . '"';
+		$provider = '"' . str_replace( '"', '',$geo_ip['Provider'] ) . '"';
 		$lat      = $geo_ip['Lat'];
 		$lon      = $geo_ip['Lon'];
 		$acc      = '"' . $geo_ip['Acc'] . '"';
@@ -1634,6 +1807,7 @@ class Wms7_Core {
 				<div class='popup-header'>
 					<h2><?php echo esc_html( 'Geolocation visitor of site', 'watchman-site7' ); ?> ip=<?php echo esc_html( $geo_ip['IP'] ); ?> (id=<?php echo esc_html( $geo_ip['ID'] ); ?>)
 					</h2>
+					<img src="<?php echo esc_html( $img1 ); ?>" style="position: absolute;top: 10px;left: 12px;">
 					<label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
 				</div>
 				<?php echo esc_html( $this->wms7_geolocation_visitor() ); ?>
@@ -1665,6 +1839,9 @@ class Wms7_Core {
 	 * @param string $str_head Head of modal window.
 	 */
 	private function wms7_console( $str_head ) {
+		$img1 = plugins_url( '/images/screw.png', __FILE__ );
+		$img2 = plugins_url( '/images/screw_l.png', __FILE__ );
+		$img3 = plugins_url( '/images/screw_r.png', __FILE__ );
 		?>
 		<div class='win-popup'>
 			<label class='btn' for='win-popup'></label>
@@ -1672,12 +1849,19 @@ class Wms7_Core {
 			<div class='popup-content'>
 				<div class='popup-header'>
 					<h2><?php echo esc_html( $str_head ); ?></h2>
+					<img src="<?php echo esc_html( $img1 ); ?>" style="position: absolute;top: 10px;left: 12px;">
 					<label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
 				</div>
 				<form id='popup_win' method='POST'>
 					<div class='popup-body'>
-						<div id="wms7_console">
-							<script language="javascript">window.onload = wms7_console()</script>
+						<div style='width: 660px; height: 330px; padding: 5px 0 0 0; margin:0 0 0 10px; background-color: #D4D0C8;'>
+							<img src="<?php echo esc_html( $img2 ); ?>" style="position: absolute;top: 50px;left: 12px;z-index:2;">
+							<img src="<?php echo esc_html( $img3 ); ?>" style="position: absolute;top: 365px;left: 12px;z-index:2;">
+							<img src="<?php echo esc_html( $img3 ); ?>" style="position: absolute;top: 50px;left: 96%;z-index:2;">
+							<img src="<?php echo esc_html( $img2 ); ?>" style="position: absolute;top: 365px;left: 96%;z-index:2;">						
+							<div id="wms7_console">
+								<script language="javascript">window.onload = wms7_console()</script>
+							</div>
 						</div>
 					</div>
 					<div class='popup-footer' style='margin: -10px 0 0 10px;'>
@@ -1689,30 +1873,20 @@ class Wms7_Core {
 		<?php
 	}
 	/**
-	 * Calculates the size of the attached file to the letter.
-	 *
-	 * @param string  $size       File size in bytes.
-	 * @param integer $precision Accuracy of calculation.
-	 * @return integer Returns the rounded size of the attached file.
-	 */
-	private function wms7_format_bytes( $size, $precision = 2 ) {
-		$base     = log( $size, 1024 );
-		$suffixes = array( '', 'K', 'M', 'G', 'T' );
-
-		return round( pow( 1024, $base - floor( $base ) ), $precision ) . ' ' . $suffixes[ floor( $base ) ];
-	}
-	/**
 	 * Create modal window for create mail new.
 	 *
 	 * @param string $str_head Head of modal window.
 	 * @param string $draft    Letter - answer or draft.
 	 */
 	private function wms7_mail_new( $str_head, $draft ) {
+		$img1             = plugins_url( '/images/screw.png', __FILE__ );
 		$_uid             = filter_input( INPUT_GET, 'uid', FILTER_SANITIZE_STRING );
 		$_msgno           = filter_input( INPUT_GET, 'msgno', FILTER_SANITIZE_STRING );
 		$_mailbox         = filter_input( INPUT_GET, 'mailbox', FILTER_SANITIZE_STRING );
+		$_mailbox         = isset( $_mailbox ) ? wms7_mail_folder_name( $_mailbox ) : 'none';
 		$_mail_view_reply = filter_input( INPUT_POST, 'mail_view_reply', FILTER_SANITIZE_STRING );
-		if ( $draft ) {
+
+		if ( $draft && ! $_mail_view_reply ) {
 			$str_head = $str_head . " ($_mailbox id=$_msgno)";
 			$header   = wms7_mail_header( $_msgno );
 
@@ -1722,10 +1896,11 @@ class Wms7_Core {
 			$arr  = wms7_mail_body( $_msgno );
 			$body = $arr[0];
 		} elseif ( $_uid ) {
-				$subject = 'Message for ' . get_user_option( 'user_login', $_uid );
-				$to      = get_user_option( 'user_email', $_uid );
-				$body    = '';
-				$arr[1]  = array();
+				$str_head = $str_head . ' (message for ' . get_user_option( 'user_login', $_uid ) . ')';
+				$subject  = 'Message for ' . get_user_option( 'user_login', $_uid );
+				$to       = get_user_option( 'user_email', $_uid );
+				$body     = '';
+				$arr[1]   = array();
 		} elseif ( $_mail_view_reply ) {
 				$str_head = $str_head . " (reply to $_mailbox id=$_msgno)";
 				$header   = wms7_mail_header( $_msgno );
@@ -1736,10 +1911,11 @@ class Wms7_Core {
 				$arr  = wms7_mail_body( $_msgno );
 				$body = 'Please enter a response here' . PHP_EOL . '-------------------------------' . PHP_EOL . $arr[0];
 		} else {
-			$subject = '';
-			$to      = '';
-			$body    = '';
-			$arr[1]  = array();
+			$str_head = $str_head . ' (new letter)';
+			$subject  = '';
+			$to       = '';
+			$body     = '';
+			$arr[1]   = array();
 		}
 		?>
 		<div class='win-popup'>
@@ -1748,6 +1924,7 @@ class Wms7_Core {
 			<div class='popup-content'>
 				<div class='popup-header'>
 					<h2><?php echo esc_html( $str_head ); ?></h2>
+					<img src="<?php echo esc_html( $img1 ); ?>" style="position: absolute;top: 10px;left: 12px;">
 					<label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
 				</div>
 				<form id='popup_mail_view' method='POST' enctype='multipart/form-data'>
@@ -1759,10 +1936,10 @@ class Wms7_Core {
 						<textarea name='mail_new_content'><?php echo esc_textarea( $body ); ?></textarea>
 					</div>
 					<div class='popup-footer'>
-						<input type='submit' value='save' id='submit' class='button-primary' name='mail_new_save'/>
-						<input type='submit' value='send' id='submit' class='button-primary' name='mail_new_send'/>
-						<input type='submit' value='quit' id='submit' class='button-primary' name='mail_new_quit'/>
-						<input type='file' name='mail_new_attach'>
+						<input type='submit' value='save' id='submit' class='button-primary' name='mail_new_save'>
+						<input type='submit' value='send' id='submit' class='button-primary' name='mail_new_send'>
+						<input type='submit' value='quit' id='submit' class='button-primary' name='mail_new_quit'>
+						<input type='file' id='file_attach' name='mail_new_attach' accept='.zip'>
 						<?php
 						$_http_host = filter_input( INPUT_SERVER, 'HTTP_HOST', FILTER_SANITIZE_STRING );
 						$item       = get_option( 'wms7_main_settings' );
@@ -1771,193 +1948,17 @@ class Wms7_Core {
 						$icon_path  = plugins_url( '/images/attachment.png', __FILE__ );
 						foreach ( $arr[1] as $attach ) {
 							$filename = $attach['filename'];
-							$fileinfo = $attach['filename'] . ' (' . $this->wms7_format_bytes( $attach['size'] ) . ') ';
 							?>
-							<a class='alignright' href='<?php echo esc_url( $path ) . esc_html( $filename ); ?>' download><big><?php echo esc_html( $fileinfo ); ?></big></a><img src='<?php echo esc_url( $icon_path ); ?>' class='alignright' style='padding:0;'>
+							<a class='alignright' href='<?php echo esc_url( $path . $filename ); ?>' download><big><?php echo esc_html( $filename ); ?></big></a><img src='<?php echo esc_url( $icon_path ); ?>' class='alignright' style='padding:0;'>
 							<?php
 						}
 						?>
-						</div>
+					</div>
+					<input type='hidden' name='mail_new_nonce' value='<?php echo esc_html( wp_create_nonce( 'mail_new_nonce' ) ); ?>'>
 				</form>
 			</div>
 		</div>
 		<?php
-	}
-	/**
-	 * Used for mail save to folder Draft.
-	 */
-	private function wms7_mail_save_to_draft() {
-		WP_Filesystem();
-		global $wp_filesystem;
-
-		$_mail_new_subject = filter_input( INPUT_POST, 'mail_new_subject', FILTER_SANITIZE_STRING );
-		$_mail_new_to      = filter_input( INPUT_POST, 'mail_new_to', FILTER_SANITIZE_STRING );
-		$_mail_new_content = filter_input( INPUT_POST, 'mail_new_content', FILTER_SANITIZE_STRING );
-		$val               = get_option( 'wms7_main_settings' );
-		$select_box        = $val['mail_select'];
-		$box               = $val[ $select_box ];
-
-		// array folders email-box.
-		$folder = explode( ';', $box['mail_folders'], -1 );
-		$i      = 0;
-		$draft  = false;
-		foreach ( $folder as $key => $value ) {
-			$pos = strpos( $value, 'Draft' );
-			if ( $pos ) {
-				$draft = true;
-				break;
-			} else {
-				$pos = strpos( $value, 'Черновик' );
-				if ( $pos ) {
-					$draft = true;
-					break;
-				}
-			}
-			$i++;
-		}
-		if ( ! $draft ) {
-			exit;
-		}
-		// array folders email-box.
-		$folder = explode( ';', $box['mail_folders_alt'], -1 );
-		$folder = substr( $folder[ $i ], strpos( $folder[ $i ], '{' ) );
-
-		$date                = date( 'D, d M Y h:i:s', time() );
-		$envelope['date']    = $date;
-		$envelope['subject'] = '=?utf-8?B?' . base64_encode( $_mail_new_subject ) . '?=';
-		$envelope['from']    = $box['mail_box_name'];
-		$envelope['to']      = $_mail_new_to;
-
-		$_files_attach = filter_var_array( $_FILES );// WPCS: input var ok.
-		$_files_attach = $_files_attach['mail_new_attach'];
-
-		if ( '' === $_files_attach['name'] ) {
-			$part1['type']          = TYPETEXT;
-			$part1['subtype']       = PLAIN;
-			$part1['charset']       = 'UTF-8';
-			$part1['contents.data'] = $_mail_new_content;
-			$body[1]                = $part1;
-		} else {
-			$part1['type']    = TYPEMULTIPART;
-			$part1['subtype'] = 'mixed';
-
-			$part2['type']          = TYPETEXT;
-			$part2['subtype']       = PLAIN;
-			$part2['charset']       = 'UTF-8';
-			$part2['contents.data'] = $_mail_new_content;
-
-			$filename = $_files_attach['tmp_name'];
-			$contents = $wp_filesystem->get_contents( $filename );
-
-			$part3['type']             = TYPEAPPLICATION;
-			$part3['encoding']         = ENCBINARY;
-			$part3['subtype']          = 'octet-stream';
-			$part3['description']      = $_files_attach['name'];
-			$part3['disposition.type'] = 'attachment';
-			$part3['disposition']      = array( 'filename' => $_files_attach['name'] );
-			$part3['type.parameters']  = array( 'name' => $_files_attach['name'] );
-			$part3['contents.data']    = $contents;
-
-			$body[1] = $part1;
-			$body[2] = $part2;
-			$body[3] = $part3;
-		}
-
-		$msg = imap_mail_compose( $envelope, $body );
-
-		$imap = wms7_mail_connection();
-
-		if ( ! imap_append( $imap, $folder, $msg ) ) {
-			die( 'could not append message: ' . esc_html( imap_last_error() ) );
-		}
-	}
-	/**
-	 * Used for mail save to folder Sent.
-	 */
-	private function wms7_mail_save_to_sent() {
-		WP_Filesystem();
-		global $wp_filesystem;
-
-		$_mail_new_subject = filter_input( INPUT_POST, 'mail_new_subject', FILTER_SANITIZE_STRING );
-		$_mail_new_to      = filter_input( INPUT_POST, 'mail_new_to', FILTER_SANITIZE_STRING );
-		$_mail_new_content = filter_input( INPUT_POST, 'mail_new_content', FILTER_SANITIZE_STRING );
-		$val               = get_option( 'wms7_main_settings' );
-		$select_box        = $val['mail_select'];
-		$box               = $val[ $select_box ];
-
-		// array folders email-box.
-		$folder = explode( ';', $box['mail_folders'], -1 );
-		$i      = 0;
-		$draft  = false;
-		foreach ( $folder as $key => $value ) {
-			$pos = strpos( $value, 'Sent' );
-			if ( $pos ) {
-				$draft = true;
-				break;
-			} else {
-				$pos = strpos( $value, 'Отправлен' );
-				if ( $pos ) {
-					$draft = true;
-					break;
-				}
-			}
-			$i++;
-		}
-		if ( ! $draft ) {
-			exit;
-		}
-		// array folders email-box.
-		$folder = explode( ';', $box['mail_folders_alt'], -1 );
-		$folder = substr( $folder[ $i ], strpos( $folder[ $i ], '{' ) );
-
-		$date                = date( 'D, d M Y h:i:s', time() );
-		$envelope['date']    = $date;
-		$envelope['subject'] = '=?utf-8?B?' . base64_encode( $_mail_new_subject ) . '?=';
-		$envelope['from']    = $box['mail_box_name'];
-		$envelope['to']      = $_mail_new_to;
-
-		$_files_attach = filter_var_array( $_FILES );// WPCS: input var ok.
-		$_files_attach = $_files_attach['mail_new_attach'];
-
-		if ( '' === $_files_attach['name'] ) {
-			$part1['type']          = TYPETEXT;
-			$part1['subtype']       = PLAIN;
-			$part1['charset']       = 'UTF-8';
-			$part1['contents.data'] = $_mail_new_content;
-			$body[1]                = $part1;
-		} else {
-			$part1['type']    = TYPEMULTIPART;
-			$part1['subtype'] = 'mixed';
-
-			$part2['type']          = TYPETEXT;
-			$part2['subtype']       = PLAIN;
-			$part2['charset']       = 'UTF-8';
-			$part2['contents.data'] = $_mail_new_content;
-
-			$filename = $_files_attach['tmp_name'];
-			$contents = $wp_filesystem->get_contents( $filename );
-
-			$part3['type']             = TYPEAPPLICATION;
-			$part3['encoding']         = ENCBINARY;
-			$part3['subtype']          = 'octet-stream';
-			$part3['description']      = $_files_attach['name'];
-			$part3['disposition.type'] = 'attachment';
-			$part3['disposition']      = array( 'filename' => $_files_attach['name'] );
-			$part3['type.parameters']  = array( 'name' => $_files_attach['name'] );
-			$part3['contents.data']    = $contents;
-
-			$body[1] = $part1;
-			$body[2] = $part2;
-			$body[3] = $part3;
-		}
-
-		$msg = imap_mail_compose( $envelope, $body );
-
-		$imap = wms7_mail_connection();
-
-		if ( ! imap_append( $imap, $folder, $msg ) ) {
-			die( 'could not append message: ' . esc_html( imap_last_error() ) );
-		}
 	}
 	/**
 	 * Create modal window for mail view.
@@ -1965,68 +1966,74 @@ class Wms7_Core {
 	 * @param string $str_head Head of modal window.
 	 */
 	private function wms7_mail_view( $str_head ) {
-		$_mail_view_code = filter_input( INPUT_POST, 'mail_view_code', FILTER_SANITIZE_STRING );
-		$_msgno          = filter_input( INPUT_GET, 'msgno', FILTER_SANITIZE_STRING );
-		$_box_name       = filter_input( INPUT_GET, 'mailbox', FILTER_SANITIZE_STRING );
-		$header          = wms7_mail_header( $_msgno );
-		$subject         = iconv_mime_decode( $header['subject'], 0, 'UTF-8' );
-		$from            = iconv_mime_decode( $header['from'], 0, 'UTF-8' );
-		$to              = iconv_mime_decode( $header['to'], 0, 'UTF-8' );
-		$date            = $header['date'];
-		$arr             = wms7_mail_body( $_msgno );
-		$body            = $arr[0];
-		?>
-		<div class='win-popup'>
-			<label class='btn' for='win-popup'></label>
-			<input type='checkbox' style='display: none;' checked>
-			<div class='popup-content'>
-				<div class='popup-header'>
-					<h2><?php echo esc_html( $str_head . ' (' . $_box_name . ' id=' . $_msgno . ')' ); ?></h2>
-					<label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
+		$_nonce = filter_input( INPUT_GET, 'mail_nonce', FILTER_SANITIZE_STRING );
+		if ( wp_verify_nonce( $_nonce, 'mail_nonce' ) ) {
+			$img1            = plugins_url( '/images/screw.png', __FILE__ );
+			$_mail_view_code = filter_input( INPUT_POST, 'mail_view_code', FILTER_SANITIZE_STRING );
+			$_msgno          = filter_input( INPUT_GET, 'msgno', FILTER_SANITIZE_STRING );
+			$_box_name       = filter_input( INPUT_GET, 'mailbox', FILTER_SANITIZE_STRING );
+			$_box_name       = wms7_mail_folder_name( $_box_name );
+			$header          = wms7_mail_header( $_msgno );
+			$subject         = iconv_mime_decode( $header['subject'], 0, 'UTF-8' );
+			$from            = iconv_mime_decode( $header['from'], 0, 'UTF-8' );
+			$to              = iconv_mime_decode( $header['to'], 0, 'UTF-8' );
+			$date            = $header['date'];
+			$arr             = wms7_mail_body( $_msgno );
+			$body            = $arr[0];
+			?>
+			<div class='win-popup'>
+				<label class='btn' for='win-popup'></label>
+				<input type='checkbox' style='display: none;' checked>
+				<div class='popup-content'>
+					<div class='popup-header'>
+						<h2><?php echo esc_html( $str_head . ' (' . $_box_name . ' id=' . $_msgno . ')' ); ?></h2>
+						<img src="<?php echo esc_html( $img1 ); ?>" style="position: absolute;top: 10px;left: 12px;">
+						<label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
+					</div>
+					<form id='popup_mail_view' method='POST'>
+						<label style='margin-left:10px;font-weight:bold;'><big>Subject: </label><?php echo esc_html( $subject ); ?></big><br>
+						<label style='margin-left:10px;font-weight:bold;width:600px;'><big>From: </label><?php echo esc_html( $from ); ?></big><br>
+						<label style='margin-left:10px;font-weight:bold;'><big>To: </label><?php echo esc_html( $to ); ?></big><br>
+						<label style='margin-left:10px;font-weight:bold;'><big>Date: </label><?php echo esc_html( $date ); ?></big><br>
+						<div class='popup-body-mail'>
+							<?php
+							if ( ( $_mail_view_code ) && ( 'text' === $_mail_view_code ) ) {
+								$code = 'html';
+								?>
+								<textarea name='content' style='height:200px'><?php echo esc_textarea( $body ); ?></textarea>
+								<?php
+							} else {
+								$code = 'text';
+								?>
+								<div id='basis'><?php echo filter_var( $body ); ?></div>
+								<?php
+							}
+							?>
+						</div>
+						<div class='popup-footer'>
+							<input type='submit' value='reply' id='submit' class='button-primary' name='mail_view_reply'/>
+							<input type='submit' value='quit' id='submit' class='button-primary' name='mail_view_quit' onClick='wms7_quit_btn()'/>
+							<input type='submit' value='<?php echo esc_html( $code ); ?>' id='submit' class='button-primary' name='mail_view_code'/>
+							<?php
+							$_http_host = filter_input( INPUT_SERVER, 'HTTP_HOST', FILTER_SANITIZE_STRING );
+							$item       = get_option( 'wms7_main_settings' );
+							$path_tmp   = $item['mail_box_tmp'] . '/';
+							$path       = 'http://' . $_http_host . $path_tmp;
+							$icon_path  = plugins_url( '/images/attachment.png', __FILE__ );
+							foreach ( $arr[1] as $attach ) {
+								$filename = $attach['filename'];
+								?>
+								<a class='alignright' href='<?php echo esc_url( $path . $filename ); ?>' download><big><?php echo esc_html( $filename ); ?></big></a><img src='<?php echo esc_url( $icon_path ); ?>' class='alignright' style='padding:0;'>
+								<?php
+							}
+							?>
+						</div>
+						<input type='hidden' name='mail_view_nonce' value='<?php echo esc_html( wp_create_nonce( 'mail_view_nonce' ) ); ?>'>
+					</form>  
 				</div>
-				<form id='popup_mail_view' method='POST'>
-					<label style='margin-left:10px;font-weight:bold;'><big>Subject: </label><?php echo esc_html( $subject ); ?></big><br>
-					<label style='margin-left:10px;font-weight:bold;width:600px;'><big>From: </label><?php echo esc_html( $from ); ?></big><br>
-					<label style='margin-left:10px;font-weight:bold;'><big>To: </label><?php echo esc_html( $to ); ?></big><br>
-					<label style='margin-left:10px;font-weight:bold;'><big>Date: </label><?php echo esc_html( $date ); ?></big><br>
-					<div class='popup-body-mail'>
-						<?php
-						if ( ( $_mail_view_code ) && ( 'text' === $_mail_view_code ) ) {
-							$code = 'html';
-							?>
-							<textarea name='content' style='height:200px'><?php echo esc_textarea( $body ); ?></textarea>
-							<?php
-						} else {
-							$code = 'text';
-							?>
-							<div id='basis'><?php echo esc_textarea( $body ); ?></div>
-							<?php
-						}
-						?>
-					</div>
-					<div class='popup-footer'>
-						<input type='submit' value='reply' id='submit' class='button-primary' name='mail_view_reply'/>
-						<input type='submit' value='quit' id='submit' class='button-primary' name='mail_view_quit' onClick='wms7_quit_btn()'/>
-						<input type='submit' value='<?php echo esc_html( $code ); ?>' id='submit' class='button-primary' name='mail_view_code'/>
-						<?php
-						$_http_host = filter_input( INPUT_SERVER, 'HTTP_HOST', FILTER_SANITIZE_STRING );
-						$item       = get_option( 'wms7_main_settings' );
-						$path_tmp   = $item['mail_box_tmp'] . '/';
-						$path       = 'http://' . $_http_host . $path_tmp;
-						$icon_path  = plugins_url( '/images/attachment.png', __FILE__ );
-						foreach ( $arr[1] as $attach ) {
-							$filename = $attach['filename'];
-							$fileinfo = $attach['filename'] . ' (' . $this->wms7_format_bytes( $attach['size'] ) . ') ';
-							?>
-							<a class='alignright' href='<?php echo esc_url( $path ) . esc_html( $filename ); ?>' download><big><?php echo esc_html( $fileinfo ); ?></big></a><img src='<?php echo esc_url( $icon_path ); ?>' class='alignright' style='padding:0;'>
-							<?php
-						}
-						?>
-					</div>
-				</form>  
 			</div>
-		</div>
-		<?php
+			<?php
+		}
 	}
 	/**
 	 * Create modal window for control mailboxes.
@@ -2034,6 +2041,9 @@ class Wms7_Core {
 	 * @param string $str_head Head of modal window.
 	 */
 	private function wms7_mail( $str_head ) {
+		$img1            = plugins_url( '/images/screw.png', __FILE__ );
+		$img2            = plugins_url( '/images/screw_l.png', __FILE__ );
+		$img3            = plugins_url( '/images/screw_r.png', __FILE__ );
 		$_mailbox        = filter_input( INPUT_GET, 'mailbox', FILTER_SANITIZE_STRING );
 		$_search_context = filter_input( INPUT_POST, 'mail_search_context', FILTER_SANITIZE_STRING );
 		$_mail_search    = filter_input( INPUT_POST, 'mail_search', FILTER_SANITIZE_STRING );
@@ -2046,6 +2056,7 @@ class Wms7_Core {
 		$folder2         = '';
 		$folder3         = '';
 		$url             = get_option( 'wms7_current_url' );
+		$mailbox_nonce   = wp_create_nonce( 'mailbox_nonce' );
 
 		if ( '' !== $folders[0] ) {
 			$folders[0] = str_replace( ' ', '', $folders[0] );
@@ -2072,6 +2083,17 @@ class Wms7_Core {
 		} else {
 			$mail_table = wms7_mail_inbox();
 		}
+		if ( ! $_mailbox ) {
+			if ( 'INBOX' === strtoupper( $folder0 ) ) {
+				$_mailbox = 'folder1';
+			} elseif ( 'INBOX' === strtoupper( $folder1 ) ) {
+				$_mailbox = 'folder2';
+			} elseif ( 'INBOX' === strtoupper( $folder2 ) ) {
+				$_mailbox = 'folder3';
+			} elseif ( 'INBOX' === strtoupper( $folder3 ) ) {
+				$_mailbox = 'folder4';
+			}
+		}
 		?>
 		<div class='win-popup'>
 			<label class='btn' for='win-popup'></label>
@@ -2079,32 +2101,37 @@ class Wms7_Core {
 			<div class='popup-content'>
 				<div class='popup-header'>
 					<h2><?php echo esc_html( $str_head ); ?></h2>
+					<img src="<?php echo esc_html( $img1 ); ?>" style="position: absolute;top: 10px;left: 12px;">
 					<label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
 				</div>
 				<form id='mailbox' method='POST'>
-					<div style='position:relative; float:left; margin: -5px 0 10px 10px;'>
-						<input class='radio' type='radio' id='folder1' name='radio_mail' value=<?php echo esc_html( $mail_box_selector[0]['name'] ); ?> onclick='mailbox_selector(id)'/>
+					<div style='position:relative; margin: -5px 0 10px 15px;'>
+						<input class='radio' type='radio' id='folder1' name='radio_mail' value=<?php echo esc_html( $mail_box_selector[0]['name'] ); ?> onclick='wms7_mailbox_select(id, "<?php echo esc_html( $mailbox_nonce ); ?>")'/>
 						<label for='folder1' style='color:black;'><?php echo esc_html( $mail_box_selector[0]['name'] ); ?><?php echo esc_html( $mail_box_selector[0]['count'] ); ?></label>
-						<input class='radio' type='radio' id='folder2' name='radio_mail' value=<?php echo esc_html( $mail_box_selector[1]['name'] ); ?> onclick='mailbox_selector(id)'/>
+						<input class='radio' type='radio' id='folder2' name='radio_mail' value=<?php echo esc_html( $mail_box_selector[1]['name'] ); ?> onclick='wms7_mailbox_select(id, "<?php echo esc_html( "$mailbox_nonce" ); ?>")'/>
 						<label for='folder2' style='color:black;'><?php echo esc_html( $mail_box_selector[1]['name'] ); ?><?php echo esc_html( $mail_box_selector[1]['count'] ); ?></label>
-						<input class='radio' type='radio' id='folder3' name='radio_mail' value=<?php echo esc_html( $mail_box_selector[2]['name'] ); ?> onclick='mailbox_selector(id)'/>
+						<input class='radio' type='radio' id='folder3' name='radio_mail' value=<?php echo esc_html( $mail_box_selector[2]['name'] ); ?> onclick='wms7_mailbox_select(id, "<?php echo esc_html( "$mailbox_nonce" ); ?>")'/>
 						<label for='folder3' style='color:black;'><?php echo esc_html( $mail_box_selector[2]['name'] ); ?><?php echo esc_html( $mail_box_selector[2]['count'] ); ?></label>
-						<input class='radio' type='radio' id='folder4' name='radio_mail' value=<?php echo esc_html( $mail_box_selector[3]['name'] ); ?> onclick='mailbox_selector(id)'/>
+						<input class='radio' type='radio' id='folder4' name='radio_mail' value=<?php echo esc_html( $mail_box_selector[3]['name'] ); ?> onclick='wms7_mailbox_select(id, "<?php echo esc_html( "$mailbox_nonce" ); ?>")'/>
 						<label for='folder4' style='color:black;'><?php echo esc_html( $mail_box_selector[3]['name'] ); ?><?php echo esc_html( $mail_box_selector[3]['count'] ); ?></label>
+						<input type='submit' value='search' id='doaction4' class='button alignright' name='mail_search' style='position:relative;float:right;margin-right: 10px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;' />
+						<input type='text' class='text alignright' placeholder = 'context' size='18' style='width: 80px; margin-right: 5px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;' name='mail_search_context' value='<?php echo esc_html( $context ); ?>' >
 					</div>
-					<input type='submit' value='search' id='doaction4' class='button alignright' name='mail_search' style='margin-right: 10px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;' />
-					<input type='text' class='text alignright' placeholder = 'context' size='18' style='width: 80px; margin-right: 5px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;' name='mail_search_context' value='<?php echo esc_html( $context ); ?>' >
 					<div class='popup-body'>
-						<table class='table' style='height:180px;max-height:180px;width:650px;background-color: #5B5B59;'>
+						<img src="<?php echo esc_html( $img2 ); ?>" style="position: absolute;top: 90px;left: 15px;z-index:2;">
+						<img src="<?php echo esc_html( $img3 ); ?>" style="position: absolute;top: 320px;left: 15px;z-index:2;">
+						<img src="<?php echo esc_html( $img3 ); ?>" style="position: absolute;top: 90px;left: 95%;z-index:2;">
+						<img src="<?php echo esc_html( $img2 ); ?>" style="position: absolute;top: 320px;left: 95%;z-index:2;">						
+						<table class='table' style='margin-left:10px;'>
 							<tr class='tr'>
-								<thead class='thead'>
+								<thead class='thead' style='margin-left:20px;width:610px;'>
 									<th class='td' width='10%' style='cursor: pointer;'>id</th>
 									<th class='td' width='30%' style='cursor: pointer;'>Date</th>
 									<th class='td' width='30%' style='cursor: pointer;'>From</th>
 									<th class='td' width='30%' style='cursor: pointer;'>Subject</th>
 								</thead>
 							</tr>
-							<tbody class="tbody" style= "height:180px;max-height:180px;width:650px;">
+							<tbody class="tbody" style= "margin-left:20px;height:190px;max-height:190px;width:630px;">
 							<?php
 							foreach ( $mail_table as $item ) {
 								$msgno = $item['msgno'];
@@ -2137,7 +2164,7 @@ class Wms7_Core {
 											break;
 										case 3:
 											?>
-											<td class='td' width='30%'><a href="<?php echo esc_html( $url ); ?>&msgno=<?php echo esc_html( $msgno ); ?>&mailbox=<?php echo esc_html( $_mailbox ); ?>"><?php echo esc_html( $value ); ?></a></td>
+											<td class='td' width='30%'><a href="<?php echo esc_html(wp_nonce_url( $url, 'mail_nonce', 'mail_nonce' ) ); ?>&msgno=<?php echo esc_html( $msgno ); ?>&mailbox=<?php echo esc_html( $_mailbox ); ?>"><?php echo esc_html( $value ); ?></a></td>
 												<?php
 											break;
 									}
@@ -2150,21 +2177,22 @@ class Wms7_Core {
 							?>
 							</tbody>
 							<tr class='tr'>
-								<tfoot class='tfoot'>
+								<tfoot class='tfoot' style='margin-left:20px;width:610px;'>
 									<th class='td' width='10%' style='cursor: pointer;'>id</th>
 									<th class='td' width='30%' style='cursor: pointer;'>Date</th>
 									<th class='td' width='30%' style='cursor: pointer;'>From</th>
 									<th class='td' width='30%' style='cursor: pointer;'>Subject</th>
 								</tfoot>
 							</tr>
-						</table>				
+						</table>
 					</div>
 					<div class='popup-footer'>
-						<input type='submit' value='delete' id='submit' class='button-primary' name='mail_delete'/>
-						<input type='submit' value='new' id='submit' class='button-primary' name='mail_new'/>
+						<input type='submit' value='delete' id='mail_delete' class='button-primary' name='mail_delete'/>
+						<input type='submit' value='new' id='mail_new' class='button-primary' name='mail_new'/>
 						<input type='submit' value='move' id='doaction5' class='button alignright' name='mail_move' style='-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin: 0 0 5px 0;'/>
 						<select name='move_box' class='text alignright' style='width: 80px; margin-right: 5px;-webkit-box-shadow: 0px 0px 10px #000;-moz-box-shadow: 0px 0px 10px #000;box-shadow: 0px 0px 10px #000;margin-bottom: 5px;'><option value='<?php echo esc_html( $folder0 ); ?>'><?php echo esc_html( $folder0 ); ?></option><option value='<?php echo esc_html( $folder1 ); ?>'><?php echo esc_html( $folder1 ); ?></option><option value='<?php echo esc_html( $folder2 ); ?>'><?php echo esc_html( $folder2 ); ?></option><option value='<?php echo esc_html( $folder3 ); ?>'><?php echo esc_html( $folder3 ); ?></option></select>
 					</div>
+					<input type='hidden' name='mailbox_nonce' value='<?php echo esc_html( $mailbox_nonce ); ?>'>
 				</form> 
 			</div>
 		</div>  
@@ -2177,6 +2205,9 @@ class Wms7_Core {
 	 * @param string $str_head Head of modal window.
 	 */
 	private function wms7_stat( $str_head ) {
+		$img1            = plugins_url( '/images/screw.png', __FILE__ );
+		$img2            = plugins_url( '/images/screw_l.png', __FILE__ );
+		$img3            = plugins_url( '/images/screw_r.png', __FILE__ );
 		$all_total       = Wms7_List_Table::wms7_get( 'allTotal' );
 		$visits_total    = Wms7_List_Table::wms7_get( 'visitsTotal' );
 		$success_total   = Wms7_List_Table::wms7_get( 'successTotal' );
@@ -2195,6 +2226,7 @@ class Wms7_Core {
 			<div class='popup-content'>
 				<div class='popup-header'>
 					<h2><?php echo esc_html( $str_head ); ?></h2>
+					<img src="<?php echo esc_html( $img1 ); ?>" style="position: absolute;top: 10px;left: 12px;">
 					<label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
 				</div>
 				<form id='popup_win' method='POST'>
@@ -2212,98 +2244,108 @@ class Wms7_Core {
 						<input class='radio' type='radio' id='blacklist' name='radio_stat' value='blacklist' onClick='wms7_stat_btn()'/>
 						<label for='blacklist' style='color:black;'><?php echo esc_html( 'Black List', 'watchman-site7' ); ?>(<?php echo esc_html( $blacklist_total ); ?>)</label>
 					</div>
-					<div class='popup-body'>
-						<?php
-						if ( $_stat_table ) {
-							$records = wms7_create_table_stat( $where );
-							?>
-							<table class="table">
-								<thead class="thead">
-									<tr class="tr">
+					<div class='popup-body' style="overflow-x: scroll;margin-left:10px;margin-right:10px;width: 660px;">
+						<div style='width: 660px; height: 260px; padding: 5px 0 0 0; margin:0; background-color: #D4D0C8;'>
 							<?php
-							$i = 0;
-							foreach ( $records[0] as $key => $value ) {
-								if ( 0 === $i ) {
-									?>
-									<th class='td' width='90px;'><?php echo esc_html( $key ); ?></th>
-									<?php
-								} else {
-									?>
-									<th class='td' width='30px;'><?php echo esc_html( $key ); ?></th>
-									<?php
-								}
-								$i++;
-							}
-							?>
-									</tr>
-								</thead>
-								<tbody class="tbody">
-							<?php
-							foreach ( $records as $record ) {
+							if ( $_stat_table ) {
+								$records = wms7_create_table_stat( $where );
+								?>
+								<table class="table" style="margin-left:10px;max-width:640px;">
+									<thead class="thead">
+										<tr class="tr">
+								<?php
 								$i = 0;
-								?>
-								<tr class="tr">
-								<?php
-								foreach ( $record as $key => $value ) {
-									if ( 0 === $i ) {
-										?>
-											<td class='td' width='90px;'><?php echo esc_html( $value ); ?></td>
+								if ( ! empty( $records ) ) {
+									foreach ( $records[0] as $key => $value ) {
+										if ( 0 === $i ) {
+											?>
+											<th class='td' width='90px;'><?php echo esc_html( $key ); ?></th>
 											<?php
-									} else {
-										?>
-										<td class='td' width='30px;'><?php echo esc_html( $value ); ?></td>
+										} else {
+											?>
+											<th class='td' width='30px;'><?php echo esc_html( $key ); ?></th>
 											<?php
+										}
+										$i++;
 									}
-									$i++;
 								}
 								?>
-								</tr>
+										</tr>
+									</thead>
+									<tbody class="tbody">
 								<?php
-							}
-							?>
-								</tbody>
-								<tfoot class="tfoot">
-									<tr class="tr">
-							<?php
-							$i = 0;
-							foreach ( $records[0] as $key => $value ) {
-								if ( 0 === $i ) {
-									?>
-								<th class='td' width='90px;'><?php echo esc_html( $key ); ?></th>
-									<?php
-								} else {
-									?>
-								<th class='td' width='30px;'><?php echo esc_html( $key ); ?></th>
-									<?php
-								}
-								$i++;
-							}
-							?>
-									</tr>
-								</tfoot>								
-							</table>	
-							<?php
-						} else {
-							?>
-						<div style='width: 660px; height: 260px; padding: 5px 0 0 0; margin:0 0 0 10px; background-color: #D4D0C8;'>
-							<div id="dashboard_chart">
-								<div id="filter_chart"></div>
-								<div id="piechart" style="margin: 5px;padding:0;width: 650px;height: 228px;position:absolute;">
-									<?php
-									if ( $_stat_graph ) {
-										$records = wms7_create_graph_stat( $where );
-										$records = wp_json_encode( $records );
+								if ( ! empty( $records ) ) {
+									foreach ( $records as $record ) {
+										$i = 0;
 										?>
-										<script>wms7_graph_statistic('<?php echo esc_html( $records ); ?>');</script>
+										<tr class="tr">
+										<?php
+										foreach ( $record as $key => $value ) {
+											if ( 0 === $i ) {
+												?>
+													<td class='td' width='90px;'><?php echo esc_html( $value ); ?></td>
+													<?php
+											} else {
+												?>
+												<td class='td' width='30px;'><?php echo esc_html( $value ); ?></td>
+													<?php
+											}
+											$i++;
+										}
+										?>
+										</tr>
 										<?php
 									}
-									?>
+								}
+								?>
+									</tbody>
+									<tfoot class="tfoot">
+										<tr class="tr">
+								<?php
+								$i = 0;
+								if ( ! empty( $records ) ) {
+									foreach ( $records[0] as $key => $value ) {
+										if ( 0 === $i ) {
+											?>
+										<th class='td' width='90px;'><?php echo esc_html( $key ); ?></th>
+											<?php
+										} else {
+											?>
+										<th class='td' width='30px;'><?php echo esc_html( $key ); ?></th>
+											<?php
+										}
+										$i++;
+									}
+								}
+								?>
+										</tr>
+									</tfoot>								
+								</table>	
+								<?php
+							} else {
+								?>
+								<div id="dashboard_chart">
+									<img src="<?php echo esc_html( $img2 ); ?>" style="position: absolute;top: 73px;left: 12px;z-index:2;">
+									<img src="<?php echo esc_html( $img3 ); ?>" style="position: absolute;top: 320px;left: 12px;z-index:2;">
+									<img src="<?php echo esc_html( $img3 ); ?>" style="position: absolute;top: 73px;left: 96%;z-index:2;">
+									<img src="<?php echo esc_html( $img2 ); ?>" style="position: absolute;top: 320px;left: 96%;z-index:2;">
+									<div style="text-align:center;"><div id="filter_chart"></div></div>
+									<div id="piechart" style="margin: 5px;padding:0;width: 650px;height: 218px;position:absolute;">
+										<?php
+										if ( $_stat_graph ) {
+											$records = wms7_create_graph_stat( $where );
+											$records = wp_json_encode( $records );
+											?>
+											<script>wms7_graph_statistic('<?php echo esc_html( $records ); ?>');</script>
+											<?php
+										}
+										?>
+									</div>
 								</div>
-							</div>
+								<?php
+							}
+							?>
 						</div>
-							<?php
-						}
-						?>
 					</div>
 					<div class='popup-footer'>
 						<input type='submit' value='Table' id='submit' class='button-primary' name='stat_table'>
@@ -2314,6 +2356,7 @@ class Wms7_Core {
 							<option value='platform' <?php echo esc_html( selected( 'platform', $_graph_type, false ) ); ?>><?php echo esc_html( 'platform', 'watchman-site7' ); ?></option>
 						</select>
 					</div>
+					<input type='hidden' name='stat_nonce' value='<?php echo esc_html( wp_create_nonce( 'stat' ) ); ?>'>
 				</form> 
 			</div>
 		</div>
@@ -2325,6 +2368,9 @@ class Wms7_Core {
 	 * @param string $str_head Head of modal window.
 	 */
 	private function wms7_wp_cron( $str_head ) {
+		$img1       = plugins_url( '/images/screw.png', __FILE__ );
+		$img2       = plugins_url( '/images/screw_l.png', __FILE__ );
+		$img3       = plugins_url( '/images/screw_r.png', __FILE__ );
 		$wms7_cron  = new wms7_cron();
 		$cron_table = $wms7_cron->wms7_create_cron_table();
 		?>
@@ -2334,101 +2380,109 @@ class Wms7_Core {
 			<div class='popup-content'>
 				<div class='popup-header'>
 					<h2><?php echo esc_html( $str_head ); ?></h2>
+					<img src="<?php echo esc_html( $img1 ); ?>" style="position: absolute;top: 10px;left: 12px;">
 					<label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
 				</div>
 				<form id='popup_win' method='POST'>
 					<div class='popup-body'>
-						<ul class='tasks'>
-						<li class = 'tasks' style='color: red;font-weight:bold;'><?php echo esc_html( 'Not found', 'watchman-site7' ); ?> : <?php echo esc_html( $wms7_cron->orphan_count ); ?></li>
-						<li class = 'tasks' style='color: blue;font-weight:bold;'><?php echo esc_html( 'Plugin task', 'watchman-site7' ); ?> : <?php echo esc_html( $wms7_cron->plugin_count ); ?></li>
-						<li class = 'tasks' style='color: green;font-weight:bold;'><?php echo esc_html( 'Themes task', 'watchman-site7' ); ?> : <?php echo esc_html( $wms7_cron->themes_count ); ?></li>
-						<li class = 'tasks' style='color: brown;font-weight:bold;'><?php echo esc_html( 'WP task', 'watchman-site7' ); ?> : <?php echo esc_html( $wms7_cron->wp_count ); ?></li>
-						</ul>
-						<table class='table'>
-							<div class='loader' id='win-loader'></div>
-							<thead class='thead'>
-								<tr class='tr'>
-									<th class='th' width='9%'>id</th>
-									<th class='th' width='35%'><?php echo esc_html( 'Task name', 'watchman-site7' ); ?></th>
-									<th class='th' width='15%'><?php echo esc_html( 'Recurrence', 'watchman-site7' ); ?></th>
-									<th class='th' width='20%'><?php echo esc_html( 'Next run', 'watchman-site7' ); ?></th>
-									<th class='th' width='21%'><?php echo esc_html( 'Source task', 'watchman-site7' ); ?></th>
-								</tr>
-							</thead>
-							<tbody class="tbody" style="max-height: 200px;height: 200px;">
-							<?php
-							$i = 0;
-							foreach ( $cron_table as $item ) {
-								$i++;
-								$val = explode( '|', $item );
-								?>
-								<tr class="tr">
-									<td class="td" width="8%" style="padding-left:5px;">
-										<input type="checkbox" name=<?php echo esc_html( $val[0] ); ?> value=cron<?php echo esc_html( $i ); ?> > <?php echo esc_html( $i ); ?>
-									</td>
-									<td class="td" width="36%">
-										<?php echo esc_html( $val[0] ); ?>
-									</td>
-									<td class="td" width="15%">
-										<?php echo esc_html( $val[1] ); ?>
-									</td>
-									<td class="td" width="20%">
-										<?php echo esc_html( $val[2] ); ?>
-									</td>
-									<td class="td" width="21%" title='<?php echo esc_html( $val[3] ); ?>' >
-									<?php
-									switch ( $val[5] ) {
-										case '':
-											?>
-											<?php echo esc_html( 'Source task', 'watchman-site7' ); ?></td>
-											<?php
-											break;
-										case 'step1':
-											?>
-										<span style="color: brown;"><?php echo esc_html( $val[4] ); ?></span></td>
-											<?php
-											break;
-										case 'step2':
-											?>
-										<span style="color: brown;"><?php echo esc_html( $val[4] ); ?></span></td>
-											<?php
-											break;
-										case 'step3':
-											?>
-										<span style="color: green;"><?php echo esc_html( $val[4] ); ?></span></td>
-											<?php
-											break;
-										case 'step4':
-											?>
-										<span style="color: blue;"><?php echo esc_html( $val[4] ); ?></span></td>
-											<?php
-											break;
-										case 'step5':
-											?>
-										<span style="color: red;"><?php echo esc_html( $val[4] ); ?></span></td>
-											<?php
-											break;
-									}
-									?>
-								</tr>
+						<div style='width: 660px; height: 300px; padding: 5px 0 0 0; margin:0 0 0 10px; background-color: #D4D0C8;'>
+							<img src="<?php echo esc_html( $img2 ); ?>" style="position: absolute;top: 50px;left: 12px;z-index:2;">
+							<img src="<?php echo esc_html( $img3 ); ?>" style="position: absolute;top: 335px;left: 12px;z-index:2;">
+							<img src="<?php echo esc_html( $img3 ); ?>" style="position: absolute;top: 50px;left: 96%;z-index:2;">
+							<img src="<?php echo esc_html( $img2 ); ?>" style="position: absolute;top: 335px;left: 96%;z-index:2;">
+							<ul class='tasks' style='margin-left: 5%; width: 90%;'>
+							<li class = 'tasks' style='color: red;font-weight:bold;'><?php echo esc_html( 'Not found', 'watchman-site7' ); ?> : <?php echo esc_html( $wms7_cron->orphan_count ); ?></li>
+							<li class = 'tasks' style='color: blue;font-weight:bold;'><?php echo esc_html( 'Plugin task', 'watchman-site7' ); ?> : <?php echo esc_html( $wms7_cron->plugin_count ); ?></li>
+							<li class = 'tasks' style='color: green;font-weight:bold;'><?php echo esc_html( 'Themes task', 'watchman-site7' ); ?> : <?php echo esc_html( $wms7_cron->themes_count ); ?></li>
+							<li class = 'tasks' style='color: brown;font-weight:bold;'><?php echo esc_html( 'WP task', 'watchman-site7' ); ?> : <?php echo esc_html( $wms7_cron->wp_count ); ?></li>
+							</ul>
+							<table class='table'>
+								<div class='loader' id='win-loader'></div>
+								<thead class='thead'>
+									<tr class='tr'>
+										<th class='th' width='9%'>id</th>
+										<th class='th' width='35%'><?php echo esc_html( 'Task name', 'watchman-site7' ); ?></th>
+										<th class='th' width='15%'><?php echo esc_html( 'Recurrence', 'watchman-site7' ); ?></th>
+										<th class='th' width='20%'><?php echo esc_html( 'Next run', 'watchman-site7' ); ?></th>
+										<th class='th' width='21%'><?php echo esc_html( 'Source task', 'watchman-site7' ); ?></th>
+									</tr>
+								</thead>
+								<tbody class="tbody" style="max-height: 190px;height: 190px;">
 								<?php
-							}
-							?>
-							</tbody>
-							<tfoot class='tfoot'>
-								<tr class='tr'><th class='th' width='9%'>id</th>
-									<th class='th' width='35%'><?php echo esc_html( 'Task name', 'watchman-site7' ); ?></th>
-									<th class='th' width='15%'><?php echo esc_html( 'Recurrence', 'watchman-site7' ); ?></th>
-									<th class='th' width='20%'><?php echo esc_html( 'Next run', 'watchman-site7' ); ?></th>
-									<th class='th' width='21%'><?php echo esc_html( 'Source task', 'watchman-site7' ); ?></th>
-								</tr>
-							</tfoot>
-						</table>
+								$i = 0;
+								foreach ( $cron_table as $item ) {
+									$i++;
+									$val = explode( '|', $item );
+									?>
+									<tr class="tr">
+										<td class="td" width="8%" style="padding-left:5px;">
+											<input type="checkbox" name=<?php echo esc_html( $val[0] ); ?> value=cron<?php echo esc_html( $i ); ?> > <?php echo esc_html( $i ); ?>
+										</td>
+										<td class="td" width="36%">
+											<?php echo esc_html( $val[0] ); ?>
+										</td>
+										<td class="td" width="15%">
+											<?php echo esc_html( $val[1] ); ?>
+										</td>
+										<td class="td" width="20%">
+											<?php echo esc_html( $val[2] ); ?>
+										</td>
+										<td class="td" width="21%" title='<?php echo esc_html( $val[3] ); ?>' >
+										<?php
+										switch ( $val[5] ) {
+											case '':
+												?>
+												<?php echo esc_html( 'Source task', 'watchman-site7' ); ?></td>
+												<?php
+												break;
+											case 'step1':
+												?>
+											<span style="color: brown;"><?php echo esc_html( $val[4] ); ?></span></td>
+												<?php
+												break;
+											case 'step2':
+												?>
+											<span style="color: brown;"><?php echo esc_html( $val[4] ); ?></span></td>
+												<?php
+												break;
+											case 'step3':
+												?>
+											<span style="color: green;"><?php echo esc_html( $val[4] ); ?></span></td>
+												<?php
+												break;
+											case 'step4':
+												?>
+											<span style="color: blue;"><?php echo esc_html( $val[4] ); ?></span></td>
+												<?php
+												break;
+											case 'step5':
+												?>
+											<span style="color: red;"><?php echo esc_html( $val[4] ); ?></span></td>
+												<?php
+												break;
+										}
+										?>
+									</tr>
+									<?php
+								}
+								?>
+								</tbody>
+								<tfoot class='tfoot'>
+									<tr class='tr'><th class='th' width='9%'>id</th>
+										<th class='th' width='35%'><?php echo esc_html( 'Task name', 'watchman-site7' ); ?></th>
+										<th class='th' width='15%'><?php echo esc_html( 'Recurrence', 'watchman-site7' ); ?></th>
+										<th class='th' width='20%'><?php echo esc_html( 'Next run', 'watchman-site7' ); ?></th>
+										<th class='th' width='21%'><?php echo esc_html( 'Source task', 'watchman-site7' ); ?></th>
+									</tr>
+								</tfoot>
+							</table>
+						</div>	
 					</div>
 					<div class='popup-footer'>
 						<input type='submit' value='Delete' id='submit' class='button-primary'  name='cron_delete'>
 						<input type='submit' value='Refresh' id='submit' class='button-primary'  name='cron_refresh' onClick='wms7_popup_loader()'>
 					</div>
+					<input type='hidden' name='cron_nonce' value='<?php echo esc_html( wp_create_nonce( 'cron' ) ); ?>'>
 				</form>
 			</div>
 		</div>
@@ -2440,16 +2494,19 @@ class Wms7_Core {
 	 * @param string $str_head Head of modal window.
 	 */
 	private function wms7_file_editor( $str_head ) {
-		$_footer        = filter_input( INPUT_POST, 'footer', FILTER_SANITIZE_STRING );
-		$_document_root = filter_input( INPUT_SERVER, 'DOCUMENT_ROOT', FILTER_SANITIZE_STRING );
-		$str_body       = '';
-		if ( ! file_exists( $_document_root . '/' . $str_head ) ) {
-			$str_body = 'File not found: ' . $str_head;
+		WP_Filesystem();
+		global $wp_filesystem;
+
+		$img1     = plugins_url( '/images/screw.png', __FILE__ );
+		$img2     = plugins_url( '/images/screw_l.png', __FILE__ );
+		$img3     = plugins_url( '/images/screw_r.png', __FILE__ );
+		$_footer  = filter_input( INPUT_POST, 'footer', FILTER_SANITIZE_STRING );
+		$str_body = '';
+		if ( ! file_exists( ABSPATH . $str_head ) ) {
+			$str_body = 'File not found: ' . ABSPATH . $str_head;
 		} else {
-			$val = file( $_document_root . '/' . $str_head );
-			foreach ( $val as $line ) {
-				$str_body = $str_body . $line;
-			}
+			$filename = ABSPATH . $str_head;
+			$str_body = $wp_filesystem->get_contents( $filename );
 		}
 		?>
 		<div class='win-popup'>
@@ -2458,16 +2515,24 @@ class Wms7_Core {
 			<div class='popup-content'>
 				<div class='popup-header'>
 					<h2><?php echo esc_html( $str_head ); ?></h2>
+					<img src="<?php echo esc_html( $img1 ); ?>" style="position: absolute;top: 10px;left: 12px;">
 					<label class='btn-close' title='close' for='win-popup' onClick='wms7_popup_close()'></label>
 				</div>
 				<form id='popup_save' method='POST'>
 					<div class='popup-body'>
-						<textarea name='content'><?php echo esc_textarea( $str_body ); ?></textarea>
+						<div style='width: 660px; height: 300px; padding: 5px 0 0 0; margin:0 0 0 10px; background-color: #D4D0C8;'>
+							<img src="<?php echo esc_html( $img2 ); ?>" style="position: absolute;top: 50px;left: 12px;z-index:2;">
+							<img src="<?php echo esc_html( $img3 ); ?>" style="position: absolute;top: 335px;left: 12px;z-index:2;">
+							<img src="<?php echo esc_html( $img3 ); ?>" style="position: absolute;top: 50px;left: 96%;z-index:2;">
+							<img src="<?php echo esc_html( $img2 ); ?>" style="position: absolute;top: 335px;left: 96%;z-index:2;">
+							<textarea name='content'><?php echo esc_textarea( $str_body ); ?></textarea>
+						</div>
 					</div>
 					<div class='popup-footer'>
 						<input type='submit' value='Save' id='submit' class='button-primary'  name=<?php echo esc_html( $_footer ); ?> >
-						<label style='margin: 0;padding: 0;'><?php echo esc_html( $_document_root ); ?> </label> 
+						<label style='margin: 0;padding: 0;'><?php echo esc_html( ABSPATH ); ?> </label> 
 					</div>
+					<input type='hidden' name='file_editor_nonce' value='<?php echo esc_html( wp_create_nonce( 'file_editor' ) ); ?>'>
 				</form>
 			</div>
 		</div>
@@ -2477,7 +2542,13 @@ class Wms7_Core {
 	 * Create main page of plugin.
 	 */
 	public function wms7_visit_manager() {
-		$plugine_info = get_plugin_data( __DIR__ . '/watchman-site7.php' );
+		$current_user = wp_get_current_user();
+		$roles        = $current_user->roles;
+		$role         = array_shift( $roles );
+		if ( 'administrator' !== $role ) {
+			exit;
+		}
+		$plugine_info = get_plugin_data( WMS7_PLUGIN_DIR . '/watchman-site7.php' );
 		$table        = new wms7_List_Table();
 		$table->prepare_items();
 		$message     = '';
@@ -2510,19 +2581,27 @@ class Wms7_Core {
 			}
 		}
 		if ( 'clear' === $wms7_action ) {
-			$this->wms7_ctrl_htaccess();
-			?>
-			<div class="notice notice-success is-dismissible" id="message">
-				<p><?php echo esc_html( 'Black list item data cleaned successful', 'watchman-site7' ); ?> : (id=<?php echo esc_html( $id ); ?>) date-time: (<?php echo esc_html( current_time( 'mysql' ) ); ?>)
-				</p>
-			</div>
-			<?php
+			if ( ( $id ) ) {
+				?>
+				<div class="notice notice-success is-dismissible" id="message">
+					<p><?php echo esc_html( 'Black list item data cleaned successful', 'watchman-site7' ); ?> : (count=<?php echo esc_html( count( $id ) ); ?>) date-time: (<?php echo esc_html( current_time( 'mysql' ) ); ?>)
+					</p>
+				</div>
+				<?php
+			} else {
+				?>
+				<div class="notice notice-warning is-dismissible" id="message">
+					<p><?php echo esc_html( 'No items selected for clear.', 'watchman-site7' ); ?>
+					</p>
+				</div>
+				<?php
+			}				
 		}
 		if ( 'export' === $wms7_action ) {
 			if ( ( $id ) ) {
 				?>
 				<div class="notice notice-success is-dismissible" id="message">
-					<p><?php echo esc_html( 'Export data items executed successful', 'watchman-site7' ); ?> : (count='<?php echo esc_html( count( $id ) ); ?>) date-time: (<?php echo esc_html( current_time( 'mysql' ) ); ?>)
+					<p><?php echo esc_html( 'Export data items executed successful', 'watchman-site7' ); ?> : (count=<?php echo esc_html( count( $id ) ); ?>) date-time: (<?php echo esc_html( current_time( 'mysql' ) ); ?>)
 					</p>
 				</div>
 				<?php
@@ -2546,17 +2625,17 @@ class Wms7_Core {
 		$img2           = plugins_url( '/images/wms7_logo.png', __FILE__ );
 
 		$banner3 = isset( $val['banner3'] ) ? $val['banner3'] : 0;
-
-		$_page = filter_input( INPUT_GET, 'page', FILTER_SANITIZE_STRING );
+		$img3_1  = plugins_url( '/images/php-badge.png', __FILE__ );
+		$img3_2  = plugins_url( '/images/wp-badge.png', __FILE__ );
 
 		if ( 0 === $banner3 ) {
 			?>
-			<a href="https://plugintests.com/plugins/watchman-site7/latest-report"><img src="https://plugintests.com/plugins/watchman-site7/php-badge.svg" style="position:absolute; margin:0 5px 5px 23px;"></a>
-			<a href="https://plugintests.com/plugins/watchman-site7/latest-report"><img src="https://plugintests.com/plugins/watchman-site7/wp-badge.svg" style="position:absolute;margin:0 0 0 150px;"></a>
+			<a href="https://plugintests.com/plugins/watchman-site7/latest-report"><img src="<?php echo esc_html( $img3_1 ); ?>" style="position:absolute; margin:0 5px 5px 23px;"></a>
+			<a href="https://plugintests.com/plugins/watchman-site7/latest-report"><img src="<?php echo esc_html( $img3_2 ); ?>" style="position:absolute;margin:0 0 0 150px;"></a>
 			<?php
 		}
 		?>
-		<div class="sse" onclick="wms7_sse()" title="<?php echo esc_html( 'Refresh table of visits', 'watchman-site7' ); ?>">
+		<div class="sse" onclick="wms7_sse_backend()" title="<?php echo esc_html( 'Refresh table of visits', 'watchman-site7' ); ?>">
 			<input type="checkbox" id="sse">
 			<label><i></i></label>     
 		</div>
@@ -2577,263 +2656,257 @@ class Wms7_Core {
 				<?php echo esc_html( $this->wms7_login_ip_filter() ); ?>
 			</div>
 			<?php echo esc_html( $this->wms7_info_panel() ); ?>
-			<form id="visitors-table" method="GET">
-				<input type="hidden" name="page" value="<?php echo esc_html( $_page ); ?>"/>
+			<form id="visitors-table" method="POST">
+				<input type='hidden' name='visit_manager' value='<?php echo esc_html( wp_create_nonce( 'nonce_visit_manager' ) ); ?>'>
 				<?php $table->display(); ?>
 			</form>
 		</div>
 		<?php
-		$_action = filter_input( INPUT_GET, 'action', FILTER_SANITIZE_STRING );
-		if ( ( $_action ) && ( 'map' === $_action ) ) {
-			$this->wms7_map();
+		$_action    = filter_input( INPUT_GET, 'action', FILTER_SANITIZE_STRING );
+		$_map_nonce = filter_input( INPUT_GET, 'map_nonce', FILTER_SANITIZE_STRING );
+		if ( wp_verify_nonce( $_map_nonce, 'map_nonce' ) ) {
+			if ( ( $_action ) && ( 'map' === $_action ) ) {
+				$this->wms7_map();
+			}
 		}
-		$_footer = filter_input( INPUT_POST, 'footer', FILTER_SANITIZE_STRING );
-		if ( $_footer ) {
-			$this->wms7_win_popup();
+		$_footer       = filter_input( INPUT_POST, 'footer', FILTER_SANITIZE_STRING );
+		$_footer_nonce = filter_input( INPUT_POST, 'footer_nonce', FILTER_SANITIZE_STRING );
+		if ( wp_verify_nonce( $_footer_nonce, 'footer' ) ) {
+			if ( $_footer ) {
+				$this->wms7_win_popup();
+			}
 		}
 		// save index.php.
 		$_index = filter_input( INPUT_POST, 'index', FILTER_SANITIZE_STRING );
-		if ( ( $_index ) && ( 'Save' === $_index ) ) {
-			$_content = filter_input( INPUT_POST, 'content' );
-			wms7_save_index_php( sanitize_post( $_content, 'edit' ) );
+		$_nonce = filter_input( INPUT_POST, 'file_editor_nonce', FILTER_SANITIZE_STRING );
+		if ( wp_verify_nonce( $_nonce, 'file_editor' ) ) {
+			if ( ( $_index ) && ( 'Save' === $_index ) ) {
+				$_content = filter_input( INPUT_POST, 'content' );
+				wms7_save_index_php( sanitize_post( $_content, 'edit' ) );
+			}
 		}
 		// save robots.txt.
 		$_robots = filter_input( INPUT_POST, 'robots', FILTER_SANITIZE_STRING );
-		if ( ( $_robots ) && ( 'Save' === $_robots ) ) {
-			$_content = filter_input( INPUT_POST, 'content' );
-			wms7_save_robots_txt( sanitize_post( $_content, 'edit' ) );
+		$_nonce  = filter_input( INPUT_POST, 'file_editor_nonce', FILTER_SANITIZE_STRING );
+		if ( wp_verify_nonce( $_nonce, 'file_editor' ) ) {
+			if ( ( $_robots ) && ( 'Save' === $_robots ) ) {
+				$_content = filter_input( INPUT_POST, 'content' );
+				wms7_save_robots_txt( sanitize_post( $_content, 'edit' ) );
+			}
 		}
 		// save htaccess.
 		$_htaccess = filter_input( INPUT_POST, 'htaccess', FILTER_SANITIZE_STRING );
-		if ( ( $_htaccess ) && ( 'Save' === $_htaccess ) ) {
-			$_content = filter_input( INPUT_POST, 'content' );
-			wms7_save_htaccess( sanitize_post( $_content, 'edit' ) );
+		$_nonce    = filter_input( INPUT_POST, 'file_editor_nonce', FILTER_SANITIZE_STRING );
+		if ( wp_verify_nonce( $_nonce, 'file_editor' ) ) {
+			if ( ( $_htaccess ) && ( 'Save' === $_htaccess ) ) {
+				$_content = filter_input( INPUT_POST, 'content' );
+				wms7_save_htaccess( sanitize_post( $_content, 'edit' ) );
+			}
 		}
 		// save wp-config.
 		$_wp_config = filter_input( INPUT_POST, 'wp_config', FILTER_SANITIZE_STRING );
-		if ( ( $_wp_config ) && ( 'Save' === $_wp_config ) ) {
-			$_content = filter_input( INPUT_POST, 'content' );
-			wms7_save_wp_config( sanitize_post( $_content, 'edit' ) );
+		$_nonce     = filter_input( INPUT_POST, 'file_editor_nonce', FILTER_SANITIZE_STRING );
+		if ( wp_verify_nonce( $_nonce, 'file_editor' ) ) {
+			if ( ( $_wp_config ) && ( 'Save' === $_wp_config ) ) {
+				$_content = filter_input( INPUT_POST, 'content' );
+				wms7_save_wp_config( sanitize_post( $_content, 'edit' ) );
+			}
 		}
 		// refresh cron table.
 		$_cron_refresh = filter_input( INPUT_POST, 'cron_refresh', FILTER_SANITIZE_STRING );
 		$_cron_delete  = filter_input( INPUT_POST, 'cron_delete', FILTER_SANITIZE_STRING );
-		if ( ( $_cron_refresh ) || ( $_cron_delete ) ) {
-			$str_head = 'wp-cron tasks';
-			$this->wms7_wp_cron( $str_head );
+		$_nonce        = filter_input( INPUT_POST, 'cron_nonce', FILTER_SANITIZE_STRING );
+		if ( wp_verify_nonce( $_nonce, 'cron' ) ) {
+			if ( ( $_cron_refresh ) || ( $_cron_delete ) ) {
+				$str_head = 'wp-cron tasks';
+				$this->wms7_wp_cron( $str_head );
+			}
 		}
 		// refresh stat table and graph.
 		$_stat_table = filter_input( INPUT_POST, 'stat_table', FILTER_SANITIZE_STRING );
 		$_stat_graph = filter_input( INPUT_POST, 'stat_graph', FILTER_SANITIZE_STRING );
-		if ( $_stat_table || $_stat_graph ) {
-			if ( $_stat_table ) {
-				$str_head = 'statistic of visits: table';
+		$_nonce      = filter_input( INPUT_POST, 'stat_nonce', FILTER_SANITIZE_STRING );
+		if ( wp_verify_nonce( $_nonce, 'stat' ) ) {
+			if ( $_stat_table || $_stat_graph ) {
+				if ( $_stat_table ) {
+					$str_head = 'statistic of visits: table';
+				}
+				if ( $_stat_graph ) {
+					$str_head = 'statistic of visits: graph';
+				}
+				$this->wms7_stat( $str_head );
 			}
-			if ( $_stat_graph ) {
-				$str_head = 'statistic of visits: graph';
-			}
-			$this->wms7_stat( $str_head );
 		}
 		// view mail №msgno.
-		$_msgno = filter_input( INPUT_GET, 'msgno', FILTER_SANITIZE_NUMBER_INT );
+		$_msgno           = filter_input( INPUT_GET, 'msgno', FILTER_SANITIZE_NUMBER_INT );
+		$_mail_view_reply = filter_input( INPUT_POST, 'mail_view_reply', FILTER_SANITIZE_STRING );
+		$_mailbox         = filter_input( INPUT_GET, 'mailbox', FILTER_SANITIZE_STRING );
+		$_mail_nonce      = filter_input( INPUT_GET, 'mail_nonce', FILTER_SANITIZE_STRING );
 		if ( $_msgno ) {
-			$val        = get_option( 'wms7_main_settings' );
-			$select_box = $val['mail_select'];
-			$box        = $val[ $select_box ];
-			$str_head   = 'e-mail box: ' . $box['mail_box_name'];
-			// check - draft folder.
-			$_mailbox = filter_input( INPUT_GET, 'mailbox', FILTER_SANITIZE_STRING );
-			$num      = substr( $_mailbox, -1 );
-			// array folders email-box.
-			$folder = explode( ';', $box['mail_folders'], -1 );
-
-			$draft = false;
-			$pos   = strpos( $folder[ $num - 1 ], 'Draft' );
-			if ( $pos ) {
-				$draft = true;
-			} else {
-				$pos = strpos( $folder[ $num - 1 ], 'Черновик' );
+			if ( wp_verify_nonce( $_mail_nonce, 'mail_nonce' ) ) {
+				$val        = get_option( 'wms7_main_settings' );
+				$select_box = $val['mail_select'];
+				$box        = $val[ $select_box ];
+				$str_head   = 'MailBox: ' . $box['mail_box_name'];
+				$num        = substr( $_mailbox, -1 );
+				// check - draft folder.
+				$folder = explode( ';', $box['mail_folders'], -1 );
+				$draft  = false;
+				$pos    = strpos( $folder[ $num - 1 ], 'Draft' );
 				if ( $pos ) {
 					$draft = true;
+				} else {
+					$pos = strpos( $folder[ $num - 1 ], 'Черновик' );
+					if ( $pos ) {
+						$draft = true;
+					}
 				}
-			}
-			if ( ! $draft ) {
-				$this->wms7_mail_view( $str_head );
-			} else {
-				$this->wms7_mail_new( $str_head, true );
+				if ( ! $draft && ! $_mail_view_reply ) {
+					$this->wms7_mail_view( $str_head );
+				} else {
+					$this->wms7_mail_new( $str_head, true );
+				}
 			}
 		}
 		// move mail.
 		$_mail_move = filter_input( INPUT_POST, 'mail_move', FILTER_SANITIZE_STRING );
 		if ( $_mail_move ) {
-			wms7_mail_move();
+			$_mailbox_nonce = filter_input( INPUT_POST, 'mailbox_nonce', FILTER_SANITIZE_STRING );
+			if ( wp_verify_nonce( $_mailbox_nonce, 'mailbox_nonce' ) ) {
+				wms7_mail_move();
+				$val        = get_option( 'wms7_main_settings' );
+				$select_box = $val['mail_select'];
+				$box        = $val[ $select_box ];
+				$str_head   = 'MailBox: ' . $box['mail_box_name'];
+				$this->wms7_mail( $str_head );
+			}
 		}
 		// send mail.
 		$_mail_new_send = filter_input( INPUT_POST, 'mail_new_send', FILTER_SANITIZE_STRING );
 		if ( $_mail_new_send ) {
-			$val        = get_option( 'wms7_main_settings' );
-			$select_box = $val['mail_select'];
-			$box        = $val[ $select_box ];
-			$str_head   = 'e-mail box: ' . $box['mail_box_name'];
-			wms7_mail_send();
-			$this->wms7_mail_save_to_sent();
-			$this->wms7_goto_sent();
+			$_mail_new_nonce = filter_input( INPUT_POST, 'mail_new_nonce', FILTER_SANITIZE_STRING );
+			if ( wp_verify_nonce( $_mail_new_nonce, 'mail_new_nonce' ) ) {
+				$val        = get_option( 'wms7_main_settings' );
+				$select_box = $val['mail_select'];
+				$box        = $val[ $select_box ];
+				$str_head   = 'MailBox: ' . $box['mail_box_name'];
+				wms7_mail_send();
+				wms7_goto_sent( $_mail_new_nonce );
+			}
 		}
 		// new mail.
 		$_mail_new = filter_input( INPUT_POST, 'mail_new', FILTER_SANITIZE_STRING );
-		if ( $_mail_new ) {
-			$val        = get_option( 'wms7_main_settings' );
-			$select_box = $val['mail_select'];
-			$box        = $val[ $select_box ];
-			$str_head   = 'e-mail box: ' . $box['mail_box_name'];
-			$this->wms7_mail_new( $str_head, false );
-		}
 		// reply mail.
 		$_mail_view_reply = filter_input( INPUT_POST, 'mail_view_reply', FILTER_SANITIZE_STRING );
-		if ( $_mail_view_reply ) {
-			$val        = get_option( 'wms7_main_settings' );
-			$select_box = $val['mail_select'];
-			$box        = $val[ $select_box ];
-			$str_head   = 'e-mail box: ' . $box['mail_box_name'];
-			$this->wms7_mail_new( $str_head, false );
-		}
 		// send mail to a registered website visitor.
 		$_uid = filter_input( INPUT_GET, 'uid', FILTER_SANITIZE_NUMBER_INT );
-		if ( $_uid ) {
-			$val        = get_option( 'wms7_main_settings' );
-			$select_box = $val['mail_select'];
-			$box        = $val[ $select_box ];
-			$str_head   = 'e-mail box: ' . $box['mail_box_name'];
-			$this->wms7_mail_new( $str_head, false );
+		if ( $_mail_new || $_mail_view_reply || $_uid ) {
+			$_nonce     = filter_input( INPUT_POST, 'mailbox_nonce', FILTER_SANITIZE_STRING );
+			$_msg_nonce = filter_input( INPUT_GET, 'msg_nonce', FILTER_SANITIZE_STRING );
+			if ( wp_verify_nonce( $_nonce, 'mailbox_nonce' ) || wp_verify_nonce( $_msg_nonce, 'msg_nonce' ) ) {
+				$val        = get_option( 'wms7_main_settings' );
+				$select_box = $val['mail_select'];
+				$box        = $val[ $select_box ];
+				$str_head   = 'MailBox: ' . $box['mail_box_name'];
+				$this->wms7_mail_new( $str_head, false );
+			}
 		}
 		// new mail save.
-		$_mail_new_save = filter_input( INPUT_POST, 'mail_new_save', FILTER_SANITIZE_STRING );
+		$_mail_new_save  = filter_input( INPUT_POST, 'mail_new_save', FILTER_SANITIZE_STRING );
+		$_mail_new_nonce = filter_input( INPUT_POST, 'mail_new_nonce', FILTER_SANITIZE_STRING );
 		if ( $_mail_new_save ) {
-			$val        = get_option( 'wms7_main_settings' );
-			$select_box = $val['mail_select'];
-			$box        = $val[ $select_box ];
-			$str_head   = 'e-mail box: ' . $box['mail_box_name'];
-			$this->wms7_mail_save_to_draft();
-			$this->wms7_goto_draft();
+			if ( wp_verify_nonce( $_mail_new_nonce, 'mail_new_nonce' ) ) {
+				$val        = get_option( 'wms7_main_settings' );
+				$select_box = $val['mail_select'];
+				$box        = $val[ $select_box ];
+				$str_head   = 'MailBox: ' . $box['mail_box_name'];
+				wms7_mail_save_to_draft();
+				wms7_goto_draft( $_mail_new_nonce );
+			}
 		}
 		// delete mail.
 		$_mail_delete = filter_input( INPUT_POST, 'mail_delete', FILTER_SANITIZE_STRING );
 		if ( $_mail_delete ) {
-			wms7_mail_delete();
-
-			$_mailbox = filter_input( INPUT_GET, 'mailbox', FILTER_SANITIZE_STRING );
-			?>
-			<div class='loader' id='win-loader' style='top:350px;'></div>
-			<script>wms7_popup_loader();</script>
-			<script>mailbox_selector('<?php echo esc_html( $_mailbox ); ?>');</script>
-			<?php
+			$_mailbox_nonce = filter_input( INPUT_POST, 'mailbox_nonce', FILTER_SANITIZE_STRING );
+			if ( wp_verify_nonce( $_mailbox_nonce, 'mailbox_nonce' ) ) {
+				wms7_mail_delete();
+				$_mailbox = filter_input( INPUT_GET, 'mailbox', FILTER_SANITIZE_STRING );
+				?>
+				<div class='loader' id='win-loader' style='top:350px;'></div>
+				<script>wms7_popup_loader();</script>
+				<script>wms7_mailbox_select('<?php echo esc_html( $_mailbox ); ?>','<?php echo esc_html( $_mailbox_nonce ); ?>');</script>
+				<?php
+			}
 		}
-
-		$_mailbox        = filter_input( INPUT_GET, 'mailbox', FILTER_SANITIZE_STRING );
-		$_msgno          = filter_input( INPUT_GET, 'msgno', FILTER_SANITIZE_STRING );
-		$_mail_new       = filter_input( INPUT_POST, 'mail_new', FILTER_SANITIZE_STRING );
-		$_mail_view_quit = filter_input( INPUT_POST, 'mail_view_quit', FILTER_SANITIZE_STRING );
-		$_mail_new_quit  = filter_input( INPUT_POST, 'mail_new_quit', FILTER_SANITIZE_STRING );
-
-		if ( ( 'quit' === $_mail_view_quit ) || ( 'quit' === $_mail_new_quit ) || ( ! is_null( $_mailbox ) && is_null( $_mail_new ) && is_null( $_msgno ) ) ) {
-
-			$val        = get_option( 'wms7_main_settings' );
-			$select_box = $val['mail_select'];
-			$box        = $val[ $select_box ];
-			$str_head   = 'e-mail box: ' . $box['mail_box_name'];
-			$this->wms7_mail( $str_head );
+		// view mail box.
+		$_mailbox         = filter_input( INPUT_GET, 'mailbox', FILTER_SANITIZE_STRING );
+		$_msgno           = filter_input( INPUT_GET, 'msgno', FILTER_SANITIZE_STRING );
+		$_mail_new        = filter_input( INPUT_POST, 'mail_new', FILTER_SANITIZE_STRING );
+		$_mail_view_quit  = filter_input( INPUT_POST, 'mail_view_quit', FILTER_SANITIZE_STRING );
+		$_mail_new_quit   = filter_input( INPUT_POST, 'mail_new_quit', FILTER_SANITIZE_STRING );
+		$_mail_view_nonce = filter_input( INPUT_POST, 'mail_view_nonce', FILTER_SANITIZE_STRING );
+		if ( isset( $_GET['mail_new_nonce'] ) ) {
+			$_mail_new_nonce = filter_input( INPUT_GET, 'mail_new_nonce', FILTER_SANITIZE_STRING );
+		}
+		if ( isset( $_POST['mail_new_nonce'] ) ) {
+			$_mail_new_nonce = filter_input( INPUT_POST, 'mail_new_nonce', FILTER_SANITIZE_STRING );
+		}
+		$_mailbox_nonce = filter_input( INPUT_GET, 'mailbox_nonce', FILTER_SANITIZE_STRING );
+		if ( ( $_mail_view_quit ) || ( $_mail_new_quit ) || ( $_mail_new_nonce ) || ( ! is_null( $_mailbox ) && is_null( $_mail_new ) && is_null( $_msgno ) ) ) {
+			if ( wp_verify_nonce( $_mail_new_nonce, 'mail_new_nonce' ) || wp_verify_nonce( $_mail_view_nonce, 'mail_view_nonce' ) || wp_verify_nonce( $_mailbox_nonce, 'mailbox_nonce' ) ) {
+				$val        = get_option( 'wms7_main_settings' );
+				$select_box = $val['mail_select'];
+				$box        = $val[ $select_box ];
+				$str_head   = 'MailBox: ' . $box['mail_box_name'];
+				$this->wms7_mail( $str_head );
+			}
 		}
 		// mail_search_context.
 		$_mail_search = filter_input( INPUT_POST, 'mail_search', FILTER_SANITIZE_STRING );
 		if ( $_mail_search ) {
-			$val        = get_option( 'wms7_main_settings' );
-			$select_box = $val['mail_select'];
-			$box        = $val[ $select_box ];
-			$str_head   = 'search in: ' . $box['mail_box_name'];
-			$this->wms7_mail( $str_head );
+			$_mailbox_nonce = filter_input( INPUT_POST, 'mailbox_nonce', FILTER_SANITIZE_STRING );
+			if ( wp_verify_nonce( $_mailbox_nonce, 'mailbox_nonce' ) ) {
+				$val        = get_option( 'wms7_main_settings' );
+				$select_box = $val['mail_select'];
+				$box        = $val[ $select_box ];
+				$str_head   = 'search in: ' . $box['mail_box_name'];
+				$this->wms7_mail( $str_head );
+			}
 		}
 	}
 	/**
-	 * Go to the draft folder of mailbox.
+	 * If the Attack analyzer option is enabled, then insert the current IP into the field: do not register visits.
 	 */
-	private function wms7_goto_draft() {
-		$val        = get_option( 'wms7_main_settings' );
-		$select_box = $val['mail_select'];
-		$box        = $val[ $select_box ];
+	public function wms7_check_ip_admin() {
+		$_forward_for    = filter_input( INPUT_SERVER, 'HTTP_X_FORWARDED_FOR', FILTER_SANITIZE_STRING );
+		$_remote_addr    = filter_input( INPUT_SERVER, 'REMOTE_ADDR', FILTER_SANITIZE_STRING );
+		$user_ip         = ( $_forward_for ) ? $_forward_for : $_remote_addr;
+		$val             = get_option( 'wms7_main_settings' );
+		$attack_analyzer = isset( $val['attack_analyzer'] ) ? $val['attack_analyzer'] : '';
 
-		// array folders email-box.
-		$folder = explode( ';', $box['mail_folders'], -1 );
-		$i      = 0;
-		$draft  = false;
-		foreach ( $folder as $key => $value ) {
-			$pos = strpos( $value, 'Draft' );
-			if ( $pos ) {
-				$draft = true;
-				break;
-			} else {
-				$pos = strpos( $value, 'Черновик' );
-				if ( $pos ) {
-					$draft = true;
-					break;
+		if ( '' !== $attack_analyzer ) {
+			$pos = strpos( $val['ip_excluded'], $user_ip );
+			if ( false === $pos ) {
+				if ( '' !== $val['ip_excluded'] ) {
+					$val['ip_excluded'] = $val['ip_excluded'] . '|' . $user_ip;
+				} else {
+					$val['ip_excluded'] = $user_ip;
 				}
+				update_option( 'wms7_main_settings', $val );
 			}
-			$i++;
 		}
-		if ( ! $draft ) {
-			exit;
-		}
-		$i++;
-
-		$folder = 'folder' . $i;
-		?>
-		<div class='loader' id='win-loader' style='top:350px;'></div>
-		<script>wms7_popup_loader();</script>
-		<script>mailbox_selector('<?php echo esc_html( $folder ); ?>');</script>
-		<?php
-	}
-	/**
-	 * Go to the sent folder of mailbox.
-	 */
-	private function wms7_goto_sent() {
-		$val        = get_option( 'wms7_main_settings' );
-		$select_box = $val['mail_select'];
-		$box        = $val[ $select_box ];
-
-		// array folders email-box.
-		$folder = explode( ';', $box['mail_folders'], -1 );
-		$i      = 0;
-		$draft  = false;
-		foreach ( $folder as $key => $value ) {
-			$pos = strpos( $value, 'Sent' );
-			if ( $pos ) {
-				$draft = true;
-				break;
-			} else {
-				$pos = strpos( $value, 'Отправлен' );
-				if ( $pos ) {
-					$draft = true;
-					break;
-				}
-			}
-			$i++;
-		}
-		if ( ! $draft ) {
-			exit;
-		}
-		$i++;
-
-		$folder = 'folder' . $i;
-		?>
-		<div class='loader' id='win-loader' style='top:350px;'></div>
-		<script>wms7_popup_loader();</script>
-		<script>mailbox_selector('<?php echo esc_html( $folder ); ?>');</script>
-		<?php
 	}
 	/**
 	 * Create and control page Settings.
 	 */
 	public function wms7_settings() {
-		$plugine_info = get_plugin_data( __DIR__ . '/watchman-site7.php' );
+		$current_user = wp_get_current_user();
+		$roles        = $current_user->roles;
+		$role         = array_shift( $roles );
+		if ( 'administrator' !== $role ) {
+			exit;
+		}
+		$plugine_info = get_plugin_data( WMS7_PLUGIN_DIR . '/watchman-site7.php' );
 		$url          = get_option( 'wms7_current_url' );
 		?>
 		<div class="wrap">
@@ -2841,8 +2914,17 @@ class Wms7_Core {
 			<h1><?php echo esc_html( $plugine_info['Name'] ) . ': ' . esc_html( 'settings', 'watchman-site7' ); ?></h1>
 			<br>
 			<?php
+			if ( ! extension_loaded('imap') ) {
+			?>
+				<div class="notice notice-success is-dismissible" id="message">
+					<p><?php echo esc_html( 'Recommendation: for use additional functions of the plug-in (mailbox management) - install the PHP IMAP extension module on your site hosting service.', 'watchman-site7' ); ?>
+					</p>
+				</div>
+			<?php
+			}
 			$_settings_updated = filter_input( INPUT_GET, 'settings-updated', FILTER_VALIDATE_BOOLEAN );
 			if ( $_settings_updated ) {
+				$this->wms7_check_ip_admin();
 				$msg = esc_html( 'Settings data saved successful', 'watchman-site7' );
 				?>
 				<div class="updated notice is-dismissible" ><p><strong><?php echo esc_html( $msg ) . '; date-time: (' . esc_html( current_time( 'mysql' ) ) . ')'; ?></strong></p></div>
@@ -2915,13 +2997,6 @@ class Wms7_Core {
 			'wms7_section'
 		);
 		add_settings_field(
-			'field6',
-			'<label for="wms7_main_settings[robots_banned]">' . __( 'Robots banned', 'watchman-site7' ) . ':</label>',
-			array( $this, 'wms7_main_setting_field6' ),
-			'wms7_settings',
-			'wms7_section'
-		);
-		add_settings_field(
 			'field7',
 			'<label for="wms7_main_settings[key_api]">' . __( 'Google Maps API key', 'watchman-site7' ) . ':</label>',
 			array( $this, 'wms7_main_setting_field7' ),
@@ -2935,27 +3010,29 @@ class Wms7_Core {
 			'wms7_settings',
 			'wms7_section'
 		);
-		add_settings_field(
-			'field9',
-			'<label for="wms7_main_settings[mail_boxes]">' . __( 'E-mail boxes', 'watchman-site7' ) . ':</label>',
-			array( $this, 'wms7_main_setting_field9' ),
-			'wms7_settings',
-			'wms7_section'
-		);
-		add_settings_field(
-			'field10',
-			'<label for="wms7_main_settings[mail_box_select]">' . __( 'E-mail box select', 'watchman-site7' ) . ':</label>',
-			array( $this, 'wms7_main_setting_field10' ),
-			'wms7_settings',
-			'wms7_section'
-		);
-		add_settings_field(
-			'field11',
-			'<label for="wms7_main_settings[mail_box_tmp]">' . __( 'E-mail folder tmp', 'watchman-site7' ) . ':</label>',
-			array( $this, 'wms7_main_setting_field11' ),
-			'wms7_settings',
-			'wms7_section'
-		);
+		if ( extension_loaded('imap') ) {
+			add_settings_field(
+				'field9',
+				'<label for="wms7_main_settings[mail_boxes]">' . __( 'MailBoxes', 'watchman-site7' ) . ':</label>',
+				array( $this, 'wms7_main_setting_field9' ),
+				'wms7_settings',
+				'wms7_section'
+			);
+			add_settings_field(
+				'field10',
+				'<label for="wms7_main_settings[mail_box_select]">' . __( 'MailBox select', 'watchman-site7' ) . ':</label>',
+				array( $this, 'wms7_main_setting_field10' ),
+				'wms7_settings',
+				'wms7_section'
+			);
+			add_settings_field(
+				'field11',
+				'<label for="wms7_main_settings[mail_box_tmp]">' . __( 'E-mail folder tmp', 'watchman-site7' ) . ':</label>',
+				array( $this, 'wms7_main_setting_field11' ),
+				'wms7_settings',
+				'wms7_section'
+			);
+		}
 		add_settings_field(
 			'field12',
 			'<label for="wms7_main_settings[sse_sound]">' . __( 'SSE sound', 'watchman-site7' ) . ':</label>',
@@ -3005,7 +3082,6 @@ class Wms7_Core {
 		$_settings_updated = filter_input( INPUT_GET, 'settings-updated', FILTER_VALIDATE_BOOLEAN );
 		if ( $_settings_updated ) {
 			wp_clear_scheduled_hook( 'wms7_truncate' );
-			$this->wms7_ctrl_htaccess_add();
 		}
 	}
 	/**
@@ -3015,7 +3091,7 @@ class Wms7_Core {
 		$val = get_option( 'wms7_main_settings' );
 		$val = isset( $val['ip_excluded'] ) ? $val['ip_excluded'] : '';
 		?>
-		<textarea id="wms7_main_settings[ip_excluded]" name="wms7_main_settings[ip_excluded]" placeholder="IP1;IP2;IP3;IP4"  style="margin: 0px; width: 320px; height: 45px;"><?php echo esc_textarea( $val ); ?></textarea><br><label><?php esc_html_e( 'Visits from these IP addresses will be excluded from the protocol visits', 'watchman-site7' ); ?></label><br><label><?php esc_html_e( 'These IPs will be ignored by the Attack analyzer. It is recommended to register one or several trusted IP addresses of the site administrator.', 'watchman-site7' ); ?></label>
+		<textarea id="wms7_main_settings[ip_excluded]" name="wms7_main_settings[ip_excluded]" placeholder="IP1|IP2|IP3|IP4"  style="margin: 0px; width: 320px; height: 45px;"><?php echo esc_textarea( $val ); ?></textarea><br><label><?php esc_html_e( 'Visits from these IP addresses will be excluded from the protocol visits', 'watchman-site7' ); ?></label><br><label><?php esc_html_e( 'These IPs will be ignored by the Attack analyzer. It is recommended to register one or several trusted IP addresses of the site administrator and authors.', 'watchman-site7' ); ?></label>
 		<?php
 	}
 	/**
@@ -3048,19 +3124,19 @@ class Wms7_Core {
 				break;
 		}
 		?>
-		<input type="radio" value="none" <?php echo esc_html( $checked0 ); ?> id="who_0" name="wms7_main_settings[whois_service]">
+		<input type="radio" value="none" <?php echo esc_html( $checked0 ); ?> id="who_0" name="wms7_main_settings[whois_service]" onClick="wms7_settings_sound()">
 		<label for="who_0"><?php esc_html_e( 'none', 'watchman-site7' ); ?></label><br>
 
-		<input type="radio" value="IP-API" <?php echo esc_html( $checked1 ); ?> id="who_1" name="wms7_main_settings[whois_service]">
+		<input type="radio" value="IP-API" <?php echo esc_html( $checked1 ); ?> id="who_1" name="wms7_main_settings[whois_service]" onClick="wms7_settings_sound()">
 		<label for="who_1">IP-API</label><br>
 
-		<input type="radio" value="IP-Info" <?php echo esc_html( $checked2 ); ?> id="who_2" name="wms7_main_settings[whois_service]">
+		<input type="radio" value="IP-Info" <?php echo esc_html( $checked2 ); ?> id="who_2" name="wms7_main_settings[whois_service]" onClick="wms7_settings_sound()">
 		<label for="who_2">IP-Info</label><br>
 
-		<input type="radio" value="Geobytes" <?php echo esc_html( $checked3 ); ?> id="who_3" name="wms7_main_settings[whois_service]">
+		<input type="radio" value="Geobytes" <?php echo esc_html( $checked3 ); ?> id="who_3" name="wms7_main_settings[whois_service]" onClick="wms7_settings_sound()">
 		<label for="who_3">Geobytes</label><br>
 
-		<input type="radio" value="SxGeo" <?php echo esc_html( $checked4 ); ?> id="who_4" name="wms7_main_settings[whois_service]">
+		<input type="radio" value="SxGeo" <?php echo esc_html( $checked4 ); ?> id="who_4" name="wms7_main_settings[whois_service]" onClick="wms7_settings_sound()">
 		<label for="who_4">SxGeo</label>
 
 		<?php
@@ -3070,9 +3146,9 @@ class Wms7_Core {
 	 */
 	public function wms7_main_setting_field4() {
 		$val = get_option( 'wms7_main_settings' );
-		$val = isset( $val['robots'] ) ? $val['robots'] : 'Mail.RU_Bot;YandexBot;Googlebot;bingbot;Virusdie;AhrefsBot;YandexMetrika;MJ12bot;BegunAdvertising;Slurp;DotBot;YandexMobileBot;MegaIndex;Google;YandexAccessibilityBot;SemrushBot;Baiduspider;SEOkicks-Robot;BingPreview;rogerbot;Applebot;Qwantify;DuckDuckBot;Cliqzbot;';
+		$val = isset( $val['robots'] ) ? $val['robots'] : 'Mail.RU_Bot|YandexBot|Googlebot|bingbot|Virusdie|AhrefsBot|YandexMetrika|MJ12bot|BegunAdvertising|Slurp|DotBot|YandexMobileBot|MegaIndex|Google|YandexAccessibilityBot|SemrushBot|Baiduspider|SEOkicks-Robot|BingPreview|rogerbot|Applebot|Qwantify|DuckDuckBot|Cliqzbot|NetcraftSurveyAgent|SeznamBot|CCBot|linkdexbot|Barkrowler|Wget|ltx71|Slackbot|Nimbostratus-Bot|Crawler|Thither.Direct|Moreover|LetsearchBot|';
 		?>
-		<textarea id="wms7_main_settings[robots]" name="wms7_main_settings[robots]" placeholder="Name1;Name2;Name3;"  style="margin: 0px; width: 320px; height: 45px;"><?php echo esc_textarea( $val ); ?></textarea><br><label><?php esc_html_e( 'Visits this name will be marked - Robot', 'watchman-site7' ); ?></label>
+		<textarea id="wms7_main_settings[robots]" name="wms7_main_settings[robots]" placeholder="Name1|Name2|Name3|"  style="margin: 0px; width: 320px; height: 45px;"><?php echo esc_textarea( $val ); ?></textarea><br><label><?php esc_html_e( 'Visits this name will be marked - Robot', 'watchman-site7' ); ?></label>
 		<?php
 	}
 	/**
@@ -3083,16 +3159,6 @@ class Wms7_Core {
 		$val = isset( $val['robots_reg'] ) ? $val['robots_reg'] : '';
 		?>
 		<input id="wms7_main_settings[robots_reg]" name="wms7_main_settings[robots_reg]" type="checkbox" value="1" <?php checked( $val ); ?> /><br><label for="wms7_main_settings[robots_reg]"><?php esc_html_e( 'Register visits by robots.', 'watchman-site7' ); ?></label>
-		<?php
-	}
-	/**
-	 * Filling option6 (Robots banned) on page Settings.
-	 */
-	public function wms7_main_setting_field6() {
-		$val = get_option( 'wms7_main_settings' );
-		$val = isset( $val['robots_banned'] ) ? $val['robots_banned'] : '';
-		?>
-		<textarea id="wms7_main_settings[robots_banned]" name="wms7_main_settings[robots_banned]" placeholder="Name1;Name2;Name3;"  style="margin: 0px; width: 320px; height: 45px;"><?php echo esc_textarea( $val ); ?></textarea><br><label><?php esc_html_e( 'Visits this name will be banned', 'watchman-site7' ); ?></label>
 		<?php
 	}
 	/**
@@ -3146,7 +3212,7 @@ class Wms7_Core {
 		<?php
 	}
 	/**
-	 * Filling option9 (E-mail boxes) on page Settings.
+	 * Filling option9 (MailBoxes) on page Settings.
 	 */
 	public function wms7_main_setting_field9() {
 		// this_site.
@@ -3219,10 +3285,10 @@ class Wms7_Core {
 							<label for="imap_server_box0" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'IMAP Server name', 'watchman-site7' ); ?></label><br>
 
 							<input id="mail_box_name_box0" style="width: 200px;" name="wms7_main_settings[box0][mail_box_name]" type="text" placeholder="mail box name" value="<?php echo esc_html( $val2_box0 ); ?>" /><br>
-							<label for="mail_box_name_box0" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'E-mail box name', 'watchman-site7' ); ?></label><br>
+							<label for="mail_box_name_box0" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'MailBox name', 'watchman-site7' ); ?></label><br>
 
 							<input id="mail_box_pwd_box0" style="width: 200px;" name="wms7_main_settings[box0][mail_box_pwd]" type="text" placeholder="mail box password" value="<?php echo esc_html( $val3_box0 ); ?>" /><br>
-							<label for="mail_box_pwd_box0" style="overflow: hidden;text-overflow: ellipsis;width: 180px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'E-mail box password', 'watchman-site7' ); ?></label>
+							<label for="mail_box_pwd_box0" style="overflow: hidden;text-overflow: ellipsis;width: 180px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'MailBox password', 'watchman-site7' ); ?></label>
 
 							<input id="pwd_box0" name="wms7_main_settings[box0][pwd_box]" type="checkbox" value="1" style="float: right;margin-top:7px;"<?php checked( $val6_box0 ); ?> onClick="wms7_check_pwd(id)"/>
 						</td>
@@ -3377,10 +3443,10 @@ class Wms7_Core {
 							<label for="imap_server_box1" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'IMAP Server name', 'watchman-site7' ); ?></label><br>
 
 							<input id="mail_box_name_box1" style="width: 200px;" name="wms7_main_settings[box1][mail_box_name]" type="text" placeholder="mail box name" value="<?php echo esc_html( $val2_box1 ); ?>" /><br>
-							<label for="mail_box_name_box1" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'E-mail box name', 'watchman-site7' ); ?></label><br>
+							<label for="mail_box_name_box1" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'MailBox name', 'watchman-site7' ); ?></label><br>
 
 							<input id="mail_box_pwd_box1" style="width: 200px;" name="wms7_main_settings[box1][mail_box_pwd]" type="text" placeholder="mail box password" value="<?php echo esc_html( $val3_box1 ); ?>" /><br>
-							<label for="mail_box_pwd_box1" style="overflow: hidden;text-overflow: ellipsis;width: 180px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'E-mail box password', 'watchman-site7' ); ?></label>
+							<label for="mail_box_pwd_box1" style="overflow: hidden;text-overflow: ellipsis;width: 180px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'MailBox password', 'watchman-site7' ); ?></label>
 
 							<input id="pwd_box1" name="wms7_main_settings[box1][pwd_box]" type="checkbox" value="1" style="float: right;margin-top:7px;"<?php checked( $val6_box1 ); ?> onClick="wms7_check_pwd(id)"/>
 						</td>
@@ -3535,10 +3601,10 @@ class Wms7_Core {
 							<label for="imap_server_box2" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'IMAP Server name', 'watchman-site7' ); ?></label><br>
 
 							<input id="mail_box_name_box2" style="width: 200px;" name="wms7_main_settings[box2][mail_box_name]" type="text" placeholder="mail box name" value="<?php echo esc_html( $val2_box2 ); ?>" /><br>
-							<label for="mail_box_name_box2" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'E-mail box name', 'watchman-site7' ); ?></label><br>
+							<label for="mail_box_name_box2" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'MailBox name', 'watchman-site7' ); ?></label><br>
 
 							<input id="mail_box_pwd_box2" style="width: 200px;" name="wms7_main_settings[box2][mail_box_pwd]" type="text" placeholder="mail box password" value="<?php echo esc_html( $val3_box2 ); ?>" /><br>
-							<label for="mail_box_pwd_box2" style="overflow: hidden;text-overflow: ellipsis;width: 180px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'E-mail box password', 'watchman-site7' ); ?></label>
+							<label for="mail_box_pwd_box2" style="overflow: hidden;text-overflow: ellipsis;width: 180px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'MailBox password', 'watchman-site7' ); ?></label>
 
 							<input id="pwd_box2" name="wms7_main_settings[box2][pwd_box]" type="checkbox" value="1" style="float: right;margin-top:7px;"<?php checked( $val6_box2 ); ?> onClick="wms7_check_pwd(id)"/>
 						</td>
@@ -3694,10 +3760,10 @@ class Wms7_Core {
 							<label for="imap_server_box3" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'IMAP Server name', 'watchman-site7' ); ?></label><br>
 
 							<input id="mail_box_name_box3" style="width: 200px;" name="wms7_main_settings[box3][mail_box_name]" type="text" placeholder="mail box name" value="<?php echo esc_html( $val2_box3 ); ?>" /><br>
-							<label for="mail_box_name_box3" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'E-mail box name', 'watchman-site7' ); ?></label><br>
+							<label for="mail_box_name_box3" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'MailBox name', 'watchman-site7' ); ?></label><br>
 
 							<input id="mail_box_pwd_box3" style="width: 200px;" name="wms7_main_settings[box3][mail_box_pwd]" type="text" placeholder="mail box password" value="<?php echo esc_html( $val3_box3 ); ?>" /><br>
-							<label for="mail_box_pwd_box3" style="overflow: hidden;text-overflow: ellipsis;width: 180px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'E-mail box password', 'watchman-site7' ); ?></label>
+							<label for="mail_box_pwd_box3" style="overflow: hidden;text-overflow: ellipsis;width: 180px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'MailBox password', 'watchman-site7' ); ?></label>
 
 							<input id="pwd_box3" name="wms7_main_settings[box3][pwd_box]" type="checkbox" value="1" style="float: right;margin-top:7px;"<?php checked( $val6_box3 ); ?> onClick="wms7_check_pwd(id)"/>
 						</td>
@@ -3853,10 +3919,10 @@ class Wms7_Core {
 							<label for="imap_server_box4" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'IMAP Server name', 'watchman-site7' ); ?></label><br>
 
 							<input id="mail_box_name_box4" style="width: 200px;" name="wms7_main_settings[box4][mail_box_name]" type="text" placeholder="mail box name" value="<?php echo esc_html( $val2_box4 ); ?>" /><br>
-							<label for="mail_box_name_box4" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'E-mail box name', 'watchman-site7' ); ?></label><br>
+							<label for="mail_box_name_box4" style="overflow: hidden;text-overflow: ellipsis;width: 200px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'MailBox name', 'watchman-site7' ); ?></label><br>
 
 							<input id="mail_box_pwd_box4" style="width: 200px;" name="wms7_main_settings[box4][mail_box_pwd]" type="text" placeholder="mail box password" value="<?php echo esc_html( $val3_box4 ); ?>" /><br>
-							<label for="mail_box_pwd_box4" style="overflow: hidden;text-overflow: ellipsis;width: 180px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'E-mail box password', 'watchman-site7' ); ?></label>
+							<label for="mail_box_pwd_box4" style="overflow: hidden;text-overflow: ellipsis;width: 180px;height:20px;white-space: nowrap;padding:0;"><?php esc_html_e( 'MailBox password', 'watchman-site7' ); ?></label>
 
 							<input id="pwd_box4" name="wms7_main_settings[box4][pwd_box]" type="checkbox" value="1" style="float: right;margin-top:7px;"<?php checked( $val6_box0 ); ?> onClick="wms7_check_pwd(id)"/>    
 						</td>
@@ -3945,7 +4011,7 @@ class Wms7_Core {
 		<?php
 	}
 	/**
-	 * Filling option10 (E-mail box select) on page Settings.
+	 * Filling option10 (MailBox select) on page Settings.
 	 */
 	public function wms7_main_setting_field10() {
 		$val      = get_option( 'wms7_main_settings' );
@@ -3974,19 +4040,19 @@ class Wms7_Core {
 				break;
 		}
 		?>
-		<input type="radio" value="box0" <?php echo esc_html( $checked0 ); ?> id="mailbox0" name="wms7_main_settings[mail_select]">
+		<input type="radio" value="box0" <?php echo esc_html( $checked0 ); ?> id="mailbox0" name="wms7_main_settings[mail_select]" onClick="wms7_settings_sound()">
 		<label for="mailbox0"><?php esc_html_e( 'This site', 'watchman-site7' ); ?></label><br>
 
-		<input type="radio" value="box1" <?php echo esc_html( $checked1 ); ?> id="mailbox1" name="wms7_main_settings[mail_select]">
+		<input type="radio" value="box1" <?php echo esc_html( $checked1 ); ?> id="mailbox1" name="wms7_main_settings[mail_select]" onClick="wms7_settings_sound()">
 		<label for="mailbox1">Mail.ru</label><br>
 
-		<input type="radio" value="box2" <?php echo esc_html( $checked2 ); ?> id="mailbox2" name="wms7_main_settings[mail_select]">
+		<input type="radio" value="box2" <?php echo esc_html( $checked2 ); ?> id="mailbox2" name="wms7_main_settings[mail_select]" onClick="wms7_settings_sound()">
 		<label for="mailbox2">Yandex.ru</label><br>
 
-		<input type="radio" value="box3" <?php echo esc_html( $checked3 ); ?> id="mailbox3" name="wms7_main_settings[mail_select]">
+		<input type="radio" value="box3" <?php echo esc_html( $checked3 ); ?> id="mailbox3" name="wms7_main_settings[mail_select]" onClick="wms7_settings_sound()">
 		<label for="mailbox3">Yahoo.com</label><br>
 
-		<input type="radio" value="box4" <?php echo esc_html( $checked4 ); ?> id="mailbox4" name="wms7_main_settings[mail_select]">
+		<input type="radio" value="box4" <?php echo esc_html( $checked4 ); ?> id="mailbox4" name="wms7_main_settings[mail_select]" onClick="wms7_settings_sound()">
 		<label for="mailbox4">Gmail.com</label>
 
 		<?php
@@ -3996,7 +4062,7 @@ class Wms7_Core {
 	 */
 	public function wms7_main_setting_field11() {
 		$val = get_option( 'wms7_main_settings' );
-		$val = isset( $val['mail_box_tmp'] ) ? $val['mail_box_tmp'] : '';
+		$val = isset( $val['mail_box_tmp'] ) ? $val['mail_box_tmp'] : '/tmp';
 		?>
 		<input id="wms7_main_settings[mail_box_tmp]" style="margin: 0px; width: 320px; height: 25px;" name="wms7_main_settings[mail_box_tmp]" type="text" placeholder="/tmp"value="<?php echo esc_html( $val ); ?>" /><br><label><?php esc_html_e( 'Create a directory in the root of the site for temporary storage of files attached to the mail', 'watchman-site7' ); ?></label>
 		<?php
@@ -4174,16 +4240,22 @@ class Wms7_Core {
 		$recaptcha       = isset( $val['recaptcha'] ) ? 'Yes' : 'No';
 		$attack_analyzer = isset( $val['attack_analyzer'] ) ? 'Yes' : 'No';
 
-		$val        = get_option( 'wms7_main_settings' );
-		$select_box = isset( $val['mail_select'] ) ? $val['mail_select'] : '';
-		$box        = isset( $val["$select_box"] ) ? $val["$select_box"] : '';
-		$box        = isset( $box['imap_server'] ) ? $box['imap_server'] : '';
-		$pos        = strpos( $box, '.' );
-		$box        = substr( $box, $pos + 1 );
-		$unseen     = wms7_mail_unseen();
+		if ( ! extension_loaded('imap') ) {
+			$imap = '';
+		} else {
+			$val        = get_option( 'wms7_main_settings' );
+			$select_box = isset( $val['mail_select'] ) ? $val['mail_select'] : '';
+			$box        = isset( $val[ $select_box ] ) ? $val[ $select_box ] : '';
+			$box        = isset( $box['imap_server'] ) ? $box['imap_server'] : '';
+			$pos        = strpos( $box, '.' );
+			$box        = substr( $box, $pos + 1 );
+
+			$unseen = wms7_mail_unseen();
+			$imap   = esc_html( 'Mail box', 'watchman-site7' ) . ': ' . esc_html( $box ) . ' (' . esc_html( $unseen ) . ')&#010;';
+		}
 		$black_list = $this->wms7_black_list_info();
 
-		$str = esc_html( 'Mail box', 'watchman-site7' ) . ': ' . esc_html( $box ) . ' (' . esc_html( $unseen ) . ')&#010;' .
+		$str = esc_html( $imap ) .
 		esc_html( 'Google reCAPTCHA', 'watchman-site7' ) . ': ' . esc_html( $recaptcha ) . '&#010;' .
 		esc_html( 'Attack analyzer', 'watchman-site7' ) . ': ' . esc_html( $attack_analyzer ) . '&#010;' .
 		esc_html( 'Visits of robots', 'watchman-site7' ) . ': ' . esc_html( $robots_reg ) . '&#010;' .
@@ -4199,7 +4271,7 @@ class Wms7_Core {
 
 			<fieldset class = "info_whois" title="<?php echo esc_html( 'History visits', 'watchman-site7' ); ?>" <?php echo esc_html( $hidden_history_list ); ?> style="width:<?php echo esc_html( $width_box ); ?>;">
 				<legend class = "panel_title"><?php echo esc_html( 'History list', 'watchman-site7' ); ?></legend>
-				<textarea class = "textarea_panel_info"><?php echo esc_html( $this->wms7_history_list( $whois_service ) ); ?></textarea>
+				<textarea class = "textarea_panel_info"><?php echo esc_html( $this->wms7_history_list_info( $whois_service ) ); ?></textarea>
 			</fieldset>
 
 			<fieldset class="info_robots" title="<?php echo esc_html( 'Robots-last day visit', 'watchman-site7' ); ?>" <?php echo esc_html( $hidden_robots_list ); ?> style="width:<?php echo esc_html( $width_box ); ?>;">
@@ -4222,31 +4294,47 @@ class Wms7_Core {
 	private function wms7_black_list_info() {
 		global $wpdb;
 		$cache_key = 'wms7_black_list_info';
-		$results   = wp_cache_get( $cache_key );
+		if ( wp_using_ext_object_cache() ) {
+			$results = wp_cache_get( $cache_key );
+		} else {
+			$results = get_option( $cache_key );
+		}
 		if ( ! $results ) {
 			$results = $wpdb->get_results(
 				$wpdb->prepare(
 					"
-                    SELECT `id`, `user_ip`, `black_list`
+                    SELECT `id`, `user_ip`, `black_list`, `info`
                     FROM {$wpdb->prefix}watchman_site
-                    WHERE `black_list` <> %s
+                    WHERE TRIM(`black_list`) <> %s
                     ",
 					''
 				)
 			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $results );
+			if ( wp_using_ext_object_cache() ) {
+				wp_cache_set( $cache_key, $results );
+			} else {
+				update_option( $cache_key, $results );
+			}
 		}
-		$output    = '';
-		$output_id = '';
+		$output                = '';
+		$output_id             = '';
+		$output_info           = '';
+		$output_ban_user_agent = '';
 		foreach ( $results as $row ) {
-			$row_id     = $row->id;
-			$row_ip     = $row->user_ip;
-			$row        = json_decode( $row->black_list, true );
-			$output_id .= $row_id . '&#010;';
-			$output    .= $row['ban_start_date'] . '&#009;' . $row['ban_end_date'] . '&#009;' . $row_ip . '&#010;';
+			$row_id                 = $row->id;
+			$row_ip                 = $row->user_ip;
+			$row_black_list         = json_decode( $row->black_list, true );
+			$output_id             .= $row_id . '&#010;';
+			$output                .= $row_black_list['ban_start_date'] . '&#009;' . $row_black_list['ban_end_date'] . '&#009;' . $row_ip . '&#010;';
+			$row_info               = json_decode( $row->info, true );
+			$row_info               = $row_info['User Agent'];
+			$output_info           .= $row_info . '&#010;';
+			$output_ban_user_agent .= $row_black_list['ban_user_agent'] . '&#010;';
 		}
 		$arr[0] = $output_id;
 		$arr[1] = $output;
+		$arr[2] = $output_info;
+		$arr[3] = $output_ban_user_agent;
 
 		return $arr;
 	}
@@ -4258,7 +4346,11 @@ class Wms7_Core {
 	private function wms7_robot_visit_info() {
 		global $wpdb;
 		$cache_key = 'wms7_robot_visit_info';
-		$results   = wp_cache_get( $cache_key );
+		if ( wp_using_ext_object_cache() ) {
+			$results = wp_cache_get( $cache_key );
+		} else {
+			$results = get_option( $cache_key );
+		}
 		if ( ! $results ) {
 			$results = $wpdb->get_results(
 				$wpdb->prepare(
@@ -4272,7 +4364,11 @@ class Wms7_Core {
 					3
 				)
 			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $results );
+			if ( wp_using_ext_object_cache() ) {
+				wp_cache_set( $cache_key, $results );
+			} else {
+				update_option( $cache_key, $results );
+			}
 		}
 		$output = '';
 		foreach ( $results as $row ) {
@@ -4283,15 +4379,19 @@ class Wms7_Core {
 		return $output;
 	}
 	/**
-	 * Generates data for the InfoPanel, Section2 - whois service.
+	 * Generates data for the InfoPanel, Section2 - history list.
 	 *
 	 * @param string $whois_service Property to get.
 	 * @return string.
 	 */
-	private function wms7_history_list( $whois_service ) {
+	private function wms7_history_list_info( $whois_service ) {
 		global $wpdb;
-		$cache_key = 'wms7_history_list';
-		$results   = wp_cache_get( $cache_key );
+		$cache_key = 'wms7_history_list_info';
+		if ( wp_using_ext_object_cache() ) {
+			$results = wp_cache_get( $cache_key );
+		} else {
+			$results = get_option( $cache_key );
+		}
 		if ( ! $results ) {
 			$results = $wpdb->get_results(
 				$wpdb->prepare(
@@ -4311,7 +4411,11 @@ class Wms7_Core {
 					$whois_service
 				)
 			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $results );
+			if ( wp_using_ext_object_cache() ) {
+				wp_cache_set( $cache_key, $results );
+			} else {
+				update_option( $cache_key, $results );
+			}
 		}
 		$output = '';
 		foreach ( $results as $row ) {
@@ -4329,86 +4433,118 @@ class Wms7_Core {
 	 * Creates Black list page of plugin.
 	 */
 	public function wms7_black_list() {
-		global $wpdb;
-
-		$plugine_info    = get_plugin_data( __DIR__ . '/watchman-site7.php' );
-		$_id             = filter_input( INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT );
-		$_blacklist_save = filter_input( INPUT_POST, 'blacklist-save', FILTER_SANITIZE_STRING );
-		$url             = get_option( 'wms7_current_url' );
-
-		$_ban_start_date = filter_input( INPUT_POST, 'ban_start_date', FILTER_SANITIZE_NUMBER_INT );
-		$_ban_end_date   = filter_input( INPUT_POST, 'ban_end_date', FILTER_SANITIZE_NUMBER_INT );
-		$_ban_message    = filter_input( INPUT_POST, 'ban_message', FILTER_SANITIZE_STRING );
-		$_ban_notes      = filter_input( INPUT_POST, 'ban_notes', FILTER_SANITIZE_STRING );
-		$_ban_login      = filter_input( INPUT_POST, 'ban_login', FILTER_SANITIZE_NUMBER_INT );
-		if ( $_ban_start_date && $_ban_end_date ) {
-			$arr = array(
-				'ban_start_date' => ( $_ban_start_date ) ? $_ban_start_date : '',
-				'ban_end_date'   => ( $_ban_end_date ) ? $_ban_end_date : '',
-				'ban_message'    => ( $_ban_message ) ? $_ban_message : '',
-				'ban_notes'      => ( $_ban_notes ) ? $_ban_notes : '',
-				'ban_login'      => ( $_ban_login ) ? $_ban_login : '',
-			);
-
-			$serialized_data = wp_json_encode( $arr );
-
-			$wpdb->update(
-				$wpdb->prefix . 'watchman_site',
-				array( 'black_list' => $serialized_data ),
-				array( 'ID' => $_id ),
-				array( '%s' )
-			);// db call ok; no-cache ok.
+		$current_user = wp_get_current_user();
+		$roles        = $current_user->roles;
+		$role         = array_shift( $roles );
+		if ( 'administrator' !== $role ) {
+			exit;
 		}
-		$cache_key = 'wms7_black_list';
-		$results   = wp_cache_get( $cache_key );
-		if ( ! $results ) {
+		global $wpdb;
+		$_edit_nonce = filter_input( INPUT_GET, 'edit_nonce', FILTER_SANITIZE_STRING );
+		if ( wp_verify_nonce( $_edit_nonce, 'edit_nonce' ) ) {
+			$plugine_info    = get_plugin_data( WMS7_PLUGIN_DIR . '/watchman-site7.php' );
+			$_id             = filter_input( INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT );
+			$_blacklist_save = filter_input( INPUT_POST, 'blacklist-save', FILTER_SANITIZE_STRING );
+			$url             = get_option( 'wms7_current_url' );
+
+			$_ban_start_date = filter_input( INPUT_POST, 'ban_start_date', FILTER_SANITIZE_NUMBER_INT );
+			$_ban_end_date   = filter_input( INPUT_POST, 'ban_end_date', FILTER_SANITIZE_NUMBER_INT );
+			$_ban_message    = filter_input( INPUT_POST, 'ban_message', FILTER_SANITIZE_STRING );
+			$_ban_notes      = filter_input( INPUT_POST, 'ban_notes', FILTER_SANITIZE_STRING );
+			$_ban_login      = filter_input( INPUT_POST, 'ban_login', FILTER_SANITIZE_NUMBER_INT );
+			$_ban_user_agent = filter_input( INPUT_POST, 'ban_user_agent', FILTER_SANITIZE_NUMBER_INT );
+			if ( $_ban_start_date && $_ban_end_date ) {
+				$arr = array(
+					'ban_start_date' => ( $_ban_start_date ) ? $_ban_start_date : '',
+					'ban_end_date'   => ( $_ban_end_date ) ? $_ban_end_date : '',
+					'ban_message'    => ( $_ban_message ) ? $_ban_message : '',
+					'ban_notes'      => ( $_ban_notes ) ? $_ban_notes : '',
+					'ban_login'      => ( $_ban_login ) ? $_ban_login : '',
+					'ban_user_agent' => ( $_ban_user_agent ) ? $_ban_user_agent : '',
+				);
+
+				$serialized_data = wp_json_encode( $arr );
+
+				$wpdb->update(
+					$wpdb->prefix . 'watchman_site',
+					array( 'black_list' => $serialized_data ),
+					array( 'ID' => $_id ),
+					array( '%s' )
+				);// db call ok; no-cache ok.
+			}
 			$results = $wpdb->get_results(
 				$wpdb->prepare(
 					"
-                    SELECT `user_ip`
+                    SELECT `user_ip`, `info`
                     FROM {$wpdb->prefix}watchman_site
                     WHERE `id` = %s
                     ",
 					$_id
 				),
 				'ARRAY_A'
-			);// db call ok; cache ok.
-			wp_cache_set( $cache_key, $results );
-		}
-		$user_ip = array_shift( $results[0] );
-		// here we adding our custom meta box.
-		add_meta_box(
-			'wms7_black_list_meta_box',
-			'<font size="4">' . esc_html( 'Black list data for', 'watchman-site7' )
-			. ': IP = ' . $user_ip . ' (id=' . $_id . '</font>)',
-			array( $this, 'wms7_black_list_visitor' ),
-			'wms7_black_list',
-			'normal',
-			'default'
-		);
-		?>
-		<div class="wrap"><span class="dashicons dashicons-shield" style="float: left;"></span>
-			<h1><?php echo esc_html( $plugine_info['Name'] ) . ': ' . esc_html( 'black list', 'watchman-site7' ); ?></h1>
-			<?php
-			if ( $_blacklist_save ) {
-				$msg = esc_html( 'Black list item data saved successful:', 'watchman-site7' );
-				?>
-				<div class="updated notice is-dismissible" ><p><strong><?php echo esc_html( $msg ) . ' (id=' . esc_html( $_id ) . ') date-time: (' . esc_html( current_time( 'mysql' ) ) . ')'; ?></strong></p></div>
-				<?php
-				// insert user_ip into .htaccess.
-				wms7_ip_insert_to_file( $user_ip );
-			}
+			);// db call ok; no-cache ok.
+			$user_ip    = array_shift( $results[0] );
+			$user_agent = json_decode( array_shift( $results[0] ), true );
+			$user_agent = $user_agent['User Agent'];
+			// here we adding our custom meta box.
+			add_meta_box(
+				'wms7_black_list_meta_box',
+				'<font size="4">' . esc_html( 'Black list data for', 'watchman-site7' )
+				. ': IP = ' . $user_ip . ' (id=' . $_id . '</font>)',
+				array( $this, 'wms7_black_list_visitor' ),
+				'wms7_black_list',
+				'normal',
+				'default'
+			);
 			?>
-			<form id="form" method="POST">
-				<input type="hidden" name="id" value="<?php echo esc_html( $_id ); ?>"/>
-				<div class="metabox-holder" id="poststuff">
-					<?php do_meta_boxes( 'wms7_black_list', 'normal', '' ); ?>
-					<input type="submit" value="<?php esc_html_e( 'Save', 'watchman-site7' ); ?>" id="submit" class="button-primary" name="blacklist-save">
-					<input type="button" value="<?php esc_html_e( 'Quit', 'watchman-site7' ); ?>" id="quit" class="button-primary" name="quit" onClick="location.href='<?php echo esc_url( $url ); ?>'">
-				</div>
-			</form>
-		</div>
-		<?php
+			<div class="wrap"><span class="dashicons dashicons-shield" style="float: left;"></span>
+				<h1><?php echo esc_html( $plugine_info['Name'] ) . ': ' . esc_html( 'black list', 'watchman-site7' ); ?></h1>
+				<?php
+				if ( $_blacklist_save ) {
+					$msg = esc_html( 'Black list item data saved successful:', 'watchman-site7' );
+					?>
+					<div class="updated notice is-dismissible" ><p><strong><?php echo esc_html( $msg ) . ' (id=' . esc_html( $_id ) . ') date-time: (' . esc_html( current_time( 'mysql' ) ) . ')'; ?></strong></p></div>
+					<?php
+					// Delete item from options.
+					delete_option( 'wms7_login_compromising' );
+					delete_option( 'wms7_ip_compromising' );
+					delete_option( 'wms7_user_agent_compromising' );
+					delete_option( 'wms7_black_list_info' );
+					// Clear variables into $_SESSION.
+					if ( isset( $_SESSION['wms7_black_list_tbl'] ) ) {
+						unset( $_SESSION['wms7_black_list_tbl'] );
+					}
+					if ( function_exists( 'session_unregister' ) ) {
+						session_unregister( 'wms7_black_list_tbl' );
+					}
+					// Insert user_agent into .htaccess.
+					if ( $_ban_user_agent &&
+						( date( 'Y-m-d' ) >= $_ban_start_date && date( 'Y-m-d' ) <= $_ban_end_date ) ) {
+						wms7_rewritecond_insert( $user_agent );
+					} else {
+						// Delete user_agent into .htaccess.
+						wms7_rewritecond_delete( $user_agent );
+					}
+					// Insert user_ip into .htaccess.
+					if ( $user_ip &&
+						( date( 'Y-m-d' ) >= $_ban_start_date && date( 'Y-m-d' ) <= $_ban_end_date ) ) {
+						wms7_ip_insert_to_file( $user_ip );
+					} else {
+						// Delete user_ip into .htaccess.
+						wms7_ip_delete_from_file( $user_ip );
+					}
+				}
+				?>
+				<form id="form" method="POST">
+					<div class="metabox-holder" id="poststuff">
+						<?php do_meta_boxes( 'wms7_black_list', 'normal', '' ); ?>
+						<input type="submit" value="<?php esc_html_e( 'Save', 'watchman-site7' ); ?>" id="submit" class="button-primary" name="blacklist-save">
+						<input type="button" value="<?php esc_html_e( 'Quit', 'watchman-site7' ); ?>" id="quit" class="button-primary" name="quit" onClick="location.href='<?php echo esc_url( $url ); ?>'">
+					</div>
+				</form>
+			</div>
+			<?php
+		}
 	}
 	/**
 	 * Creates custom fields on the Black list page.
@@ -4421,7 +4557,11 @@ class Wms7_Core {
 
 		if ( $_id ) {
 			$cache_key = 'wms7_black_list_visitor';
-			$results   = wp_cache_get( $cache_key );
+			if ( wp_using_ext_object_cache() ) {
+				$results = wp_cache_get( $cache_key );
+			} else {
+				$results = get_option( $cache_key );
+			}
 			if ( ! $results ) {
 				$result = $wpdb->get_results(
 					$wpdb->prepare(
@@ -4434,7 +4574,11 @@ class Wms7_Core {
 					),
 					'ARRAY_A'
 				);// db call ok; cache ok.
-				wp_cache_set( $cache_key, $results );
+				if ( wp_using_ext_object_cache() ) {
+					wp_cache_set( $cache_key, $results );
+				} else {
+					update_option( $cache_key, $results );
+				}
 			}
 		}
 		$result     = array_shift( $result );
@@ -4494,6 +4638,14 @@ class Wms7_Core {
 				<?php
 			}
 			?>
+			<tr>
+				<th>
+					<label for="ban_user_agent"><?php esc_html_e( 'Ban user agent', 'watchman-site7' ); ?></label>
+				</th>
+				<td colspan="3">
+					<input id="ban_user_agent" name="ban_user_agent" type="checkbox" value="1" <?php checked( sanitize_text_field( $black_list['ban_user_agent'] ) ); ?>" >
+				</td>
+			</tr>			
 			</table>
 			<label><?php esc_html_e( 'Note: Insert the shortcode - [black_list] in a page or an entry to display the table compromised IP addresses stored in the database -Black list.', 'watchman-site7' ); ?></label>
 		<?php
@@ -4510,24 +4662,19 @@ class Wms7_Core {
 		$_id = filter_input( INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT );
 
 		if ( $_id ) {
-			$cache_key = 'wms7_ip_info';
-			$results   = wp_cache_get( $cache_key );
-			if ( ! $results ) {
-				$results = $wpdb->get_results(
-					$wpdb->prepare(
-						"
-	                    SELECT `user_ip_info`
-	                    FROM {$wpdb->prefix}watchman_site
-	                    WHERE `id` = %d
-	                    ",
-						$_id
-					),
-					'ARRAY_A'
-				);// db call ok; cache ok.
-				if ( ! empty( $results ) ) {
-					wp_cache_set( $cache_key, $results );
-					$user_ip_info = array_shift( $results[0] );
-				}
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"
+                    SELECT `user_ip_info`
+                    FROM {$wpdb->prefix}watchman_site
+                    WHERE `id` = %d
+                    ",
+					$_id
+				),
+				'ARRAY_A'
+			);// db call ok; cache ok.
+			if ( ! empty( $results ) ) {
+				$user_ip_info = array_shift( $results[0] );
 			}
 		}
 		return $user_ip_info;

@@ -5,7 +5,7 @@
  * @category    Wms7_Cron
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @category    Class
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.0
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 class Wms7_Cron {
@@ -33,7 +33,15 @@ class Wms7_Cron {
 		 * @var integer
 		 */
 		WP_Filesystem();
-		$this->file_name    = '';
+
+		global $wp_filesystem;
+
+		$this->dirname_wp      = $wp_filesystem->abspath() . 'wp-admin';
+		$this->dirname_wp_add  = $wp_filesystem->abspath() . 'wp-includes';
+		$this->dirname_themes  = $wp_filesystem->wp_themes_dir();
+		$this->dirname_plugins = $wp_filesystem->wp_plugins_dir();
+
+		$this->file_name    = [];
 		$this->orphan_count = 0;
 		$this->plugin_count = 0;
 		$this->themes_count = 0;
@@ -105,22 +113,22 @@ class Wms7_Cron {
 		$dirlist = $wp_filesystem->dirlist( $dirname );
 		if ( $dirlist ) {
 			foreach ( $dirlist as $filename => $dirattr ) {
+				$path = str_replace( '//', '/', $dirname . '/' . $dirattr['name'] );
 				if ( 'f' === $dirattr['type'] ) {
 					if ( '.php' === substr( $dirattr['name'], -4 ) ) {
 						// If the file *.php processed content.
-						$pattern = "~(wp_schedule_event.*?$context)~s";
-						$search  = preg_match( $pattern, $wp_filesystem->get_contents( $dirname . '/' . $dirattr['name'] ) );
+						$search  = strpos( $wp_filesystem->get_contents( $path ), $context );
 						if ( $search ) {
 							$this->file_name[0] = $dirname;
 							$this->file_name[1] = $dirattr['name'];
+
 							return $this->file_name;
 						}
 					}
 				} elseif ( 'd' === $dirattr['type'] ) {
 						// If it is a directory, recursively called function wms7_scan_dir.
-						$ret = $this->wms7_scan_dir( $dirname . '/' . $dirattr['name'], $context );
+						$ret = $this->wms7_scan_dir( $path, $context );
 					if ( $ret ) {
-						$ret = str_replace( '//', '/', $ret );
 						return $ret;
 					}
 				}
@@ -134,33 +142,26 @@ class Wms7_Cron {
 	 * @param string $context Context.
 	 */
 	private function wms7_search_into_directory( $context ) {
-		global $wp_filesystem;
-
-		$dirname_wp      = $wp_filesystem->abspath() . 'wp-admin';
-		$dirname_wp_add  = $wp_filesystem->abspath() . 'wp-includes';
-		$dirname_themes  = $wp_filesystem->wp_themes_dir();
-		$dirname_plugins = $wp_filesystem->wp_plugins_dir();
-
-		$step1 = $this->wms7_scan_dir( $dirname_wp, $context );
+		$step1 = $this->wms7_scan_dir( $this->dirname_wp, $context );
 		if ( $step1 ) {
 			$this->wp_count++;
 			$step1[2] = 'step1';
 			return $step1;
 		}
-		$step2 = $this->wms7_scan_dir( $dirname_wp_add, $context );
+		$step2 = $this->wms7_scan_dir( $this->dirname_wp_add, $context );
 		if ( $step2 ) {
 			$this->wp_count++;
 			$step2[2] = 'step2';
 			return $step2;
 		}
 
-		$step3 = $this->wms7_scan_dir( $dirname_themes, $context );
+		$step3 = $this->wms7_scan_dir( $this->dirname_themes, $context );
 		if ( $step3 ) {
 			$this->themes_count++;
 			$step3[2] = 'step3';
 			return $step3;
 		}
-		$step4 = $this->wms7_scan_dir( $dirname_plugins, $context );
+		$step4 = $this->wms7_scan_dir( $this->dirname_plugins, $context );
 		if ( $step4 ) {
 			$this->plugin_count++;
 			$step4[2] = 'step4';
