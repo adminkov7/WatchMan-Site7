@@ -4,7 +4,7 @@
  * @category    Wms7_console.js
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
@@ -21,8 +21,8 @@ function wms7_console() {
 	shell.id  = 'shell';
 	document.getElementById( 'wms7_console' ).appendChild( shell );
 
-	about();
-	doPrompt();
+	wms7_about();
+	wms7_doPrompt();
 
 	addEventListener( "keyup", wms7_keyup );
 	addEventListener( "keydown", wms7_keydown );
@@ -92,7 +92,7 @@ function wms7_keydown(e) {
 			queries[historyIndex] = input.value;
 
 			if (input.value.length !== 0) {
-				signature = hex_hmac_sha1( wms7_sec, input.value );
+				signature = wms7_hex_hmac_sha1( wms7_sec, input.value );
 				request   = 'partial=' + encodeURIComponent( input.value ) + '&signature=' + encodeURIComponent( signature );
 				wms7_post(
 					'wms7-complete',
@@ -101,19 +101,19 @@ function wms7_keydown(e) {
 						if ( '[]' !== data.responseText && 200 === data.status ) {
 							responseText = JSON.parse( data.responseText );
 							// print 2-column listing of array values.
-							buffer_to_longest( responseText );
+							wms7_buffer_to_longest( responseText );
 							responseText_length = responseText.length;
 							while (responseText_length > 0) {
 								var line = responseText.splice( 0,2 );
-								print( line.join( " " ) );
+								wms7_print( line.join( " " ) );
 								responseText_length = responseText.length;
 							}
 						} else if ( data.status > 200 ) {
-							print( 'Error(' + data.status + '): ' + data.statusText );
+							wms7_print( 'Error(' + data.status + '): ' + data.statusText );
 						} else if ('[]' === data.responseText ) {
-							print( 'Error: not found...' );
+							wms7_print( 'Error: not found...' );
 						}
-						doPrompt();
+						wms7_doPrompt();
 					}
 				);
 			}
@@ -129,7 +129,7 @@ function wms7_keydown(e) {
  *
  * @param object $e Name of e-event.
  */
-function doPrompt(prompt) {
+function wms7_doPrompt(prompt) {
 	counter++;
 
 	// default prompt to > unless passed in as argument.
@@ -171,10 +171,10 @@ function doPrompt(prompt) {
 
 		switch (input.value) {
 			case 'clear': case 'c':
-					clear();
+					wms7_clear();
 				break;
 			case 'help': case '?':
-					print(
+					wms7_print(
 						"\n" +
 						"You cannot correctly enter the function name ?\n" +
 						"  Enter the first part of the function name and press the tab key.\n" +
@@ -189,7 +189,7 @@ function doPrompt(prompt) {
 						"  Just enter the phpinfo(); command in this console. " +
 						"<img src='https://s.w.org/images/core/emoji/11/svg/1f609.svg' width='15'>"
 					);
-					doPrompt();
+					wms7_doPrompt();
 				break;
 			case 'reload': case 'r':
 					request = 'query=' + encodeURIComponent( input.value );
@@ -198,36 +198,40 @@ function doPrompt(prompt) {
 						request,
 						function(data){
 							responseText = JSON.parse( data.responseText );
-							print( JSON.stringify( responseText.output ).replace( /"/g, '' ) );
-							doPrompt();
+							wms7_print( JSON.stringify( responseText.output ).replace( /"/g, '' ) );
+							wms7_doPrompt();
 						}
 					);
 				break;
 			default:
 				if (input.value.length !== 0) {
-					signature = hex_hmac_sha1( wms7_sec, input.value );
+					signature = wms7_hex_hmac_sha1( wms7_sec, input.value );
 					request   = 'query=' + encodeURIComponent( input.value ) + '&signature=' + encodeURIComponent( signature );
 					wms7_post(
 						'wms7-query',
 						request,
 						function(data){
 							if ( data.responseText && 200 === data.status ) {
-								responseText = JSON.parse( data.responseText );
-								if ( responseText.rval && ! responseText.output) {
-									print( responseText.rval );
-								} else if ( responseText.output && ! responseText.rval) {
-									print( responseText.output );
-								} else if ( responseText.output && responseText.rval ) {
-									print( responseText.output );
-								} else if ( responseText.error ) {
-									print( 'Error: ' + JSON.stringify( responseText.error ) );
+								try {
+									responseText = JSON.parse( data.responseText );
+									if ( responseText.rval && ! responseText.output) {
+										wms7_print( responseText.rval );
+									} else if ( responseText.output && ! responseText.rval) {
+										wms7_print( responseText.output );
+									} else if ( responseText.output && responseText.rval ) {
+										wms7_print( responseText.output );
+									} else if ( responseText.error ) {
+										wms7_print( 'Error: ' + JSON.stringify( responseText.error ).split(',')[0] );
+									}
+								} catch(e) {
+									wms7_print( 'Error: invalid command.' );
 								}
 							} else if ( data.status > 200 ) {
-								print( 'Error(' + data.status + '): ' + data.statusText );
+								wms7_print( 'Error(' + data.status + '): ' + data.statusText );
 							} else {
-								print( 'Error: not found...' );
+								wms7_print( 'Error: not found...' );
 							}
-							doPrompt();
+							wms7_doPrompt();
 						}
 					);
 				}
@@ -242,7 +246,7 @@ function doPrompt(prompt) {
  * @param object $callback  Data received from server.
  */
 function wms7_post(page, data, callback) {
-	var xmlhttp     = getXmlHttp();
+	var xmlhttp     = wms7_getXmlHttp();
 	var request_url = wms7_url + 'includes/' + page + ".php";
 	// Open an asynchronous connection.
 	xmlhttp.open( 'POST', request_url );
@@ -264,7 +268,7 @@ function wms7_post(page, data, callback) {
  *
  * @return object XMLHTTP.
  */
-function getXmlHttp() {
+function wms7_getXmlHttp() {
 	var xmlhttp;
 	try {
 		xmlhttp = new ActiveXObject( 'Msxml2.XMLHTTP' );
@@ -283,7 +287,7 @@ function getXmlHttp() {
 /**
  * Clear of screen console.
  */
-function clear() {
+function wms7_clear() {
 	child   = Array.prototype.filter.call(
 		header.parentNode.children,
 		function(child){
@@ -292,13 +296,13 @@ function clear() {
 		}
 	);
 	counter = 0;
-	about();
-	doPrompt();
+	wms7_about();
+	wms7_doPrompt();
 }
 /**
- * Creates about info for console.
+ * Creates wms7_about info for console.
  */
-function about() {
+function wms7_about() {
 	header           = document.createElement( "div" );
 	header.id        = 'header';
 	header.innerHTML = '℗ Console build: october 2018, by Oleg Klenitsky.';
@@ -309,7 +313,7 @@ function about() {
  *
  * @param string $string Data for print to console.
  */
-function print(string) {
+function wms7_print(string) {
 	// Using textContent() escapes HTML to output visible tags.
 	var result   = document.createElement( "div" );
 	var input_id = 'input_console' + String( counter );
@@ -367,7 +371,7 @@ function print(string) {
  *
  * @return array.
  */
-function buffer_to_longest( array ) {
+function wms7_buffer_to_longest( array ) {
 	var longest  = array[0].length;
 	array_length = array.length;
 	for (var i = 1; i < array_length; i++) {
@@ -377,19 +381,19 @@ function buffer_to_longest( array ) {
 	};
 	array_length = array.length;
 	for (var i = 0; i < array_length; i++) {
-		array[i] = pad( array[i], longest );
+		array[i] = wms7_pad( array[i], longest );
 	};
 	return array;
 }
 /**
- * Helper function for buffer_to_longest().
+ * Helper function for wms7_buffer_to_longest().
  *
  * @param string $string Data (list of functions).
  * @param integer $length Length (length of string).
  *
  * @return string.
  */
-function pad( string, length ) {
+function wms7_pad( string, length ) {
 	string_length = string.length;
 	while (string_length < length) {
 		string        = string + " ";

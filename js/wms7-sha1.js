@@ -25,75 +25,75 @@ var chrsz = 8;
  *
  * @param string key  Key.
  * @param string data Data.
- * @return string $binb2hex().
+ * @return string $wms7_binb2hex().
  */
-function hex_sha1(s) {
-	return binb2hex( core_sha1( str2binb( s ), s.length * chrsz ) );
+function wms7_hex_sha1(s) {
+	return wms7_binb2hex( wms7_core_sha1( wms7_str2binb( s ), s.length * chrsz ) );
 }
 /*
  * They take string arguments and return either base-64 encoded strings.
  *
  * @param string key  Key.
  * @param string data Data.
- * @return string $binb2b64().
+ * @return string $wms7_binb2b64().
  */
-function b64_sha1(s) {
-	return binb2b64( core_sha1( str2binb( s ), s.length * chrsz ) );
+function wms7_b64_sha1(s) {
+	return wms7_binb2b64( wms7_core_sha1( wms7_str2binb( s ), s.length * chrsz ) );
 }
 /*
  * They take string arguments and return either base-64 encoded strings.
  *
  * @param string key  Key.
  * @param string data Data.
- * @return string $binb2str().
+ * @return string $wms7_binb2str().
  */
-function str_sha1(s) {
-	return binb2str( core_sha1( str2binb( s ), s.length * chrsz ) );
+function wms7_str_sha1(s) {
+	return wms7_binb2str( wms7_core_sha1( wms7_str2binb( s ), s.length * chrsz ) );
 }
 /*
  * They take string arguments and return either hex encoded strings.
  *
  * @param string key  Key.
  * @param string data Data.
- * @return string $binb2hex().
+ * @return string $wms7_binb2hex().
  */
-function hex_hmac_sha1(key, data) {
-	return binb2hex( core_hmac_sha1( key, data ) );
+function wms7_hex_hmac_sha1(key, data) {
+	return wms7_binb2hex( wms7_core_hmac_sha1( key, data ) );
 }
 /*
  * They take string arguments and return either base-64 encoded strings.
  *
  * @param string key  Key.
  * @param string data Data.
- * @return string $binb2b64().
+ * @return string $wms7_binb2b64().
  */
-function b64_hmac_sha1(key, data) {
-	return binb2b64( core_hmac_sha1( key, data ) );
+function wms7_b64_hmac_sha1(key, data) {
+	return wms7_binb2b64( wms7_core_hmac_sha1( key, data ) );
 }
 /*
  * They take string arguments and return either base-64 encoded strings.
  *
  * @param string key  Key.
  * @param string data Data.
- * @return string $binb2str().
+ * @return string $wms7_binb2str().
  */
-function str_hmac_sha1(key, data) {
-	return binb2str( core_hmac_sha1( key, data ) );
+function wms7_str_hmac_sha1(key, data) {
+	return wms7_binb2str( wms7_core_hmac_sha1( key, data ) );
 }
 /*
  * Perform a simple self-test to see if the VM is working.
  *
- * @return string $hex_sha1().
+ * @return string $wms7_hex_sha1().
  */
-function sha1_vm_test() {
-	return hex_sha1( "abc" ) == "a9993e364706816aba3e25717850c26c9cd0d89d";
+function wms7_sha1_vm_test() {
+	return wms7_hex_sha1( "abc" ) == "a9993e364706816aba3e25717850c26c9cd0d89d";
 }
 /*
  * Calculate the SHA-1 of an array of big-endian words, and a bit length.
  *
  * @return array $Array.
  */
-function core_sha1(x, len) {
+function wms7_core_sha1(x, len) {
 	// append padding.
 	x[len >> 5] |= 0x80 << ( 24 - len % 32 );
 
@@ -117,21 +117,21 @@ function core_sha1(x, len) {
 			if ( j < 16 ) {
 				w[j] = x[i + j];
 			} else {
-				w[j] = rol( w[j - 3] ^ w[j - 8] ^ w[j - 14] ^ w[j - 16], 1 );
+				w[j] = wms7_rol( w[j - 3] ^ w[j - 8] ^ w[j - 14] ^ w[j - 16], 1 );
 			}
-			var t = safe_add( safe_add( rol( a, 5 ), sha1_ft( j, b, c, d ) ), safe_add( safe_add( e, w[j] ), sha1_kt( j ) ) );
+			var t = wms7_safe_add( wms7_safe_add( wms7_rol( a, 5 ), wms7_sha1_ft( j, b, c, d ) ), wms7_safe_add( wms7_safe_add( e, w[j] ), wms7_sha1_kt( j ) ) );
 
 			e = d;
 			d = c;
-			c = rol( b, 30 );
+			c = wms7_rol( b, 30 );
 			b = a;
 			a = t;
 		}
-		a = safe_add( a, olda );
-		b = safe_add( b, oldb );
-		c = safe_add( c, oldc );
-		d = safe_add( d, oldd );
-		e = safe_add( e, olde );
+		a = wms7_safe_add( a, olda );
+		b = wms7_safe_add( b, oldb );
+		c = wms7_safe_add( c, oldc );
+		d = wms7_safe_add( d, oldd );
+		e = wms7_safe_add( e, olde );
 	}
 	return Array( a, b, c, d, e );
 }
@@ -140,7 +140,7 @@ function core_sha1(x, len) {
  *
  * @return string $match.
  */
-function sha1_ft(t, b, c, d) {
+function wms7_sha1_ft(t, b, c, d) {
 	if ( t < 20 ) {
 		return ( b & c ) | ( ( ~b ) & d );
 	}
@@ -157,7 +157,7 @@ function sha1_ft(t, b, c, d) {
  *
  * @return string $t.
  */
-function sha1_kt(t) {
+function wms7_sha1_kt(t) {
 	return ( t < 20 ) ? 1518500249 : ( t < 40 ) ? 1859775393 : ( t < 60 ) ? -1894007588 : -899497514;
 }
 /*
@@ -165,10 +165,10 @@ function sha1_kt(t) {
  *
  * @return string $hash.
  */
-function core_hmac_sha1(key, data) {
-	var bkey = str2binb( key );
+function wms7_core_hmac_sha1(key, data) {
+	var bkey = wms7_str2binb( key );
 	if ( bkey.length > 16 ) {
-		bkey = core_sha1( bkey, key.length * chrsz );
+		bkey = wms7_core_sha1( bkey, key.length * chrsz );
 	}
 	var ipad = Array( 16 ),
 		opad = Array( 16 );
@@ -176,8 +176,8 @@ function core_hmac_sha1(key, data) {
 		ipad[i] = bkey[i] ^ 0x36363636;
 		opad[i] = bkey[i] ^ 0x5C5C5C5C;
 	}
-	var hash = core_sha1( ipad.concat( str2binb( data ) ), 512 + data.length * chrsz );
-	return core_sha1( opad.concat( hash ), 512 + 160 );
+	var hash = wms7_core_sha1( ipad.concat( wms7_str2binb( data ) ), 512 + data.length * chrsz );
+	return wms7_core_sha1( opad.concat( hash ), 512 + 160 );
 }
 /*
  * Add integers, wrapping at 2^32. This uses 16-bit operations internally.
@@ -185,7 +185,7 @@ function core_hmac_sha1(key, data) {
  *
  * @return string $msw.
  */
-function safe_add(x, y) {
+function wms7_safe_add(x, y) {
 	var lsw = ( x & 0xFFFF ) + ( y & 0xFFFF );
 	var msw = ( x >> 16 ) + ( y >> 16 ) + ( lsw >> 16 );
 	return ( msw << 16 ) | ( lsw & 0xFFFF );
@@ -195,7 +195,7 @@ function safe_add(x, y) {
  *
  * @return string $num.
  */
-function rol(num, cnt) {
+function wms7_rol(num, cnt) {
 	return ( num << cnt ) | ( num >>> ( 32 - cnt ) );
 }
 /*
@@ -204,7 +204,7 @@ function rol(num, cnt) {
  *
  * @return string $bin.
  */
-function str2binb(str) {
+function wms7_str2binb(str) {
 	var bin    = Array();
 	var mask   = (1 << chrsz) - 1;
 	str_length = str.length * chrsz
@@ -218,7 +218,7 @@ function str2binb(str) {
  *
  * @return string $str.
  */
-function binb2str(bin) {
+function wms7_binb2str(bin) {
 	var str    = "";
 	var mask   = (1 << chrsz) - 1;
 	bin_length = bin.length * 32;
@@ -232,7 +232,7 @@ function binb2str(bin) {
  *
  * @return string $str.
  */
-function binb2hex(binarray) {
+function wms7_binb2hex(binarray) {
 	var hex_tab     = hexcase ? "0123456789ABCDEF" : "0123456789abcdef";
 	var str         = "";
 	binarray_length = binarray.length * 4;
@@ -246,7 +246,7 @@ function binb2hex(binarray) {
  *
  * @return string $str.
  */
-function binb2b64(binarray) {
+function wms7_binb2b64(binarray) {
 	var tab         = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	var str         = "";
 	binarray_length = binarray.length * 4;

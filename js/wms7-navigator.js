@@ -4,13 +4,13 @@
  * @category    Wms7_navigator.js
  * @package     WatchMan-Site7
  * @author      Oleg Klenitskiy <klenitskiy.oleg@mail.ru>
- * @version     3.0.1
+ * @version     3.1.1
  * @license     GPLv2 or later
  */
 
 if (navigator.geolocation) {
 	/* Geolocation enabled */
-	navigator.geolocation.getCurrentPosition( successCallback, errorCallback );
+	navigator.geolocation.getCurrentPosition( wms7_successCallback, wms7_errorCallback );
 } else {
 	/* Geolocation not enabled */
 	alert( 'GPS not supported' );
@@ -21,11 +21,11 @@ if (navigator.geolocation) {
  *
  * @param object position Position of visitor of site.
  */
-function successCallback(position) {
+function wms7_successCallback(position) {
 	var lat     = position.coords.latitude;
 	var lon     = position.coords.longitude;
 	var acc     = position.coords.accuracy;
-	var xmlhttp = getXmlHttp();
+	var xmlhttp = wms7_getXmlHttp();
 
 	var pos = wms7_url.indexOf( '//' );
 	var url = wms7_url.substr( pos + 2 ) + 'class-wms7-core.php';
@@ -50,9 +50,9 @@ function successCallback(position) {
  *
  * @param object error Error visiting the site.
  */
-function errorCallback(error) {
+function wms7_errorCallback(error) {
 
-	var xmlhttp = getXmlHttp();
+	var xmlhttp = wms7_getXmlHttp();
 
 	var pos = wms7_url.indexOf( '//' );
 	var url = wms7_url.substr( pos + 2 );
@@ -77,7 +77,7 @@ function errorCallback(error) {
  *
  * @param object XMLHTTP.
  */
-function getXmlHttp() {
+function wms7_getXmlHttp() {
 	var xmlhttp;
 	try {
 		xmlhttp = new ActiveXObject( 'Msxml2.XMLHTTP' );
