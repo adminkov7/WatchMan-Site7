@@ -1,0 +1,334 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: WatchMan-Site7\n"
+"POT-Creation-Date: 2018-08-08 09:33+0300\n"
+"PO-Revision-Date: 2018-08-08 11:30+0300\n"
+"Last-Translator: \n"
+"Language-Team: adminkov\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.1.1\n"
+"X-Poedit-Basepath: .\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
+"X-Poedit-KeywordsList: __;_e;esc_hmtl;esc_html_e\n"
+"X-Poedit-SearchPath-0: .\n"
+
+#: class-wms7-core.php:70
+msgid "ERROR: Access is denied."
+msgstr "Сообшение: Доступ запрещен."
+
+#: class-wms7-core.php:2674
+msgid "General settings. (changes take effect after you click Save)"
+msgstr "Общие настройки. (изменения действуют после нажатия кнопки Сохранить)"
+
+#: class-wms7-core.php:2702
+msgid "Duration log entries"
+msgstr "Записей в журнале"
+
+#: class-wms7-core.php:2706
+msgid "Do not register visits for"
+msgstr "Не хранить визиты для"
+
+#: class-wms7-core.php:2710
+msgid "WHO-IS service"
+msgstr "WHO-IS сервис"
+
+#: class-wms7-core.php:2714 class-wms7-widget.php:198
+msgid "Robots"
+msgstr "Роботы"
+
+#: class-wms7-core.php:2718
+msgid "Visits of robots"
+msgstr "Визиты роботов"
+
+#: class-wms7-core.php:2722
+msgid "Robots banned"
+msgstr "Запрещенные роботы"
+
+#: class-wms7-core.php:2726
+msgid "Google Maps API key"
+msgstr "Google Maps API ключ"
+
+#: class-wms7-core.php:2730
+msgid "Exporting Table Fields"
+msgstr "Поля таблицы для экспорта"
+
+#: class-wms7-core.php:2734
+msgid "E-mail boxes"
+msgstr "Почтовые ящики"
+
+#: class-wms7-core.php:2738
+msgid "E-mail box select"
+msgstr "Выбор почтового ящика"
+
+#: class-wms7-core.php:2742
+msgid "E-mail folder tmp"
+msgstr "Папка tmp почтового ящика"
+
+#: class-wms7-core.php:2746
+msgid "SSE sound"
+msgstr "SSE оповещение"
+
+#: class-wms7-core.php:2757
+msgid "days. Leave empty or enter 0 if you not want the log to be truncated"
+msgstr "дней.  Укажите количество дней хранения журнала визитов"
+
+#: class-wms7-core.php:2773
+msgid ""
+"Visits from these IP addresses will be excluded from the protocol visits"
+msgstr "Посещения  с этих IP-адресов не будут заносится в журнал визитов"
+
+#: class-wms7-core.php:2807
+msgid "none"
+msgstr "нет"
+
+#: class-wms7-core.php:2830
+msgid "Visits this name will be marked - Robot"
+msgstr "Визиты с перечисленными именами будут помечены как Роботы"
+
+#: class-wms7-core.php:2840
+msgid "Register visits by robots."
+msgstr "Регистрировать посещения роботов."
+
+#: class-wms7-core.php:2850
+msgid "Visits this name will be banned"
+msgstr "Визиты с перечисленными именами роботов будут запрещены"
+
+#: class-wms7-core.php:2860
+msgid ""
+"Insert Google Maps API key (for Google Maps JavaScript API and Google Maps "
+"Geocoding API). Visit "
+msgstr ""
+"Вставьте Google Maps API  (для Google Maps JavaScript API и Google Maps "
+"Geocoding API). Посетите "
+
+#: class-wms7-core.php:2881 class-wms7-list-table.php:446
+msgid "ID"
+msgstr "ID"
+
+#: class-wms7-core.php:2883 class-wms7-list-table.php:447
+msgid "UID"
+msgstr "UID"
+
+#: class-wms7-core.php:2885 class-wms7-list-table.php:448
+msgid "Login"
+msgstr "Логин"
+
+#: class-wms7-core.php:2887 class-wms7-list-table.php:449
+msgid "Role"
+msgstr "Роль"
+
+#: class-wms7-core.php:2889
+msgid "Time"
+msgstr "Дата визита"
+
+#: class-wms7-core.php:2891 class-wms7-list-table.php:451
+msgid "Visitor IP"
+msgstr "Визитор IP"
+
+#: class-wms7-core.php:2893 class-wms7-list-table.php:452
+msgid "Black list"
+msgstr "Черный список"
+
+#: class-wms7-core.php:2895
+msgid "Page Visit"
+msgstr "Стр. визита"
+
+#: class-wms7-core.php:2897
+msgid "Page From"
+msgstr "Стр. откуда"
+
+#: class-wms7-core.php:2899 class-wms7-list-table.php:455
+msgid "Info"
+msgstr "Инфо"
+
+#: class-wms7-core.php:2900
+msgid "Select the fields to export to the report file"
+msgstr "Выберите поля для экспорта данных о визитах во внешний файл"
+
+#: class-wms7-core.php:2974 class-wms7-core.php:3132 class-wms7-core.php:3290
+#: class-wms7-core.php:3449 class-wms7-core.php:3608
+msgid "IMAP Server name"
+msgstr "IMAP Server имя"
+
+#: class-wms7-core.php:2977 class-wms7-core.php:3135 class-wms7-core.php:3293
+#: class-wms7-core.php:3452 class-wms7-core.php:3611
+msgid "E-mail box name"
+msgstr "E-mail box имя"
+
+#: class-wms7-core.php:2980 class-wms7-core.php:3138 class-wms7-core.php:3296
+#: class-wms7-core.php:3455 class-wms7-core.php:3614
+msgid "E-mail box password"
+msgstr "E-mail box пароль"
+
+#: class-wms7-core.php:2987 class-wms7-core.php:3145 class-wms7-core.php:3304
+#: class-wms7-core.php:3462 class-wms7-core.php:3621
+msgid "Encrypt"
+msgstr "Шифр-ние"
+
+#: class-wms7-core.php:2990 class-wms7-core.php:3148 class-wms7-core.php:3307
+#: class-wms7-core.php:3465 class-wms7-core.php:3624
+msgid "Port"
+msgstr "Порт"
+
+#: class-wms7-core.php:3049 class-wms7-core.php:3207 class-wms7-core.php:3366
+#: class-wms7-core.php:3524 class-wms7-core.php:3683
+msgid "SMTP Server name"
+msgstr "SMTP Server имя"
+
+#: class-wms7-core.php:3055 class-wms7-core.php:3213 class-wms7-core.php:3372
+#: class-wms7-core.php:3530 class-wms7-core.php:3689
+msgid "SMTP Encrypt"
+msgstr "SMTP шифр-ние"
+
+#: class-wms7-core.php:3056 class-wms7-core.php:3214 class-wms7-core.php:3373
+#: class-wms7-core.php:3531 class-wms7-core.php:3690
+msgid "SMTP Port"
+msgstr "SMTP порт"
+
+#: class-wms7-core.php:3733
+msgid "This site"
+msgstr "Этот сайт"
+
+#: class-wms7-core.php:3756
+msgid ""
+"Create a directory in the root of the site for temporary storage of files "
+"attached to the mail"
+msgstr ""
+"Создайте директорий в корне сайта для временного хранения прикрепленных "
+"файлов к письмам"
+
+#: class-wms7-core.php:3814
+msgid ""
+"It is intended for sound maintenance of updating of the screen at receipt of "
+"new visitors of the website"
+msgstr ""
+"Настройки звукового сопровождения визита на сайт. Для отключения - "
+"установить Volume в 0"
+
+#: class-wms7-core.php:4123
+msgid "Save"
+msgstr "Save"
+
+#: class-wms7-core.php:4125
+msgid "Quit"
+msgstr "Выход"
+
+#: class-wms7-core.php:4166 class-wms7-core.php:4169
+msgid "Ban start date"
+msgstr "Начало блокировки"
+
+#: class-wms7-core.php:4172
+msgid "IP info"
+msgstr "IP инфо"
+
+#: class-wms7-core.php:4180 class-wms7-core.php:4183
+msgid "Ban end date"
+msgstr "Конец блокировки"
+
+#: class-wms7-core.php:4188 class-wms7-core.php:4191
+msgid "Ban message"
+msgstr "Коментарий 1 блокировки"
+
+#: class-wms7-core.php:4196 class-wms7-core.php:4199
+msgid "Ban notes"
+msgstr "Коментарий 2 блокировки"
+
+#: class-wms7-core.php:4207
+msgid "Ban user login"
+msgstr "Блокировка по логину"
+
+#: class-wms7-core.php:4217
+msgid ""
+"Note: Insert the shortcode - [black_list] in a page or an entry to display "
+"the table compromised IP addresses stored in the database -Black list."
+msgstr ""
+"Примечание: вставьте шорткод  - [black_list] на страницу сайта для "
+"отображения \"Черный список\" в виде таблицы."
+
+#: class-wms7-list-table.php:389
+msgid "Map"
+msgstr "Карта"
+
+#: class-wms7-list-table.php:417
+msgid "Edit"
+msgstr "Ред"
+
+#: class-wms7-list-table.php:418
+msgid "Clear"
+msgstr "Чист"
+
+#: class-wms7-list-table.php:450
+msgid "Date visit"
+msgstr "Дата визита"
+
+#: class-wms7-list-table.php:453
+msgid "Page visit"
+msgstr "Стр. визита"
+
+#: class-wms7-list-table.php:454
+msgid "Page from"
+msgstr "Стр откуда"
+
+#: class-wms7-list-table.php:484
+msgid "Delete"
+msgstr "Удалить"
+
+#: class-wms7-list-table.php:485
+msgid "Export"
+msgstr "Экспорт"
+
+#: class-wms7-shortcode.php:70
+msgid "IP address"
+msgstr "IP адрес"
+
+#: class-wms7-shortcode.php:71
+msgid "Ban start"
+msgstr "Начало блокировки"
+
+#: class-wms7-shortcode.php:72
+msgid "Ban end"
+msgstr "Конец блокировки"
+
+#: class-wms7-shortcode.php:73
+msgid "Description"
+msgstr "Описание"
+
+#: class-wms7-widget.php:198
+msgid "Interval"
+msgstr "Интервал"
+
+#: class-wms7-widget.php:198
+msgid "Visits"
+msgstr "Визиты"
+
+#: class-wms7-widget.php:198
+msgid "Visitors"
+msgstr "Посетители"
+
+#: class-wms7-widget.php:199
+msgid "month"
+msgstr "месяц"
+
+#: class-wms7-widget.php:200
+msgid "week"
+msgstr "неделя"
+
+#: class-wms7-widget.php:201
+msgid "today"
+msgstr "сегодня"
+
+#: class-wms7-widget.php:214
+msgid "Counter of visits"
+msgstr "Счетчик визитов"
+
+#: class-wms7-widget.php:223
+msgid "Title:"
+msgstr "Заглавие:"
+
+#: class-wms7-widget.php:225
+msgid "Background color:"
+msgstr "Цвет фона:"
