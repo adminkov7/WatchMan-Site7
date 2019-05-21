@@ -1,6 +1,7 @@
-/* for modal window - statistic. Begin*/
+/* for modal window - cron-table. Begin*/
 ul.tasks {
-margin: 0;
+margin-top: -5px;
+margin-bottom:5px;
 }
 ul.tasks li.tasks {
 display: inline;
@@ -12,8 +13,8 @@ list-style-type: none;
 li.tasks:before {
 content: "■";
 }
-
 /* for modal window - statistic. End*/
+
 /* for filters II level. Begin*/
 .radio + label {
 cursor: pointer;
@@ -406,9 +407,10 @@ color:blue;
 
 /* Styles related to the popup window and content */
 .table {
-max-width:665px;
-table-layout:fixed;
-margin-left:8px;
+border: 1px solid #5A5750;
+-webkit-box-shadow: 0px 0px 10px #000;
+-moz-box-shadow: 0px 0px 10px #000;
+box-shadow: 0px 0px 10px #000;
 }
 .th, .td {
 padding:5px 10px;
@@ -427,7 +429,6 @@ width:calc(100% - 18px);
 height:180px;
 max-height:180px;
 overflow-y: scroll;
-overflow-x: auto;
 display:block;
 width:100%;
 background: #fff;
@@ -491,10 +492,10 @@ table-layout:fixed;
 /* кнопка закрытия окна */
 .win-popup .btn-close {
 position: absolute;
-top: 20px;
-right: 10px;padding: 0;
-width: 20px;
-height: 20px;
+top: 12px;
+right: 12px;padding: 0;
+width: 18px;
+height: 18px;
 border: 2px solid #ccc;
 -webkit-border-radius: 15px;
 -moz-border-radius: 15px;
@@ -530,12 +531,12 @@ background-color: rgba(252, 20, 0, 0.8);
 transform: rotate(360deg);
 }
 .popup-header {
-padding: 20px 20px 10px 10px;
+padding: 10px 10px;
 }
 .popup-header h2 {
 color: #008000;
 background-color: #D4D0C8;
-text-align: left;
+text-align: center;
 text-shadow: 0 1px 3px rgba(0,0,0,.3);
 font:22px Arial, Helvetica, sans-serif;
 position: relative;
@@ -595,26 +596,26 @@ box-shadow: 0 0 10px rgba(0,0,0,0.3), 0 1px 1px rgba(0,0,0,0.25);
 }
 .popup-body{
 width: 670px;
-overflow-x: auto;
 padding:0;
 margin:0;
 }
 .popup-body textarea{
 position: relative;
 text-align: left;
-padding: 10px 10px;
-width: 97%;
+padding: 10px 15px;
+width: 94%;
 background: #fff;
 background: -moz-linear-gradient(#fff, #999);
 background: -webkit-linear-gradient(#fff, #999);
 background: -o-linear-gradient(#fff, #999);
 color: black;
-margin: 0 10px;
-height:285px;
+margin-left: 20px;
+height:295px;
 border: 1px solid #5A5750;
 -webkit-box-shadow: 0px 0px 10px #000;
 -moz-box-shadow: 0px 0px 10px #000;
 box-shadow: 0px 0px 10px #000;
+z-index:1;
 }
 .popup-body-mail textarea{
 position: relative;
@@ -716,12 +717,17 @@ padding: 5px 10px;
 overflow: auto;
 cursor: text;
 height: 310px;
+width: 91%;
 background-color: #2A2A2E;
 color: #FFFFFF;
 font-family: monaco, 'lucida console', 'courier new', 'courier', monospace;
 font-size: 10pt;
 line-height: 1.25em;
-margin-left:10px;
+margin-left:18px;
+border: 1px solid #5A5750;
+-webkit-box-shadow: 0px 0px 10px #000;
+-moz-box-shadow: 0px 0px 10px #000;
+box-shadow: 0px 0px 10px #000;
 }
 #wms7_console #shell .row,
 #wms7_console #shell .row form {
@@ -750,7 +756,7 @@ font-family: monaco, 'lucida console', 'courier new', 'courier', monospace;
 font-size: 10pt;
 background-color: #2A2A2E;
 color: #FFFFFF;
-width: 97%;
+width: 98%;
 }
 #wms7_console #shell .err {
 color: #FF0000;
